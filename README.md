@@ -7,6 +7,14 @@ K. Floettmann (DESY Hamburg) based on the Python FastAPI package and Docker.
 
 # Startup
 
+## Environment
+
+Ensure the following environment variables are set:
+
+| Variable          | Description                                                                  |
+|-------------------|------------------------------------------------------------------------------|
+| `ASTRA_API_KEY`   | The API key to access the ASTRA web API. This is required for authorization. |
+
 ## Local deployment in development environment 
 
 Build the image and start container by execution of the following command
