@@ -2,8 +2,10 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12606498.svg)](https://doi.org/10.5281/zenodo.12606498)
 
 # ASTRA Web API
-This repository contains an API wrapper for the well-known [ASTRA simulation code](https://www.desy.de/~mpyflo/) by
+This repository is based on [astra-web](https://github.com/AlexanderKlemps/astra-web) by A. Klemps (Hamburg University of Technology, TUHH) and contains an API wrapper for the well-known [ASTRA simulation code](https://www.desy.de/~mpyflo/) by
 K. Floettmann (DESY Hamburg) based on the Python FastAPI package and Docker.
+
+This fork includes modification for improved interoperability with a SLURM environment.
 
 # Startup
 
