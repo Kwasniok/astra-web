@@ -10,7 +10,7 @@ services:
       GENERATOR_DATA_PATH: "/data/generator"
       SIMULATION_DATA_PATH: "/data/simulation"
     volumes:
-      - data:/app/data
+      - ${ASTRA_DATA_PATH:-data}:/app/data
     networks:
       - astra
     restart: unless-stopped

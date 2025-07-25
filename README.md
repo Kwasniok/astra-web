@@ -11,11 +11,14 @@ This fork includes modification for improved interoperability with a SLURM envir
 
 ## Environment
 
-Ensure the following environment variables are set:
+Ensure the following environment variables are set (e.g. in `./docker/.env`)
 
-| Variable          | Description                                                                  |
-|-------------------|------------------------------------------------------------------------------|
-| `ASTRA_API_KEY`   | The API key to access the ASTRA web API. This is required for authorization. |
+| Variable          | Required | Description                                                                  |
+|-------------------|----------|------------------------------------------------------------------------------|
+| `ASTRA_API_KEY`   | yes      | The API key to access the ASTRA web API. This is required for authorization. |
+| `ASTRA_DATA_PATH` | optional | The path to a local data directory where all results are stored. If not specified an internal storage volume will be used.|
+
+note: Ensure that the user starting the Docker container has read and write access to the `ASTRA_DATA_PATH` directory when specified.
 
 ## Local deployment in development environment 
 
