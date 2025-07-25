@@ -10,6 +10,7 @@ ASTRA_BINARY_PATH = get_env_var("ASTRA_BINARY_PATH")
 
 def write_input_file(generator_input: GeneratorInput) -> str:
     ini_content = generator_input.to_ini()
+    os.makedirs(os.path.dirname(generator_input.input_filename), exist_ok=True)
     with open(generator_input.input_filename, "w") as input_file:
         input_file.write(ini_content)
 
@@ -24,6 +25,7 @@ def process_generator_input(generator_input: GeneratorInput) -> str:
     ).stdout
     decoded_process_output = raw_process_output.decode()
     output_file_name = default_filename(generator_input.gen_id) + ".out"
+    os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     with open(output_file_name, "w") as file:
         file.write(decoded_process_output)
 

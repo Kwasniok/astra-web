@@ -122,7 +122,9 @@ class SimulationInput(BaseModel):
         os.mkdir(self.run_dir)
         self.sort_and_set_ids('cavities')
         self.sort_and_set_ids('solenoids')
-        with open(f"{self.run_dir}/input.json", "w") as f:
+        path = f"{self.run_dir}/input.json"
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
             data = {
                 "solenoid_strength": self.solenoids[0].MaxB,
                 "spot_size": self.run_specs.XYrms,
@@ -155,6 +157,7 @@ class SimulationInput(BaseModel):
     def write_to_disk(self) -> str:
         if not os.path.exists(self.run_dir): os.mkdir(self.run_dir)
         ini_string = self.to_ini()
+        os.makedirs(os.path.dirname(self.input_filename), exist_ok=True)
         with open(self.input_filename, "w") as input_file:
             input_file.write(ini_string)
         for o in self.solenoids + self.cavities:

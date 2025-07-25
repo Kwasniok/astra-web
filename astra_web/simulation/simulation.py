@@ -26,6 +26,7 @@ def process_simulation_input(simulation_input: SimulationInput) -> str:
 
     terminal_output = raw_process_output.decode()
     output_file_name = f"{simulation_input.run_dir}/run.out"
+    os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     with open(output_file_name, "w") as file:
         file.write(terminal_output)
 
