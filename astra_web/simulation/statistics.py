@@ -9,22 +9,25 @@ C = 299792458
 M0 = 9.10938356e-31
 
 
-def get_statistics(statistics_input: StatisticsInput, particles: Particles) -> StatisticsOutput:
-    with open(f"{SIMULATION_DATA_PATH}/{statistics_input.sim_id}/input.json", 'r') as f:
+def get_statistics(sim_id: str, n_slices: int, particles: Particles) -> StatisticsOutput:
+    with open(f"{SIMULATION_DATA_PATH}/{sim_id}/input.json", 'r') as f:
         sim_input = json.load(f)
 
     particle_group = particles.to_pmd(only_active=True)
     try:
-        emittance_data = sl_emittance(particle_group, statistics_input.n_slices)
-    except ZeroDivisionError as e:
-        print(f"Calculation of slice statistics for sim {statistics_input.sim_id} raised ZeroDivisionError. Message: {e}")
-        emittance_data = []
+        slice_data = sl_emittance(particle_group, n_slices)
+        z_pos = particle_group.avg("z")
+        ptp_z = particle_group.ptp("z")
+    except (ZeroDivisionError, ValueError) as e:
+        print(f"Calculation of slice statistics for sim {sim_id} raised {type(e)}. Message: {e}")
+        z_pos = particles.z[0]
+        ptp_z = max(particles.z) - min(particles.z)
+        slice_data = {}
 
     return StatisticsOutput(
         z_pos=particle_group.avg("z"),
         inputs=sim_input,
-        sim_id=statistics_input.sim_id,
-        slice_emittances=emittance_data,
+        sim_id=sim_id,
         particle_counts={
             'total': len(particles.x),
             'active': int(sum(particles.active_particles)),
