@@ -1,9 +1,13 @@
 from pydantic import BaseModel, Field, computed_field
-from astra_web.paths import generator_path
+from astra_web.host_localizer import HostLocalizer, LocalHostLocalizer
 from astra_web.decorators.decorators import ini_exportable
+from astra_web.host_localizer.local import LocalHostLocalizer
 
 @ini_exportable
 class SimulationRunSpecifications(BaseModel):
+
+    _localizer: HostLocalizer = LocalHostLocalizer.instance()
+
     run_dir: str = Field(
         default=None,
         description='Name of the directory the simulation will be executed in.',
@@ -62,7 +66,7 @@ class SimulationRunSpecifications(BaseModel):
         file_name = 'example.ini'
         if self.particle_file_name is not None:
             file_name = self.particle_file_name + ".ini"
-        return generator_path(file_name)
+        return self._localizer.generator_path(file_name)
 
     Qbunch: float = Field(
         default=None,

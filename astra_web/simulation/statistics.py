@@ -4,7 +4,7 @@ import json
 from pmd_beamphysics import ParticleGroup
 from astra_web.generator.schemas.particles import Particles
 from astra_web.simulation.schemas.io import StatisticsInput, StatisticsOutput
-from astra_web.paths import simulation_path
+from astra_web.host_localizer import HostLocalizer
 
 C = 299792458
 M0 = 9.10938356e-31
@@ -12,8 +12,8 @@ M0 = 9.10938356e-31
 
 def get_statistics(
     sim_id: str, n_slices: int, particles: Particles
-) -> StatisticsOutput:
-    with open(simulation_path(sim_id, "input.json"), "r") as f:
+, localizer: HostLocalizer) -> StatisticsOutput:
+    with open(localizer.simulation_path(sim_id, "input.json"), "r") as f:
         sim_input = json.load(f)
 
     particle_group = particles.to_pmd(only_active=True)

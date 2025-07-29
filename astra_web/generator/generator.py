@@ -1,6 +1,6 @@
 import os
 from subprocess import run
-from astra_web.paths import astra_binary_path, generator_path
+from astra_web.host_localizer import        HostLocalizer
 from .schemas.io import GeneratorInput
 from .schemas.particles import Particles
 
@@ -14,14 +14,14 @@ def write_input_file(generator_input: GeneratorInput) -> str:
     return ini_content
 
 
-def process_generator_input(generator_input: GeneratorInput) -> str:
+def process_generator_input(generator_input: GeneratorInput, localizer: HostLocalizer) -> str:
     raw_process_output = run([
-        _generator_binary(),
+        _generator_binary(localizer),
         generator_input.input_filename],
         capture_output=True
     ).stdout
     decoded_process_output = raw_process_output.decode()
-    output_file_name = generator_path(generator_input.gen_id, ".out")
+    output_file_name = localizer.generator_path(generator_input.gen_id, ".out")
     os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     with open(output_file_name, "w") as file:
         file.write(decoded_process_output)
@@ -29,8 +29,8 @@ def process_generator_input(generator_input: GeneratorInput) -> str:
     return decoded_process_output
 
 
-def _generator_binary() -> str:
-    return astra_binary_path("generator")
+def _generator_binary(localizer: HostLocalizer) -> str:
+    return localizer.astra_binary_path("generator")
 
 
 def read_particle_file(filepath):
@@ -40,8 +40,8 @@ def read_particle_file(filepath):
         return None
 
 
-def read_output_file(generator_input: GeneratorInput) -> Particles:
-    filepath = generator_path(generator_input.gen_id, ".ini")
+def read_output_file(generator_input: GeneratorInput, localizer: HostLocalizer) -> Particles:
+    filepath = localizer.generator_path(generator_input.gen_id, ".ini")
 
     return read_particle_file(filepath)
 

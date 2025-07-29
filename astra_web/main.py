@@ -4,7 +4,7 @@ from datetime import datetime
 from shortuuid import uuid
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import ORJSONResponse
-from .paths import generator_path, simulation_path
+from .host_localizer import HostLocalizer, LocalHostLocalizer
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
 from .generator.schemas.io import GeneratorInput, GeneratorOutput
@@ -57,9 +57,10 @@ def generate_particle_distribution(generator_input: GeneratorInput) -> Generator
     """
     Description to be done
     """
+    localizer = LocalHostLocalizer.instance()
     input_ini = write_input_file(generator_input)
-    run_output = process_generator_input(generator_input)
-    particle_output = read_output_file(generator_input)
+    run_output = process_generator_input(generator_input, localizer)
+    particle_output = read_output_file(generator_input, localizer)
 
     return GeneratorOutput(
         gen_id=generator_input.gen_id,
@@ -73,9 +74,10 @@ def generate_particle_distribution(generator_input: GeneratorInput) -> Generator
     "/particles/{gen_id}", dependencies=[Depends(api_key_auth)], tags=["particles"]
 )
 def upload_particle_distribution(data: Particles, gen_id: str | None = None) -> dict:
+    localizer = LocalHostLocalizer.instance()
     if gen_id is None:
         gen_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
-    path = generator_path(gen_id, ".ini")
+    path = localizer.generator_path(gen_id, ".ini")
     if os.path.exists(path):
         os.remove(path)
 
@@ -91,7 +93,8 @@ def download_particle_distribution(gen_id: str) -> Particles | None:
     Returns a specific particle distribution on the requested server depending
     on the given filename.
     """
-    path = generator_path(gen_id, ".ini")
+    localizer = LocalHostLocalizer.instance()
+    path = localizer.generator_path(gen_id, ".ini")
     if os.path.exists(path):
         return Particles.from_csv(path)
     else:
@@ -105,7 +108,8 @@ def list_available_particle_distributions() -> list[str]:
     """
     Returns a list of all existing particle distributions on the requested server.
     """
-    files = glob.glob(generator_path("*", ".ini"))
+    localizer = LocalHostLocalizer.instance()
+    files = glob.glob(localizer.generator_path("*", ".ini"))
     files = list(map(lambda p: p.split("/")[-1].split(".ini")[0], files))
 
     return sorted(files)
@@ -115,21 +119,23 @@ def list_available_particle_distributions() -> list[str]:
     "/particles/{gen_id}", dependencies=[Depends(api_key_auth)], tags=["particles"]
 )
 async def delete_particle_distribution(gen_id: str) -> None:
-    path = generator_path(gen_id, ".ini")
+    localizer = LocalHostLocalizer.instance()
+    path = localizer.generator_path(gen_id, ".ini")
     if os.path.exists(path):
         os.remove(path)
 
 
 @app.put("/simulations", dependencies=[Depends(api_key_auth)], tags=["simulations"])
 async def run_simulation(simulation_input: SimulationInput) -> dict:
+    localizer = LocalHostLocalizer.instance()
     simulation_input.write_to_disk()
-    output = process_simulation_input(simulation_input)
+    output = process_simulation_input(simulation_input, localizer)
 
     return {"output": output, "sim_id": simulation_input.sim_id}
 
 
-def _particle_paths(id: str):
-    files = glob.glob(simulation_path(id, "run.*[0-9].001"))
+def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
+    files = glob.glob(localizer.simulation_path(id, "run.*[0-9].001"))
     return sorted(
         files,
         key=lambda s: s.split(".")[1],
@@ -140,11 +146,12 @@ def _particle_paths(id: str):
 async def run_simulation_and_return_results(
     simulation_input: SimulationInput,
 ) -> SimulationOutput:
+    localizer = LocalHostLocalizer.instance()
     input_ini = simulation_input.write_to_disk()
-    output = process_simulation_input(simulation_input)
+    output = process_simulation_input(simulation_input, localizer)
     x_table, y_table, z_table = load_emittance_output(simulation_input.run_dir)
     particles = [
-        read_particle_file(path) for path in _particle_paths(simulation_input.sim_id)
+        read_particle_file(path) for path in _particle_paths(simulation_input.sim_id, localizer)
     ]
 
     return SimulationOutput(
@@ -163,7 +170,8 @@ def list_available_particle_distributions() -> list[str]:
     """
     Returns a list of all existing simulations on the requested server.
     """
-    files = glob.glob(simulation_path("*"))
+    localizer = LocalHostLocalizer.instance()
+    files = glob.glob(localizer.simulation_path("*"))
     files = list(map(lambda p: p.split("/")[-1], files))
 
     return sorted(files)
@@ -177,7 +185,8 @@ def download_simulation_results(sim_id: str) -> SimulationOutput | None:
     Returns the output of a specific ASTRA simulation on the requested server depending
     on the given ID.
     """
-    path = simulation_path(sim_id)
+    localizer = LocalHostLocalizer.instance()
+    path = localizer.simulation_path(sim_id)
     if os.path.exists(path):
         return load_simulation_output(path, sim_id)
     else:
@@ -191,7 +200,8 @@ def download_simulation_results(sim_id: str) -> SimulationOutput | None:
     "/simulations/{sim_id}", dependencies=[Depends(api_key_auth)], tags=["simulations"]
 )
 async def delete_simulation(sim_id: str) -> None:
-    path = simulation_path(sim_id)
+    localizer = LocalHostLocalizer.instance()
+    path = localizer.simulation_path(sim_id)
     if os.path.exists(path):
         rmtree(path)
 

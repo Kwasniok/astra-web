@@ -6,7 +6,7 @@ from shortuuid import uuid
 from typing import Optional
 from pydantic import BaseModel, Field
 from astra_web.decorators.decorators import ini_exportable
-from astra_web.paths import simulation_path
+from astra_web.host_localizer import HostLocalizer, LocalHostLocalizer
 from astra_web.generator.schemas.particles import Particles
 from .run import SimulationRunSpecifications
 from .modules import Solenoid, Cavity
@@ -77,6 +77,7 @@ class SimulationOutputSpecification(BaseModel):
 @ini_exportable
 class SimulationInput(BaseModel):
     _sim_id: str | None = None
+    _localizer = LocalHostLocalizer.instance()
 
     @property
     def sim_id(self):
@@ -85,7 +86,7 @@ class SimulationInput(BaseModel):
     @property
     def run_dir(self):
         dir_name = self.sim_id if self.run_specs.run_dir is None else self.run_specs.run_dir
-        return simulation_path(dir_name)
+        return self._localizer.simulation_path(dir_name)
 
     run_specs: SimulationRunSpecifications = Field(
         default=SimulationRunSpecifications(),

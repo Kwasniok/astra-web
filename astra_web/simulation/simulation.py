@@ -4,7 +4,7 @@ import pandas as pd
 from subprocess import run
 from .schemas.io import SimulationInput, SimulationOutput
 from .schemas.tables import XYEmittanceTable, ZEmittanceTable
-from astra_web.paths import astra_binary_path
+from astra_web.host_localizer import HostLocalizer
 from astra_web.generator.generator import read_particle_file
 
 def link_initial_particle_distribution(simulation_input: SimulationInput):
@@ -12,10 +12,10 @@ def link_initial_particle_distribution(simulation_input: SimulationInput):
                f"{simulation_input.run_dir}/run.0000.001")
 
 
-def process_simulation_input(simulation_input: SimulationInput) -> str:
+def process_simulation_input(simulation_input: SimulationInput, localizer:HostLocalizer) -> str:
     link_initial_particle_distribution(simulation_input)
     raw_process_output = run(
-        _run_command(simulation_input),
+        _run_command(simulation_input, localizer),
         cwd=simulation_input.run_dir,
         capture_output=True,
         timeout=simulation_input.run_specs.timeout
@@ -30,20 +30,20 @@ def process_simulation_input(simulation_input: SimulationInput) -> str:
     return terminal_output
 
 
-def _run_command(simulation_input: SimulationInput) -> list[str]:
-    cmd = [_astra_binary(simulation_input), simulation_input.input_filename]
+def _run_command(simulation_input: SimulationInput, localizer: HostLocalizer) -> list[str]:
+    cmd = [_astra_binary(simulation_input, localizer), simulation_input.input_filename]
 
     if simulation_input.run_specs.thread_num > 1:
         cmd = ['mpirun', "-n", str(simulation_input.run_specs.thread_num)] + cmd
     return cmd
 
 
-def _astra_binary(simulation_input: SimulationInput) -> str:
+def _astra_binary(simulation_input: SimulationInput, localizer: HostLocalizer) -> str:
     binary = "astra"
     if simulation_input.run_specs.thread_num > 1:
         binary = "parallel_" + binary
 
-    return astra_binary_path(binary)
+    return localizer.astra_binary_path(binary)
 
 
 def load(file_path: str, model_cls):
