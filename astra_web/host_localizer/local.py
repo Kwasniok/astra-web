@@ -18,10 +18,12 @@ class LocalHostLocalizer(HostLocalizer):
             cls._instance = LocalHostLocalizer(do_not_init_manually_use_instance=None)
         return cls._instance
 
-    def generator_path(self, id: str, extention: str = "") -> str:
+    def generator_path(self, id: str | None = None, extention: str = "") -> str:
         """
         Returns the path to the generator file for the given id and extension.
         """
+        if id is None:
+            return self._GENERATOR_DATA_PATH
         return os.path.join(self._GENERATOR_DATA_PATH, f"{id}{extention}")
 
     def simulation_path(self, id: str, file_name: str | None = None) -> str:

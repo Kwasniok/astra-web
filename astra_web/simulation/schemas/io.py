@@ -6,7 +6,6 @@ from shortuuid import uuid
 from typing import Optional
 from pydantic import BaseModel, Field
 from astra_web.decorators.decorators import ini_exportable
-from astra_web.host_localizer import HostLocalizer, LocalHostLocalizer
 from astra_web.generator.schemas.particles import Particles
 from .run import SimulationRunSpecifications
 from .modules import Solenoid, Cavity
@@ -77,19 +76,15 @@ class SimulationOutputSpecification(BaseModel):
 
 @ini_exportable
 class SimulationInput(BaseModel):
-    _sim_id: str | None = None
-    _localizer = LocalHostLocalizer.instance()
+    _sim_id: str
 
     @property
     def sim_id(self):
         return self._sim_id
 
     @property
-    def run_dir(self):
-        dir_name = (
-            self.sim_id if self.run_specs.run_dir is None else self.run_specs.run_dir
-        )
-        return self._localizer.simulation_path(dir_name)
+    def run_dir(self) -> str:
+        return self.sim_id if self.run_specs.run_dir is None else self.run_specs.run_dir
 
     run_specs: SimulationRunSpecifications = Field(
         default=SimulationRunSpecifications(),
@@ -111,7 +106,7 @@ class SimulationInput(BaseModel):
     )
     space_charge: SpaceCharge = Field(default=SpaceCharge(), description="")
 
-    def sort_and_set_ids(self, attribute_key: str) -> None:
+    def _sort_and_set_ids(self, attribute_key: str) -> None:
         attr = getattr(self, attribute_key)
         if not np.any(list(map(lambda o: o.z_0 is None, attr))):
             setattr(self, attribute_key, sorted(attr, key=lambda element: element.z_0))
@@ -120,28 +115,8 @@ class SimulationInput(BaseModel):
 
     def model_post_init(self, __context) -> None:
         self._sim_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
-        os.mkdir(self.run_dir)
-        self.sort_and_set_ids("cavities")
-        self.sort_and_set_ids("solenoids")
-        path = f"{self.run_dir}/input.json"
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, "w") as f:
-            data = {
-                "solenoid_strength": self.solenoids[0].MaxB,
-                "spot_size": self.run_specs.XYrms,
-                "emission_time": self.run_specs.Trms,
-                "gun_phase": self.cavities[0].Phi,
-                "gun_gradient": self.cavities[0].MaxE,
-                "input_distribution": self.run_specs.particle_file_name,
-            }
-            str_ = json.dumps(
-                data,
-                indent=4,
-                sort_keys=True,
-                separators=(",", ": "),
-                ensure_ascii=False,
-            )
-            f.write(str_)
+        self._sort_and_set_ids("cavities")
+        self._sort_and_set_ids("solenoids")
 
     def to_ini(self) -> str:
         has_cavities = str(len(self.cavities) > 0).lower()
@@ -156,22 +131,6 @@ class SimulationInput(BaseModel):
             "\n\n".join([run_str, output_str, charge_str, cavity_str, solenoid_str])
             + "\n"
         )
-
-    @property
-    def input_filename(self) -> str:
-        return f"{self.run_dir}/run.in"
-
-    def write_to_disk(self) -> str:
-        if not os.path.exists(self.run_dir):
-            os.mkdir(self.run_dir)
-        ini_string = self.to_ini()
-        os.makedirs(os.path.dirname(self.input_filename), exist_ok=True)
-        with open(self.input_filename, "w") as input_file:
-            input_file.write(ini_string)
-        for o in self.solenoids + self.cavities:
-            o.write_to_disk(self.run_dir)
-
-        return ini_string
 
 
 class SimulationOutput(BaseModel):

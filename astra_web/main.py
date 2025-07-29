@@ -10,13 +10,14 @@ from .generator.schemas.particles import Particles
 from .generator.schemas.io import GeneratorInput, GeneratorOutput
 from .simulation.schemas.io import StatisticsInput, StatisticsOutput
 from .simulation.schemas.io import SimulationInput, SimulationOutput
-from .generator.generator import (
-    write_input_file,
+from .generator.host_localized import (
+    write_generator_files,
     process_generator_input,
     read_output_file,
-    read_particle_file,
 )
-from .simulation.simulation import (
+from .generator.util import read_particle_file
+from .simulation.host_localized import (
+    write_simulation_files,
     process_simulation_input,
     load_simulation_output,
 )
@@ -79,7 +80,7 @@ async def generate_particle_distribution(
     Description to be done
     """
     localizer = LocalHostLocalizer.instance()
-    input_ini = write_input_file(generator_input)
+    input_ini = write_generator_files(generator_input, localizer)
     run_output = process_generator_input(generator_input, localizer)
     particle_output = read_output_file(generator_input, localizer)
 
@@ -163,7 +164,7 @@ def list_available_particle_distributions() -> list[str]:
 )
 async def run_simulation(simulation_input: SimulationInput) -> dict:
     localizer = LocalHostLocalizer.instance()
-    simulation_input.write_to_disk()
+    write_simulation_files(simulation_input, localizer)
     output = process_simulation_input(simulation_input, localizer)
 
     return {"output": output, "sim_id": simulation_input.sim_id}
@@ -180,14 +181,14 @@ def download_simulation_results(sim_id: str) -> SimulationOutput | None:
     on the given ID.
     """
     localizer = LocalHostLocalizer.instance()
-    path = localizer.simulation_path(sim_id)
-    if os.path.exists(path):
-        return load_simulation_output(path, sim_id)
-    else:
+    output = load_simulation_output(sim_id, localizer)
+    if output is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Simulation '{sim_id}' not found.",
         )
+    else:
+        return output
 
 
 @app.delete(

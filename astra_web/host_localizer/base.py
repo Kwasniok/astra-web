@@ -15,7 +15,7 @@ class HostLocalizer(ABC):
         pass
 
     @abstractmethod
-    def generator_path(self, id: str, extention: str = "") -> str:
+    def generator_path(self, id: str | None = None, extention: str = "") -> str:
         """
         Returns the path to the generator file for the given id and extension.
         """

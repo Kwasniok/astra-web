@@ -3,7 +3,6 @@ from typing import Optional
 from shortuuid import uuid
 from pydantic import BaseModel, Field, ConfigDict, computed_field
 from astra_web.decorators.decorators import ini_exportable
-from astra_web.host_localizer import HostLocalizer, LocalHostLocalizer
 from .enums import Distribution, ParticleType
 from .particles import Particles
 
@@ -13,9 +12,7 @@ class GeneratorInput(BaseModel):
     # Model config
     model_config = ConfigDict(use_enum_values=True)
     # Internal attributes
-    _gen_id: str | None = None
-
-    _localizer: HostLocalizer = LocalHostLocalizer.instance()
+    _gen_id: str
 
     # Attributes relevant for dump to ASTRA input file
     # Aliases correspond to possibly externally used keywords
@@ -23,11 +20,7 @@ class GeneratorInput(BaseModel):
     @computed_field(return_type=str)
     @property
     def FNAME(self) -> str:
-        return self._localizer.generator_path(self._gen_id, ".ini")
-
-    @property
-    def input_filename(self) -> str:
-        return self.FNAME[:-1]
+        return self._gen_id + ".ini"
 
     Add: bool | None = False
     N_add: int | None = 0

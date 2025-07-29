@@ -1,3 +1,4 @@
+import os
 from .tables import FieldTable
 from typing import Any
 from pydantic import BaseModel, Field, ConfigDict, computed_field, model_serializer
@@ -67,10 +68,11 @@ class Cavity(Module):
         json_schema_extra={"format": "Unit: [MV/m] | [T]"},
     )
 
-    def write_to_disk(self, path) -> None:
+    def write_to_disk(self, run_path: str) -> None:
+        """Write the field table to a CSV file in the specified path."""
         if self.field_table is None:
             return
-        self.field_table.to_csv(f"{path}/{self.File_Efield}")
+        self.field_table.to_csv(os.path.join(run_path, self.File_Efield))
 
     @property
     def z_0(self):
@@ -129,7 +131,8 @@ class Solenoid(Module):
 
         return out_dict
 
-    def write_to_disk(self, path) -> None:
+    def write_to_disk(self, run_path: str) -> None:
+        """Write the field table to a CSV file in the specified path."""
         if self.field_table is None:
             return
-        self.field_table.to_csv(f"{path}/{self.File_Bfield}")
+        self.field_table.to_csv(os.path.join(run_path, self.File_Bfield))
