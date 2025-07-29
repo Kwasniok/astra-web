@@ -20,8 +20,8 @@ from .simulation.host_localized import (
     write_simulation_files,
     process_simulation_input,
     load_simulation_output,
+    get_statistics,
 )
-from .simulation.statistics import get_statistics
 
 tags_metadata = [
     {
@@ -210,14 +210,5 @@ async def delete_simulation(sim_id: str) -> None:
 )
 async def statistics(data: StatisticsInput, sim_id: str) -> StatisticsOutput:
     localizer = LocalHostLocalizer.instance()
-    particles = read_particle_file(_particle_paths(sim_id, localizer)[-1])
-    stats = get_statistics(sim_id, data.n_slices, particles, localizer)
+    stats = get_statistics(sim_id, localizer)
     return stats
-
-
-def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
-    files = glob.glob(localizer.simulation_path(id, "run.*[0-9].001"))
-    return sorted(
-        files,
-        key=lambda s: s.split(".")[1],
-    )

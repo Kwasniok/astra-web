@@ -1,12 +1,16 @@
 import os
 import glob
+import numpy as np
 import pandas as pd
 import json
 from subprocess import run
-from .schemas.io import SimulationInput, SimulationOutput
-from .schemas.tables import XYEmittanceTable, ZEmittanceTable
+from pmd_beamphysics import ParticleGroup
+from astra_web.generator.schemas.particles import Particles
+from astra_web.simulation.schemas.io import StatisticsOutput
 from astra_web.host_localizer import HostLocalizer
 from astra_web.generator.util import read_particle_file
+from .schemas.io import SimulationInput, SimulationOutput
+from .schemas.tables import XYEmittanceTable, ZEmittanceTable
 
 
 def write_simulation_files(simulation_input: SimulationInput, localizer: HostLocalizer):
@@ -155,3 +159,25 @@ def _load(file_path: str, model_cls):
             return None
     except pd.errors.EmptyDataError:
         return None
+
+
+def get_statistics(sim_id: str, localizer: HostLocalizer) -> StatisticsOutput:
+
+    particles = read_particle_file(_particle_paths(sim_id, localizer)[-1])
+
+    return StatisticsOutput(
+        sim_id=sim_id,
+        particle_counts={
+            "total": len(particles.x),
+            "active": int(sum(particles.active_particles)),
+            "lost": int(sum(particles.lost_particles)),
+        },
+    )
+
+
+def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
+    files = glob.glob(localizer.simulation_path(id, "run.*[0-9].001"))
+    return sorted(
+        files,
+        key=lambda s: s.split(".")[1],
+    )
