@@ -186,11 +186,6 @@ class SimulationOutput(BaseModel):
 
 
 class StatisticsInput(BaseModel):
-    sim_ids: list[str]
-    z_pos: int = Field(
-        default=-1,
-        description='Longitudinal position at which statistics will be calculated.'
-    )
     n_slices: int = Field(
         default=20,
         description='Number of slices to be used for slice emittance calculation.'

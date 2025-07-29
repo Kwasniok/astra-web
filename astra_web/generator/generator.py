@@ -37,7 +37,7 @@ def read_particle_file(filepath):
     if os.path.exists(filepath):
         return Particles.from_csv(filepath)
     else:
-        return None
+        raise FileNotFoundError(f"Particle file '{filepath}' does not exist.")
 
 
 def read_output_file(generator_input: GeneratorInput, localizer: HostLocalizer) -> Particles:
