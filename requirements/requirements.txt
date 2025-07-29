@@ -1,6 +1,6 @@
 fastapi==0.109.2
 pandas
-pydantic==2.6
+pydantic
 pytest>=7.4.3
 uvicorn<=0.24
 aenum
