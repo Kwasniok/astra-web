@@ -7,18 +7,23 @@ from .schemas.tables import XYEmittanceTable, ZEmittanceTable
 from astra_web.host_localizer import HostLocalizer
 from astra_web.generator.generator import read_particle_file
 
+
 def link_initial_particle_distribution(simulation_input: SimulationInput):
-    os.symlink(simulation_input.run_specs.Distribution,
-               f"{simulation_input.run_dir}/run.0000.001")
+    os.symlink(
+        simulation_input.run_specs.Distribution,
+        f"{simulation_input.run_dir}/run.0000.001",
+    )
 
 
-def process_simulation_input(simulation_input: SimulationInput, localizer:HostLocalizer) -> str:
+def process_simulation_input(
+    simulation_input: SimulationInput, localizer: HostLocalizer
+) -> str:
     link_initial_particle_distribution(simulation_input)
     raw_process_output = run(
         _run_command(simulation_input, localizer),
         cwd=simulation_input.run_dir,
         capture_output=True,
-        timeout=simulation_input.run_specs.timeout
+        timeout=simulation_input.run_specs.timeout,
     ).stdout
 
     terminal_output = raw_process_output.decode()
@@ -30,11 +35,13 @@ def process_simulation_input(simulation_input: SimulationInput, localizer:HostLo
     return terminal_output
 
 
-def _run_command(simulation_input: SimulationInput, localizer: HostLocalizer) -> list[str]:
+def _run_command(
+    simulation_input: SimulationInput, localizer: HostLocalizer
+) -> list[str]:
     cmd = [_astra_binary(simulation_input, localizer), simulation_input.input_filename]
 
     if simulation_input.run_specs.thread_num > 1:
-        cmd = ['mpirun', "-n", str(simulation_input.run_specs.thread_num)] + cmd
+        cmd = ["mpirun", "-n", str(simulation_input.run_specs.thread_num)] + cmd
     return cmd
 
 
@@ -58,9 +65,9 @@ def load(file_path: str, model_cls):
 
 def load_emittance_output(run_dir: str) -> list[XYEmittanceTable]:
     tables = []
-    for coordinate in ['x', 'y', 'z']:
+    for coordinate in ["x", "y", "z"]:
         file_name = f"{run_dir}/run.{coordinate.upper()}emit.001"
-        model_cls = ZEmittanceTable if coordinate == 'z' else XYEmittanceTable
+        model_cls = ZEmittanceTable if coordinate == "z" else XYEmittanceTable
         tables.append(load(file_name, model_cls))
 
     return tables
@@ -73,8 +80,7 @@ def load_simulation_output(path: str, sim_id: str) -> SimulationOutput:
     with open(f"{path}/run.in", "r") as f:
         input_ini = f.read()
     particle_paths = sorted(
-        glob.glob(f"{path}/run.*[0-9].001"),
-        key=lambda s: s.split(".")[1]
+        glob.glob(f"{path}/run.*[0-9].001"), key=lambda s: s.split(".")[1]
     )
     particles = [read_particle_file(path) for path in particle_paths]
     return SimulationOutput(

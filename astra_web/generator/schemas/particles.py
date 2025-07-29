@@ -4,45 +4,45 @@ from pmd_beamphysics import ParticleGroup
 from typing import Type, TypeVar
 from pydantic import BaseModel, Field
 
-T = TypeVar('T', bound='Parent')
+T = TypeVar("T", bound="Parent")
 
 
 class Particles(BaseModel):
     x: list[float] = Field(
         default=[],
-        description='List of particle x values.',
-        json_schema_extra={'format': 'Unit: [m]'}
+        description="List of particle x values.",
+        json_schema_extra={"format": "Unit: [m]"},
     )
     y: list[float] = Field(
         default=[],
-        description='List of particle y values',
-        json_schema_extra={'format': 'Unit: [m]'}
+        description="List of particle y values",
+        json_schema_extra={"format": "Unit: [m]"},
     )
     z: list[float] = Field(
         default=[],
-        description='List of particle z values.',
-        json_schema_extra={'format': 'Unit: [m]'}
+        description="List of particle z values.",
+        json_schema_extra={"format": "Unit: [m]"},
     )
     px: list[float] = Field(
         default=[],
-        description='List of particle px values.',
-        json_schema_extra={'format': 'Unit: [eV/c]'}
+        description="List of particle px values.",
+        json_schema_extra={"format": "Unit: [eV/c]"},
     )
     py: list[float] = Field(
         default=[],
-        description='List of particle py values.',
-        json_schema_extra={'format': 'Unit: [eV/c]'}
+        description="List of particle py values.",
+        json_schema_extra={"format": "Unit: [eV/c]"},
     )
     pz: list[float] = Field(
         default=[],
-        description='List of particle pz values.',
-        json_schema_extra={'format': 'Unit: [eV/c]'}
+        description="List of particle pz values.",
+        json_schema_extra={"format": "Unit: [eV/c]"},
     )
     t_clock: list[float] | None = []
     macro_charge: list[float] = Field(
         default=[],
-        description='List of particle macro charges.',
-        json_schema_extra={'format': 'Unit: [nC]'}
+        description="List of particle macro charges.",
+        json_schema_extra={"format": "Unit: [nC]"},
     )
     species: list[int] | None = []
     status: list[int] | None = []
@@ -83,16 +83,16 @@ class Particles(BaseModel):
         if only_active:
             data = data[self.active_particles]
 
-        data['weight'] = np.abs(data.pop('macro_charge')) * 1e-9
-        data.loc[1:, 'z'] = data.loc[1:, 'z'] + ref['z']
-        data.loc[1:, 'pz'] = data.loc[1:, 'pz'] + ref['pz']
-        data.loc[1:, 't_clock'] = (data.loc[1:, 't_clock'] + ref['t_clock']) * 1e-9
-        data.loc[data['status'] == 1, 'status'] = 2
-        data.loc[data['status'] == 5, 'status'] = 1
+        data["weight"] = np.abs(data.pop("macro_charge")) * 1e-9
+        data.loc[1:, "z"] = data.loc[1:, "z"] + ref["z"]
+        data.loc[1:, "pz"] = data.loc[1:, "pz"] + ref["pz"]
+        data.loc[1:, "t_clock"] = (data.loc[1:, "t_clock"] + ref["t_clock"]) * 1e-9
+        data.loc[data["status"] == 1, "status"] = 2
+        data.loc[data["status"] == 5, "status"] = 1
 
-        data_dict = data.to_dict('list')
-        data_dict['n_particles'] = data.size
-        data_dict['species'] = 'electron'
-        data_dict['t'] = ref['t_clock'] * 1e-9
+        data_dict = data.to_dict("list")
+        data_dict["n_particles"] = data.size
+        data_dict["species"] = "electron"
+        data_dict["t"] = ref["t_clock"] * 1e-9
 
         return ParticleGroup(data=data_dict)

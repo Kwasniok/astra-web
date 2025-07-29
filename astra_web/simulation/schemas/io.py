@@ -13,61 +13,62 @@ from .modules import Solenoid, Cavity
 from .space_charge import SpaceCharge
 from .tables import XYEmittanceTable, ZEmittanceTable
 
+
 @ini_exportable
 class SimulationOutputSpecification(BaseModel):
     ZSTART: float = Field(
         default=0.0,
-        validation_alias='z_start',
-        description='Minimal z position for the generation of output.',
-        json_schema_extra={'format': 'Unit: [m]'},
+        validation_alias="z_start",
+        description="Minimal z position for the generation of output.",
+        json_schema_extra={"format": "Unit: [m]"},
     )
     ZSTOP: float = Field(
         default=1.0,
-        validation_alias='z_stop',
-        description='Longitudinal stop position. Tracking will stop when the bunch center passes z_stop.',
-        json_schema_extra={'format': 'Unit: [m]'},
+        validation_alias="z_stop",
+        description="Longitudinal stop position. Tracking will stop when the bunch center passes z_stop.",
+        json_schema_extra={"format": "Unit: [m]"},
     )
     Zemit: int = Field(
         default=100,
-        validation_alias='emittance_checkpoint_num',
-        description='The interval z_stop - z_start is divided into z_emit sub-intervals. At the end of \
+        validation_alias="emittance_checkpoint_num",
+        description="The interval z_stop - z_start is divided into z_emit sub-intervals. At the end of \
                      each sub-interval statistical bunch parameters such as emittance are saved. It is advised to set \
-                     a multiple of z_phase as value.',
-        gt=1
+                     a multiple of z_phase as value.",
+        gt=1,
     )
     Zphase: int = Field(
         default=1,
-        validation_alias='distribution_checkpoint_num',
-        description='The interval z_stop - z_start is divided into z_emit sub-intervals. At the end of \
-                     each sub-interval a complete particle distribution is saved.'
+        validation_alias="distribution_checkpoint_num",
+        description="The interval z_stop - z_start is divided into z_emit sub-intervals. At the end of \
+                     each sub-interval a complete particle distribution is saved.",
     )
     High_res: bool = Field(
         default=True,
-        validation_alias='high_accuracy',
-        description='If true, particle distributions are saved with increased accuracy'
+        validation_alias="high_accuracy",
+        description="If true, particle distributions are saved with increased accuracy",
     )
     RefS: bool = Field(
         default=True,
-        validation_alias='high_accuracy',
-        description='If true, ASTRA generates output of the off-axis reference trajectory, energy gain etc. at each \
-                     Runge-Kutta time step.'
+        validation_alias="high_accuracy",
+        description="If true, ASTRA generates output of the off-axis reference trajectory, energy gain etc. at each \
+                     Runge-Kutta time step.",
     )
     EmitS: bool = Field(
         default=True,
-        validation_alias='generate_emittance_output',
-        description='If true, output of the beam emittance and other statistical beam parameters is generated. The parameters \
-                    are calculated and stored at the end of each sub-interval defined by z_emit.'
+        validation_alias="generate_emittance_output",
+        description="If true, output of the beam emittance and other statistical beam parameters is generated. The parameters \
+                    are calculated and stored at the end of each sub-interval defined by z_emit.",
     )
     Tr_emitS: bool = Field(
         default=True,
-        validation_alias='generate_ts_emittance_output',
-        description='If true, output of the trace space beam emittance and other statistical beam parameters is \
-                    generated. The parameters are calculated and stored at the end of each sub-interval defined by z_emit.'
+        validation_alias="generate_ts_emittance_output",
+        description="If true, output of the trace space beam emittance and other statistical beam parameters is \
+                    generated. The parameters are calculated and stored at the end of each sub-interval defined by z_emit.",
     )
     PhaseS: bool = Field(
         default=True,
-        validation_alias='generate_complete_particle_output',
-        description='If true, the complete particle distribution is saved at z_phase different locations.'
+        validation_alias="generate_complete_particle_output",
+        description="If true, the complete particle distribution is saved at z_phase different locations.",
     )
 
     def to_ini(self) -> str:
@@ -85,31 +86,30 @@ class SimulationInput(BaseModel):
 
     @property
     def run_dir(self):
-        dir_name = self.sim_id if self.run_specs.run_dir is None else self.run_specs.run_dir
+        dir_name = (
+            self.sim_id if self.run_specs.run_dir is None else self.run_specs.run_dir
+        )
         return self._localizer.simulation_path(dir_name)
 
     run_specs: SimulationRunSpecifications = Field(
         default=SimulationRunSpecifications(),
-        description='Specifications of operative run parameters such as thread numbers, run directories and more.'
+        description="Specifications of operative run parameters such as thread numbers, run directories and more.",
     )
     output_specs: SimulationOutputSpecification = Field(
         default=SimulationOutputSpecification(),
-        description='Specifications about the output files generated by the simulation.'
+        description="Specifications about the output files generated by the simulation.",
     )
     cavities: list[Cavity] = Field(
         default=[],
-        description='Specifications of cavities existing in the simulation setup. If not specified differently, \
-            cavities will be ordered w.r.t. to the z_0 parameter values.',
+        description="Specifications of cavities existing in the simulation setup. If not specified differently, \
+            cavities will be ordered w.r.t. to the z_0 parameter values.",
     )
     solenoids: list[Solenoid] = Field(
         default=[],
-        description='Specifications of solenoids existing in the simulation setup. If not specified differently, \
-            solenoids will be ordered w.r.t. to the z_0 parameter values.',
+        description="Specifications of solenoids existing in the simulation setup. If not specified differently, \
+            solenoids will be ordered w.r.t. to the z_0 parameter values.",
     )
-    space_charge: SpaceCharge = Field(
-        default=SpaceCharge(),
-        description=''
-    )
+    space_charge: SpaceCharge = Field(default=SpaceCharge(), description="")
 
     def sort_and_set_ids(self, attribute_key: str) -> None:
         attr = getattr(self, attribute_key)
@@ -121,8 +121,8 @@ class SimulationInput(BaseModel):
     def model_post_init(self, __context) -> None:
         self._sim_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
         os.mkdir(self.run_dir)
-        self.sort_and_set_ids('cavities')
-        self.sort_and_set_ids('solenoids')
+        self.sort_and_set_ids("cavities")
+        self.sort_and_set_ids("solenoids")
         path = f"{self.run_dir}/input.json"
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
@@ -134,10 +134,13 @@ class SimulationInput(BaseModel):
                 "gun_gradient": self.cavities[0].MaxE,
                 "input_distribution": self.run_specs.particle_file_name,
             }
-            str_ = json.dumps(data,
-                              indent=4, sort_keys=True,
-                              separators=(',', ': '),
-                              ensure_ascii=False)
+            str_ = json.dumps(
+                data,
+                indent=4,
+                sort_keys=True,
+                separators=(",", ": "),
+                ensure_ascii=False,
+            )
             f.write(str_)
 
     def to_ini(self) -> str:
@@ -149,14 +152,18 @@ class SimulationInput(BaseModel):
         charge_str = self.space_charge.to_ini()
         output_str = self.output_specs.to_ini()
 
-        return "\n\n".join([run_str, output_str, charge_str, cavity_str, solenoid_str]) + "\n"
+        return (
+            "\n\n".join([run_str, output_str, charge_str, cavity_str, solenoid_str])
+            + "\n"
+        )
 
     @property
     def input_filename(self) -> str:
         return f"{self.run_dir}/run.in"
 
     def write_to_disk(self) -> str:
-        if not os.path.exists(self.run_dir): os.mkdir(self.run_dir)
+        if not os.path.exists(self.run_dir):
+            os.mkdir(self.run_dir)
         ini_string = self.to_ini()
         os.makedirs(os.path.dirname(self.input_filename), exist_ok=True)
         with open(self.input_filename, "w") as input_file:
@@ -171,41 +178,36 @@ class SimulationOutput(BaseModel):
     sim_id: str
     input_ini: str
     run_output: str
-    particles: Optional[list[Particles]] = Field(
-        default=[Particles()]
-    )
+    particles: Optional[list[Particles]] = Field(default=[Particles()])
     emittance_x: Optional[XYEmittanceTable] = Field(
         default=None,
     )
     emittance_y: Optional[XYEmittanceTable] = Field(
         default=None,
     )
-    emittance_z: Optional[ZEmittanceTable] = Field(
-        default=None
-    )
+    emittance_z: Optional[ZEmittanceTable] = Field(default=None)
 
 
 class StatisticsInput(BaseModel):
     n_slices: int = Field(
         default=20,
-        description='Number of slices to be used for slice emittance calculation.'
+        description="Number of slices to be used for slice emittance calculation.",
     )
 
 
 class StatisticsOutput(BaseModel):
     sim_id: str
     particle_counts: dict = Field(
-        description='Number of particles - active, inactive, total.'
+        description="Number of particles - active, inactive, total."
     )
     z_pos: float = Field(
         default=-1,
-        description='Longitudinal position at which statistics were calculated.'
+        description="Longitudinal position at which statistics were calculated.",
     )
     inputs: dict = Field(
-        default={},
-        description='Dictionary holding initial inputs to the simulation.'
+        default={}, description="Dictionary holding initial inputs to the simulation."
     )
     slice_emittances: list[tuple[float, float]] = Field(
         default=[],
-        description='Slice emittances for a bunch at a certain longitudinal position.'
+        description="Slice emittances for a bunch at a certain longitudinal position.",
     )

@@ -11,8 +11,8 @@ M0 = 9.10938356e-31
 
 
 def get_statistics(
-    sim_id: str, n_slices: int, particles: Particles
-, localizer: HostLocalizer) -> StatisticsOutput:
+    sim_id: str, n_slices: int, particles: Particles, localizer: HostLocalizer
+) -> StatisticsOutput:
     with open(localizer.simulation_path(sim_id, "input.json"), "r") as f:
         sim_input = json.load(f)
 

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class HostLocalizer(ABC):
 
     def __init__(self, *, do_not_init_manually_use_instance: None):
@@ -14,14 +15,14 @@ class HostLocalizer(ABC):
         pass
 
     @abstractmethod
-    def generator_path(self, id:str, extention:str="") -> str:
+    def generator_path(self, id: str, extention: str = "") -> str:
         """
         Returns the path to the generator file for the given id and extension.
         """
         pass
 
     @abstractmethod
-    def simulation_path(self, id:str, file_name:str | None = None) -> str:
+    def simulation_path(self, id: str, file_name: str | None = None) -> str:
         """
         Returns the path to the simulation output for a given ID.
 
@@ -31,7 +32,7 @@ class HostLocalizer(ABC):
         pass
 
     @abstractmethod
-    def astra_binary_path(self, binary:str) -> str:
+    def astra_binary_path(self, binary: str) -> str:
         """
         Returns the path to the Astra binary.
         """

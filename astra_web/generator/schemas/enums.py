@@ -12,9 +12,7 @@ class Distribution(str, MultiValueEnum):
 
 
 class ParticleType(str, MultiValueEnum):
-    electrons = 'electrons', "el", "e"
-    positrons = 'positrons', 'po'
-    protons = 'protons', 'pr'
-    hydrogen = 'hydrogen', 'hy'
-
-
+    electrons = "electrons", "el", "e"
+    positrons = "positrons", "po"
+    protons = "protons", "pr"
+    hydrogen = "hydrogen", "hy"

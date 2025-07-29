@@ -10,5 +10,5 @@ def api_key_auth(api_key: str = Depends(auth_scheme)):
     if api_key not in API_KEYS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Forbidden"
+            detail="Forbidden",
         )
