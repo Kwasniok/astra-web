@@ -3,7 +3,7 @@ from typing import Optional
 from shortuuid import uuid
 from pydantic import BaseModel, Field, ConfigDict, computed_field
 from astra_web.decorators.decorators import ini_exportable
-from astra_web.paths import default_filename
+from astra_web.paths import generator_base_path
 from .enums import Distribution, ParticleType
 from .particles import Particles
 
@@ -21,7 +21,7 @@ class GeneratorInput(BaseModel):
     @computed_field(return_type=str)
     @property
     def FNAME(self) -> str:
-        return f"{default_filename(self._gen_id)}.ini"
+        return f"{generator_base_path(self._gen_id)}.ini"
 
     @property
     def input_filename(self) -> str:

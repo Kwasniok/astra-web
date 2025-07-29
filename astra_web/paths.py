@@ -7,5 +7,8 @@ GENERATOR_DATA_PATH = os.path.join(DATA_PATH, "generator")
 SIMULATION_DATA_PATH = os.path.join(DATA_PATH, "simulation")
 
 
-def default_filename(timestamp) -> str:
-    return os.path.join(GENERATOR_DATA_PATH, timestamp)
+def generator_base_path(id: str) -> str:
+    return os.path.join(GENERATOR_DATA_PATH, id)
+
+def simulation_base_path(id: str) -> str:
+    return os.path.join(SIMULATION_DATA_PATH, id)

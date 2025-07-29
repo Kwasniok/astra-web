@@ -4,21 +4,36 @@ from datetime import datetime
 from shortuuid import uuid
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import ORJSONResponse
-from .paths import default_filename, GENERATOR_DATA_PATH, SIMULATION_DATA_PATH
+from .paths import generator_base_path, simulation_base_path
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
 from .generator.schemas.io import GeneratorInput, GeneratorOutput
 from .simulation.schemas.io import StatisticsInput, StatisticsOutput
 from .simulation.schemas.io import SimulationInput, SimulationOutput
-from .generator.generator import write_input_file, process_generator_input, read_output_file, read_particle_file
-from .simulation.simulation import process_simulation_input, load_emittance_output, load_simulation_output
+from .generator.generator import (
+    write_input_file,
+    process_generator_input,
+    read_output_file,
+    read_particle_file,
+)
+from .simulation.simulation import (
+    process_simulation_input,
+    load_emittance_output,
+    load_simulation_output,
+)
 from .simulation.statistics import get_statistics
 
 tags_metadata = [
-    {"name": "particles", "description": "All CRUD methods for particle distributions. Distributions are generated \
-                                         by ASTRA generator binary."},
-    {"name": "simulations", "description": "All CRUD methods for beam dynamics simulations. Simulations are run \
-                                           by ASTRA binary."},
+    {
+        "name": "particles",
+        "description": "All CRUD methods for particle distributions. Distributions are generated \
+                                         by ASTRA generator binary.",
+    },
+    {
+        "name": "simulations",
+        "description": "All CRUD methods for beam dynamics simulations. Simulations are run \
+                                           by ASTRA binary.",
+    },
 ]
 
 
@@ -33,11 +48,11 @@ app = FastAPI(
     },
     root_path=os.getenv("SERVER_ROOT_PATH", ""),
     openapi_tags=tags_metadata,
-    default_response_class=ORJSONResponse
+    default_response_class=ORJSONResponse,
 )
 
 
-@app.post("/particles", dependencies=[Depends(api_key_auth)], tags=['particles'])
+@app.post("/particles", dependencies=[Depends(api_key_auth)], tags=["particles"])
 def generate_particle_distribution(generator_input: GeneratorInput) -> GeneratorOutput:
     """
     Description to be done
@@ -50,69 +65,87 @@ def generate_particle_distribution(generator_input: GeneratorInput) -> Generator
         gen_id=generator_input.gen_id,
         particles=particle_output,
         run_output=run_output,
-        input_ini=input_ini
+        input_ini=input_ini,
     )
 
 
-@app.put('/particles/{gen_id}', dependencies=[Depends(api_key_auth)], tags=['particles'])
+@app.put(
+    "/particles/{gen_id}", dependencies=[Depends(api_key_auth)], tags=["particles"]
+)
 def upload_particle_distribution(data: Particles, gen_id: str | None = None) -> dict:
-    if gen_id is None: gen_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
-    path = default_filename(gen_id) + '.ini'
-    if os.path.exists(path): os.remove(path)
+    if gen_id is None:
+        gen_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
+    path = generator_base_path(gen_id) + ".ini"
+    if os.path.exists(path):
+        os.remove(path)
 
     data.to_csv(path)
     return {"gen_id": gen_id}
 
 
-@app.get('/particles/{gen_id}', dependencies=[Depends(api_key_auth)], tags=['particles'])
+@app.get(
+    "/particles/{gen_id}", dependencies=[Depends(api_key_auth)], tags=["particles"]
+)
 def download_particle_distribution(gen_id: str) -> Particles | None:
     """
     Returns a specific particle distribution on the requested server depending
     on the given filename.
     """
-    path = default_filename(gen_id) + '.ini'
+    path = generator_base_path(gen_id) + ".ini"
     if os.path.exists(path):
         return Particles.from_csv(path)
     else:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Item '{gen_id}' not found."
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"Item '{gen_id}' not found."
         )
 
 
-@app.get('/particles', dependencies=[Depends(api_key_auth)], tags=['particles'])
+@app.get("/particles", dependencies=[Depends(api_key_auth)], tags=["particles"])
 def list_available_particle_distributions() -> list[str]:
     """
     Returns a list of all existing particle distributions on the requested server.
     """
-    files = glob.glob(f"{GENERATOR_DATA_PATH}/*.ini")
+    files = glob.glob(generator_base_path("*.ini"))
     files = list(map(lambda p: p.split("/")[-1].split(".ini")[0], files))
 
     return sorted(files)
 
 
-@app.delete('/particles/{gen_id}', dependencies=[Depends(api_key_auth)], tags=['particles'])
+@app.delete(
+    "/particles/{gen_id}", dependencies=[Depends(api_key_auth)], tags=["particles"]
+)
 async def delete_particle_distribution(gen_id: str) -> None:
-    path = default_filename(gen_id) + '.ini'
-    if os.path.exists(path): os.remove(path)
+    path = generator_base_path(gen_id) + ".ini"
+    if os.path.exists(path):
+        os.remove(path)
 
 
-@app.put('/simulations', dependencies=[Depends(api_key_auth)], tags=['simulations'])
+@app.put("/simulations", dependencies=[Depends(api_key_auth)], tags=["simulations"])
 async def run_simulation(simulation_input: SimulationInput) -> dict:
     simulation_input.write_to_disk()
     output = process_simulation_input(simulation_input)
 
-    return {'output': output, 'sim_id': simulation_input.sim_id}
+    return {"output": output, "sim_id": simulation_input.sim_id}
 
-def _particle_paths(sim_id):
-    return sorted(glob.glob(f"{SIMULATION_DATA_PATH}/{sim_id}/run.*[0-9].001"), key=lambda s: s.split(".")[1])
 
-@app.post('/simulations', dependencies=[Depends(api_key_auth)], tags=['simulations'])
-async def run_simulation_and_return_results(simulation_input: SimulationInput) -> SimulationOutput:
+def _particle_paths(id: str):
+    files = glob.glob(os.path.join(simulation_base_path(id), "run.*[0-9].001"))
+    return sorted(
+        files,
+        key=lambda s: s.split(".")[1],
+    )
+
+
+@app.post("/simulations", dependencies=[Depends(api_key_auth)], tags=["simulations"])
+async def run_simulation_and_return_results(
+    simulation_input: SimulationInput,
+) -> SimulationOutput:
     input_ini = simulation_input.write_to_disk()
     output = process_simulation_input(simulation_input)
     x_table, y_table, z_table = load_emittance_output(simulation_input.run_dir)
-    particles = [read_particle_file(path) for path in _particle_paths(simulation_input.sim_id)]
+    particles = [
+        read_particle_file(path) for path in _particle_paths(simulation_input.sim_id)
+    ]
 
     return SimulationOutput(
         sim_id=simulation_input.sim_id,
@@ -125,40 +158,49 @@ async def run_simulation_and_return_results(simulation_input: SimulationInput) -
     )
 
 
-@app.get('/simulations', dependencies=[Depends(api_key_auth)], tags=['simulations'])
+@app.get("/simulations", dependencies=[Depends(api_key_auth)], tags=["simulations"])
 def list_available_particle_distributions() -> list[str]:
     """
     Returns a list of all existing simulations on the requested server.
     """
-    files = glob.glob(f"{SIMULATION_DATA_PATH}/*")
+    files = glob.glob(simulation_base_path("*"))
     files = list(map(lambda p: p.split("/")[-1], files))
 
     return sorted(files)
 
 
-@app.get("/simulations/{sim_id}", dependencies=[Depends(api_key_auth)], tags=['simulations'])
+@app.get(
+    "/simulations/{sim_id}", dependencies=[Depends(api_key_auth)], tags=["simulations"]
+)
 def download_simulation_results(sim_id: str) -> SimulationOutput | None:
     """
-        Returns the output of a specific ASTRA simulation on the requested server depending
-        on the given ID.
-        """
-    path = os.path.abspath(f"{SIMULATION_DATA_PATH}/{sim_id}")
+    Returns the output of a specific ASTRA simulation on the requested server depending
+    on the given ID.
+    """
+    path = simulation_base_path(sim_id)
     if os.path.exists(path):
         return load_simulation_output(path, sim_id)
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Simulation '{sim_id}' not found."
+            detail=f"Simulation '{sim_id}' not found.",
         )
 
 
-@app.delete('/simulations/{sim_id}', dependencies=[Depends(api_key_auth)], tags=['simulations'])
+@app.delete(
+    "/simulations/{sim_id}", dependencies=[Depends(api_key_auth)], tags=["simulations"]
+)
 async def delete_simulation(sim_id: str) -> None:
-    path = default_filename(f"{SIMULATION_DATA_PATH}/{sim_id}")
-    if os.path.exists(path): rmtree(path)
+    path = simulation_base_path(sim_id)
+    if os.path.exists(path):
+        rmtree(path)
 
 
-@app.post('/simulations/statistics', dependencies=[Depends(api_key_auth)], tags=['simulations'])
+@app.post(
+    "/simulations/statistics",
+    dependencies=[Depends(api_key_auth)],
+    tags=["simulations"],
+)
 async def statistics(statistics_input: StatisticsInput) -> list[StatisticsOutput]:
     stats = []
     for sim_id in statistics_input.sim_ids:
