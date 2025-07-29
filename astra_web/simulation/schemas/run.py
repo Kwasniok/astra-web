@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, computed_field
-from astra_web.paths import GENERATOR_DATA_PATH
+from astra_web.paths import generator_path
 from astra_web.decorators.decorators import ini_exportable
 
 @ini_exportable
@@ -62,7 +62,7 @@ class SimulationRunSpecifications(BaseModel):
         file_name = 'example.ini'
         if self.particle_file_name is not None:
             file_name = self.particle_file_name + ".ini"
-        return f"{GENERATOR_DATA_PATH}/{file_name}"
+        return generator_path(file_name)
 
     Qbunch: float = Field(
         default=None,

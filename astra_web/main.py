@@ -4,7 +4,7 @@ from datetime import datetime
 from shortuuid import uuid
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import ORJSONResponse
-from .paths import generator_base_path, simulation_base_path
+from .paths import generator_path, simulation_path
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
 from .generator.schemas.io import GeneratorInput, GeneratorOutput
@@ -75,7 +75,7 @@ def generate_particle_distribution(generator_input: GeneratorInput) -> Generator
 def upload_particle_distribution(data: Particles, gen_id: str | None = None) -> dict:
     if gen_id is None:
         gen_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
-    path = generator_base_path(gen_id) + ".ini"
+    path = generator_path(gen_id, ".ini")
     if os.path.exists(path):
         os.remove(path)
 
@@ -91,7 +91,7 @@ def download_particle_distribution(gen_id: str) -> Particles | None:
     Returns a specific particle distribution on the requested server depending
     on the given filename.
     """
-    path = generator_base_path(gen_id) + ".ini"
+    path = generator_path(gen_id, ".ini")
     if os.path.exists(path):
         return Particles.from_csv(path)
     else:
@@ -105,7 +105,7 @@ def list_available_particle_distributions() -> list[str]:
     """
     Returns a list of all existing particle distributions on the requested server.
     """
-    files = glob.glob(generator_base_path("*.ini"))
+    files = glob.glob(generator_path("*", ".ini"))
     files = list(map(lambda p: p.split("/")[-1].split(".ini")[0], files))
 
     return sorted(files)
@@ -115,7 +115,7 @@ def list_available_particle_distributions() -> list[str]:
     "/particles/{gen_id}", dependencies=[Depends(api_key_auth)], tags=["particles"]
 )
 async def delete_particle_distribution(gen_id: str) -> None:
-    path = generator_base_path(gen_id) + ".ini"
+    path = generator_path(gen_id, ".ini")
     if os.path.exists(path):
         os.remove(path)
 
@@ -129,7 +129,7 @@ async def run_simulation(simulation_input: SimulationInput) -> dict:
 
 
 def _particle_paths(id: str):
-    files = glob.glob(os.path.join(simulation_base_path(id), "run.*[0-9].001"))
+    files = glob.glob(simulation_path(id, "run.*[0-9].001"))
     return sorted(
         files,
         key=lambda s: s.split(".")[1],
@@ -163,7 +163,7 @@ def list_available_particle_distributions() -> list[str]:
     """
     Returns a list of all existing simulations on the requested server.
     """
-    files = glob.glob(simulation_base_path("*"))
+    files = glob.glob(simulation_path("*"))
     files = list(map(lambda p: p.split("/")[-1], files))
 
     return sorted(files)
@@ -177,7 +177,7 @@ def download_simulation_results(sim_id: str) -> SimulationOutput | None:
     Returns the output of a specific ASTRA simulation on the requested server depending
     on the given ID.
     """
-    path = simulation_base_path(sim_id)
+    path = simulation_path(sim_id)
     if os.path.exists(path):
         return load_simulation_output(path, sim_id)
     else:
@@ -191,7 +191,7 @@ def download_simulation_results(sim_id: str) -> SimulationOutput | None:
     "/simulations/{sim_id}", dependencies=[Depends(api_key_auth)], tags=["simulations"]
 )
 async def delete_simulation(sim_id: str) -> None:
-    path = simulation_base_path(sim_id)
+    path = simulation_path(sim_id)
     if os.path.exists(path):
         rmtree(path)
 

@@ -6,7 +6,7 @@ from shortuuid import uuid
 from typing import Optional
 from pydantic import BaseModel, Field
 from astra_web.decorators.decorators import ini_exportable
-from astra_web.paths import SIMULATION_DATA_PATH
+from astra_web.paths import simulation_path
 from astra_web.generator.schemas.particles import Particles
 from .run import SimulationRunSpecifications
 from .modules import Solenoid, Cavity
@@ -85,7 +85,7 @@ class SimulationInput(BaseModel):
     @property
     def run_dir(self):
         dir_name = self.sim_id if self.run_specs.run_dir is None else self.run_specs.run_dir
-        return f"{SIMULATION_DATA_PATH}/{dir_name}"
+        return simulation_path(dir_name)
 
     run_specs: SimulationRunSpecifications = Field(
         default=SimulationRunSpecifications(),

@@ -1,16 +1,19 @@
+import os
 import numpy as np
 import json
 from pmd_beamphysics import ParticleGroup
 from astra_web.generator.schemas.particles import Particles
 from astra_web.simulation.schemas.io import StatisticsInput, StatisticsOutput
-from astra_web.paths import SIMULATION_DATA_PATH
+from astra_web.paths import simulation_path
 
 C = 299792458
 M0 = 9.10938356e-31
 
 
-def get_statistics(sim_id: str, n_slices: int, particles: Particles) -> StatisticsOutput:
-    with open(f"{SIMULATION_DATA_PATH}/{sim_id}/input.json", 'r') as f:
+def get_statistics(
+    sim_id: str, n_slices: int, particles: Particles
+) -> StatisticsOutput:
+    with open(simulation_path(sim_id, "input.json"), "r") as f:
         sim_input = json.load(f)
 
     particle_group = particles.to_pmd(only_active=True)
@@ -19,7 +22,9 @@ def get_statistics(sim_id: str, n_slices: int, particles: Particles) -> Statisti
         z_pos = particle_group.avg("z")
         ptp_z = particle_group.ptp("z")
     except (ZeroDivisionError, ValueError) as e:
-        print(f"Calculation of slice statistics for sim {sim_id} raised {type(e)}. Message: {e}")
+        print(
+            f"Calculation of slice statistics for sim {sim_id} raised {type(e)}. Message: {e}"
+        )
         z_pos = particles.z[0]
         ptp_z = max(particles.z) - min(particles.z)
         slice_data = {}
@@ -29,15 +34,18 @@ def get_statistics(sim_id: str, n_slices: int, particles: Particles) -> Statisti
         inputs=sim_input,
         sim_id=sim_id,
         particle_counts={
-            'total': len(particles.x),
-            'active': int(sum(particles.active_particles)),
-            'lost': int(sum(particles.lost_particles))}
+            "total": len(particles.x),
+            "active": int(sum(particles.active_particles)),
+            "lost": int(sum(particles.lost_particles)),
+        },
     )
 
 
 def sl_emittance(particle_group: ParticleGroup, n_slice):
-    slice_data = particle_group.slice_statistics("norm_emit_x", "norm_emit_y", n_slice=n_slice)
-    slice_zs = (slice_data['mean_z'] - particle_group.avg("z")) * 1e3
+    slice_data = particle_group.slice_statistics(
+        "norm_emit_x", "norm_emit_y", n_slice=n_slice
+    )
+    slice_zs = (slice_data["mean_z"] - particle_group.avg("z")) * 1e3
     emittances = np.sqrt(slice_data["norm_emit_x"] * slice_data["norm_emit_y"]) * 1e6
 
     return list(map(tuple, np.vstack([slice_zs, emittances]).T))
@@ -45,7 +53,8 @@ def sl_emittance(particle_group: ParticleGroup, n_slice):
 
 def slice_emittance(particles: Particles, n_slices: 20) -> list[tuple[float, float]]:
     x, px, y, py, z = active_data(particles)
-    z_min = np.min(z); z_max = np.max(z)
+    z_min = np.min(z)
+    z_max = np.max(z)
     dz = (z_max - z_min) / n_slices
 
     eps = []
@@ -53,7 +62,7 @@ def slice_emittance(particles: Particles, n_slices: 20) -> list[tuple[float, flo
         idx = np.logical_and(z < z_min + (i + 1) * dz, z > z_min + i * dz)
         eps_x = projected_emittance(x[idx], px[idx])
         eps_y = projected_emittance(y[idx], py[idx])
-        slice_center = (z_min + (i + 0.5) * dz - z[0]) * 1e3 # mm
+        slice_center = (z_min + (i + 0.5) * dz - z[0]) * 1e3  # mm
         eps.append((slice_center, np.sqrt(eps_x * eps_y) * 1e6))
 
     return eps
@@ -71,14 +80,12 @@ def active_data(particles: Particles):
     return x, px, y, py, z
 
 
-
 def projected_emittance(x, p) -> float:
-    p_ = p * 5.36e-28 # kg*m/s
-    x2 = np.mean(x**2) - np.mean(x)**2
-    px2 = np.mean(p_**2) - np.mean(p_)**2
-    xpx = np.mean(x*p_) - np.mean(x) * np.mean(p_)
+    p_ = p * 5.36e-28  # kg*m/s
+    x2 = np.mean(x**2) - np.mean(x) ** 2
+    px2 = np.mean(p_**2) - np.mean(p_) ** 2
+    xpx = np.mean(x * p_) - np.mean(x) * np.mean(p_)
 
-    eps = 1/(M0*C) * np.sqrt(abs(x2*px2 - xpx**2))
+    eps = 1 / (M0 * C) * np.sqrt(abs(x2 * px2 - xpx**2))
 
     return eps
-

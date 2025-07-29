@@ -4,7 +4,7 @@ import pandas as pd
 from subprocess import run
 from .schemas.io import SimulationInput, SimulationOutput
 from .schemas.tables import XYEmittanceTable, ZEmittanceTable
-from astra_web.paths import ASTRA_BINARY_PATH, SIMULATION_DATA_PATH
+from astra_web.paths import astra_binary_path
 from astra_web.generator.generator import read_particle_file
 
 def link_initial_particle_distribution(simulation_input: SimulationInput):
@@ -43,7 +43,7 @@ def _astra_binary(simulation_input: SimulationInput) -> str:
     if simulation_input.run_specs.thread_num > 1:
         binary = "parallel_" + binary
 
-    return f"{ASTRA_BINARY_PATH}/{binary}"
+    return astra_binary_path(binary)
 
 
 def load(file_path: str, model_cls):
