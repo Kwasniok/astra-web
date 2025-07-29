@@ -223,8 +223,12 @@ class GeneratorInput(BaseModel):
         self._gen_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
 
 
+class GeneratorID(BaseModel):
+    gen_id: str
+
+
 class GeneratorOutput(BaseModel):
     gen_id: str
-    particles: Optional[Particles]
-    input_ini: str | None = ""
+    particles: Particles
+    input_ini: str
     run_output: str

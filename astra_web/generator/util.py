@@ -2,7 +2,7 @@ import os
 from .schemas.particles import Particles
 
 
-def read_particle_file(filepath):
+def _read_particle_file(filepath):
     if os.path.exists(filepath):
         return Particles.from_csv(filepath)
     else:

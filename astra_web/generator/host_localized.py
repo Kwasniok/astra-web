@@ -3,7 +3,7 @@ from subprocess import run
 from astra_web.host_localizer import HostLocalizer
 from .schemas.io import GeneratorInput
 from .schemas.particles import Particles
-from .util import read_particle_file
+from .util import _read_particle_file
 
 
 def write_generator_files(
@@ -20,7 +20,7 @@ def write_generator_files(
 
 def process_generator_input(
     generator_input: GeneratorInput, localizer: HostLocalizer
-) -> str:
+) -> None:
     raw_process_output = run(
         [localizer.astra_binary_path("generator"), f"{generator_input.gen_id}.in"],
         cwd=localizer.generator_path(),
@@ -32,12 +32,17 @@ def process_generator_input(
     with open(output_file_name, "w") as file:
         file.write(decoded_process_output)
 
-    return decoded_process_output
+
+def read_particle_file(gen_id: str, localizer: HostLocalizer) -> Particles:
+    filepath = localizer.generator_path(gen_id, ".ini")
+
+    return _read_particle_file(filepath)
 
 
-def read_output_file(
-    generator_input: GeneratorInput, localizer: HostLocalizer
-) -> Particles:
-    filepath = localizer.generator_path(generator_input.gen_id, ".ini")
+def read_generator_file(gen_id: str, extension: str, localizer: HostLocalizer) -> str:
+    filepath = localizer.generator_path(gen_id, extension)
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"Generator file '{filepath}' not found.")
 
-    return read_particle_file(filepath)
+    with open(filepath, "r") as file:
+        return file.read()

@@ -4,18 +4,23 @@ from datetime import datetime
 from shortuuid import uuid
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import ORJSONResponse
-from .host_localizer import HostLocalizer, LocalHostLocalizer
+from .host_localizer import LocalHostLocalizer
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
-from .generator.schemas.io import GeneratorInput, GeneratorOutput
-from .simulation.schemas.io import StatisticsInput, StatisticsOutput
-from .simulation.schemas.io import SimulationInput, SimulationOutput
+from .generator.schemas.io import GeneratorInput, GeneratorID, GeneratorOutput
+from .simulation.schemas.io import (
+    SimulationInput,
+    SimulationOutput,
+    SimulationID,
+    StatisticsInput,
+    StatisticsOutput,
+)
 from .generator.host_localized import (
     write_generator_files,
     process_generator_input,
-    read_output_file,
+    read_particle_file,
+    read_generator_file,
 )
-from .generator.util import read_particle_file
 from .simulation.host_localized import (
     write_simulation_files,
     process_simulation_input,
@@ -75,21 +80,14 @@ def list_available_particle_distributions() -> list[str]:
 )
 async def generate_particle_distribution(
     generator_input: GeneratorInput,
-) -> GeneratorOutput:
+) -> GeneratorID:
     """
     Description to be done
     """
     localizer = LocalHostLocalizer.instance()
-    input_ini = write_generator_files(generator_input, localizer)
-    run_output = process_generator_input(generator_input, localizer)
-    particle_output = read_output_file(generator_input, localizer)
-
-    return GeneratorOutput(
-        gen_id=generator_input.gen_id,
-        particles=particle_output,
-        run_output=run_output,
-        input_ini=input_ini,
-    )
+    write_generator_files(generator_input, localizer)
+    process_generator_input(generator_input, localizer)
+    return GeneratorID(gen_id=generator_input.gen_id)
 
 
 @app.put(
@@ -114,19 +112,19 @@ def upload_particle_distribution(data: Particles, gen_id: str | None = None) -> 
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-def download_particle_distribution(gen_id: str) -> Particles | None:
-    """
-    Returns a specific particle distribution on the requested server depending
-    on the given filename.
-    """
+def download_generator_results(gen_id: str) -> GeneratorOutput | None:
     localizer = LocalHostLocalizer.instance()
     path = localizer.generator_path(gen_id, ".ini")
-    if os.path.exists(path):
-        return Particles.from_csv(path)
-    else:
+    if not os.path.exists(path):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Item '{gen_id}' not found."
         )
+    return GeneratorOutput(
+        gen_id=gen_id,
+        particles=read_particle_file(gen_id, localizer),
+        input_ini=read_generator_file(gen_id, ".in", localizer),
+        run_output=read_generator_file(gen_id, ".out", localizer),
+    )
 
 
 @app.delete(
@@ -162,12 +160,11 @@ def list_available_particle_distributions() -> list[str]:
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-async def run_simulation(simulation_input: SimulationInput) -> dict:
+async def run_simulation(simulation_input: SimulationInput) -> SimulationID:
     localizer = LocalHostLocalizer.instance()
     write_simulation_files(simulation_input, localizer)
-    output = process_simulation_input(simulation_input, localizer)
-
-    return {"output": output, "sim_id": simulation_input.sim_id}
+    process_simulation_input(simulation_input, localizer)
+    return SimulationID(sim_id=simulation_input.sim_id)
 
 
 @app.get(

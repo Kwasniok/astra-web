@@ -133,6 +133,10 @@ class SimulationInput(BaseModel):
         )
 
 
+class SimulationID(BaseModel):
+    sim_id: str
+
+
 class SimulationOutput(BaseModel):
     sim_id: str
     input_ini: str

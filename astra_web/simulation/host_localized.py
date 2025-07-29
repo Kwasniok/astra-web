@@ -8,12 +8,14 @@ from pmd_beamphysics import ParticleGroup
 from astra_web.generator.schemas.particles import Particles
 from astra_web.simulation.schemas.io import StatisticsOutput
 from astra_web.host_localizer import HostLocalizer
-from astra_web.generator.util import read_particle_file
+from astra_web.generator.util import _read_particle_file
 from .schemas.io import SimulationInput, SimulationOutput
 from .schemas.tables import XYEmittanceTable, ZEmittanceTable
 
 
-def write_simulation_files(simulation_input: SimulationInput, localizer: HostLocalizer):
+def write_simulation_files(
+    simulation_input: SimulationInput, localizer: HostLocalizer
+) -> None:
     """
     Write the simulation input to disk, including the INI file, element files and input JSON.
     """
@@ -66,7 +68,7 @@ def _write_input_json(simulation_input: SimulationInput, run_path: str) -> None:
 
 def process_simulation_input(
     simulation_input: SimulationInput, localizer: HostLocalizer
-) -> str:
+) -> None:
     _link_initial_particle_distribution(simulation_input, localizer)
     raw_process_output = run(
         _run_command(simulation_input, localizer),
@@ -80,8 +82,6 @@ def process_simulation_input(
     os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     with open(output_file_name, "w") as file:
         file.write(terminal_output)
-
-    return terminal_output
 
 
 def _link_initial_particle_distribution(
@@ -128,7 +128,7 @@ def load_simulation_output(
     particle_paths = sorted(
         glob.glob(os.path.join(path, "run.*[0-9].001")), key=lambda s: s.split(".")[1]
     )
-    particles = [read_particle_file(path) for path in particle_paths]
+    particles = [_read_particle_file(path) for path in particle_paths]
 
     return SimulationOutput(
         sim_id=sim_id,
@@ -163,7 +163,7 @@ def _load(file_path: str, model_cls):
 
 def get_statistics(sim_id: str, localizer: HostLocalizer) -> StatisticsOutput:
 
-    particles = read_particle_file(_particle_paths(sim_id, localizer)[-1])
+    particles = _read_particle_file(_particle_paths(sim_id, localizer)[-1])
 
     return StatisticsOutput(
         sim_id=sim_id,
