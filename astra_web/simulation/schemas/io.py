@@ -6,7 +6,7 @@ from shortuuid import uuid
 from typing import Optional
 from pydantic import BaseModel, Field
 from astra_web.decorators.decorators import ini_exportable
-from astra_web.utils import SIMULATION_DATA_PATH
+from astra_web.paths import SIMULATION_DATA_PATH
 from astra_web.generator.schemas.particles import Particles
 from .run import SimulationRunSpecifications
 from .modules import Solenoid, Cavity

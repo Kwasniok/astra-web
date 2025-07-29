@@ -4,9 +4,9 @@ services:
       context: ..
       dockerfile: docker/api.Dockerfile
       args:
-        BINARY_PATH: /usr/local/bin
         API_KEY: $ASTRA_API_KEY
     environment:
+      ASTRA_BINARY_PATH: /usr/local/bin
       GENERATOR_DATA_PATH: "/data/generator"
       SIMULATION_DATA_PATH: "/data/simulation"
     volumes:

@@ -3,7 +3,7 @@ import json
 from pmd_beamphysics import ParticleGroup
 from astra_web.generator.schemas.particles import Particles
 from astra_web.simulation.schemas.io import StatisticsInput, StatisticsOutput
-from astra_web.utils import SIMULATION_DATA_PATH
+from astra_web.paths import SIMULATION_DATA_PATH
 
 C = 299792458
 M0 = 9.10938356e-31

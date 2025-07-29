@@ -4,11 +4,8 @@ import pandas as pd
 from subprocess import run
 from .schemas.io import SimulationInput, SimulationOutput
 from .schemas.tables import XYEmittanceTable, ZEmittanceTable
-from astra_web.utils import get_env_var, SIMULATION_DATA_PATH
+from astra_web.paths import ASTRA_BINARY_PATH, SIMULATION_DATA_PATH
 from astra_web.generator.generator import read_particle_file
-
-ASTRA_BINARY_PATH = get_env_var("ASTRA_BINARY_PATH")
-
 
 def link_initial_particle_distribution(simulation_input: SimulationInput):
     os.symlink(simulation_input.run_specs.Distribution,

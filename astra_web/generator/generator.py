@@ -1,11 +1,8 @@
 import os
 from subprocess import run
-from astra_web.utils import get_env_var, default_filename
+from astra_web.paths import ASTRA_BINARY_PATH, default_filename
 from .schemas.io import GeneratorInput
 from .schemas.particles import Particles
-
-
-ASTRA_BINARY_PATH = get_env_var("ASTRA_BINARY_PATH")
 
 
 def write_input_file(generator_input: GeneratorInput) -> str:

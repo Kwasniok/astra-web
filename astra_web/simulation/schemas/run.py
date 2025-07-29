@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, computed_field
-from astra_web.utils import GENERATOR_DATA_PATH
+from astra_web.paths import GENERATOR_DATA_PATH
 from astra_web.decorators.decorators import ini_exportable
 
 @ini_exportable

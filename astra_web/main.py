@@ -4,7 +4,7 @@ from datetime import datetime
 from shortuuid import uuid
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import ORJSONResponse
-from .utils import default_filename, GENERATOR_DATA_PATH, SIMULATION_DATA_PATH
+from .paths import default_filename, GENERATOR_DATA_PATH, SIMULATION_DATA_PATH
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
 from .generator.schemas.io import GeneratorInput, GeneratorOutput
