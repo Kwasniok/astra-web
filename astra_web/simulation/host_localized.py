@@ -52,7 +52,7 @@ def _write_input_json(simulation_input: SimulationInput, run_path: str) -> None:
             "emission_time": simulation_input.run_specs.Trms,
             "gun_phase": simulation_input.cavities[0].Phi,
             "gun_gradient": simulation_input.cavities[0].MaxE,
-            "input_distribution": simulation_input.run_specs.particle_file_name,
+            "input_distribution": simulation_input.run_specs.particle_base_file_name,
         }
         str_ = json.dumps(
             data,
@@ -68,47 +68,11 @@ def _link_initial_particle_distribution(
     simulation_input: SimulationInput, localizer: HostLocalizer
 ):
     os.symlink(
-        simulation_input.run_specs.Distribution,
+        localizer.generator_path(
+            simulation_input.run_specs.particle_base_file_name, ".ini"
+        ),
         localizer.simulation_path(simulation_input.run_dir, "run.0000.001"),
     )
-
-
-def dispatch_simulation(
-    simulation_input: SimulationInput, localizer: HostLocalizer
-) -> None:
-    """
-    Dispatches the simulation by running the ASTRA binary with the appropriate input file.
-    """
-    raw_process_output = run(
-        _run_command(simulation_input, localizer),
-        cwd=localizer.simulation_path(simulation_input.run_dir),
-        capture_output=True,
-        timeout=simulation_input.run_specs.timeout,
-    ).stdout
-
-    terminal_output = raw_process_output.decode()
-    output_file_name = localizer.simulation_path(simulation_input.run_dir, "run.out")
-    os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
-    with open(output_file_name, "w") as file:
-        file.write(terminal_output)
-
-
-def _run_command(
-    simulation_input: SimulationInput, localizer: HostLocalizer
-) -> list[str]:
-    cmd = [_astra_binary(simulation_input, localizer), "run.in"]
-
-    if simulation_input.run_specs.thread_num > 1:
-        cmd = ["mpirun", "-n", str(simulation_input.run_specs.thread_num)] + cmd
-    return cmd
-
-
-def _astra_binary(simulation_input: SimulationInput, localizer: HostLocalizer) -> str:
-    binary = "astra"
-    if simulation_input.run_specs.thread_num > 1:
-        binary = "parallel_" + binary
-
-    return localizer.astra_binary_path(binary)
 
 
 def load_simulation_output(

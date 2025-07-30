@@ -1,13 +1,9 @@
 from pydantic import BaseModel, Field, computed_field
-from astra_web.host_localizer import HostLocalizer, LocalHostLocalizer
 from astra_web.decorators.decorators import ini_exportable
-from astra_web.host_localizer.local import LocalHostLocalizer
 
 
 @ini_exportable
 class SimulationRunSpecifications(BaseModel):
-
-    _localizer: HostLocalizer = LocalHostLocalizer.instance()
 
     run_dir: str = Field(
         default=None,
@@ -20,7 +16,7 @@ class SimulationRunSpecifications(BaseModel):
     @computed_field(return_type=str, description="Run name for protocol", repr=True)
     @property
     def Head(self) -> str:
-        return f"Simulation run with initial particle distribution {self.particle_file_name}"
+        return f"Simulation run with initial particle distribution {self.particle_base_file_name}"
 
     thread_num: int = Field(
         default=1,
@@ -44,9 +40,10 @@ class SimulationRunSpecifications(BaseModel):
         validation_alias="run_number",
         description="The run_number is used as extension for all generated output files.",
     )
-    particle_file_name: str = Field(
-        default=None,
-        description="Name of a particle file generated with the /generate endpoint of this API.",
+
+    particle_base_file_name: str = Field(
+        default="example",
+        description="Name of a particle file generated with the /generate endpoint of this API without the file extension",
         exclude=True,
     )
 
@@ -57,10 +54,7 @@ class SimulationRunSpecifications(BaseModel):
     )
     @property
     def Distribution(self) -> str:
-        file_name = "example.ini"
-        if self.particle_file_name is not None:
-            file_name = self.particle_file_name + ".ini"
-        return self._localizer.generator_path(file_name)
+        return self.particle_base_file_name + ".ini"
 
     Qbunch: float = Field(
         default=None,

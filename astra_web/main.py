@@ -17,13 +17,11 @@ from .simulation.schemas.io import (
 )
 from .generator.host_localized import (
     write_generator_files,
-    dispatch_generation,
     read_particle_file,
     read_generator_file,
 )
 from .simulation.host_localized import (
     write_simulation_files,
-    dispatch_simulation,
     load_simulation_output,
     get_statistics,
 )
@@ -86,7 +84,7 @@ async def generate_particle_distribution(
     """
     localizer = LocalHostLocalizer.instance()
     write_generator_files(generator_input, localizer)
-    dispatch_generation(generator_input, localizer)
+    localizer.dispatch_generation(generator_input)
     return GeneratorID(gen_id=generator_input.gen_id)
 
 
@@ -164,7 +162,7 @@ def list_available_particle_distributions() -> list[str]:
 async def run_simulation(simulation_input: SimulationInput) -> SimulationID:
     localizer = LocalHostLocalizer.instance()
     write_simulation_files(simulation_input, localizer)
-    dispatch_simulation(simulation_input, localizer)
+    localizer.dispatch_simulation(simulation_input)
     return SimulationID(sim_id=simulation_input.sim_id)
 
 
