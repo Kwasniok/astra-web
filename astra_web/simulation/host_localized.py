@@ -14,13 +14,14 @@ def write_simulation_files(
     simulation_input: SimulationInput, localizer: HostLocalizer
 ) -> None:
     """
-    Write the simulation input to disk, including the INI file, element files and input JSON.
+    Write the simulation input to disk, including the INI file, element files, input JSON and linking the initial particle distribution.
     """
     run_path = localizer.simulation_path(simulation_input.run_dir)
     os.makedirs(run_path, exist_ok=True)
     _write_simulation_ini(simulation_input, run_path)
     _write_element_files(simulation_input, run_path)
     _write_input_json(simulation_input, run_path)
+    _link_initial_particle_distribution(simulation_input, localizer)
 
 
 def _write_simulation_ini(simulation_input: SimulationInput, run_path: str) -> None:
@@ -63,10 +64,21 @@ def _write_input_json(simulation_input: SimulationInput, run_path: str) -> None:
         f.write(str_)
 
 
-def process_simulation_input(
+def _link_initial_particle_distribution(
+    simulation_input: SimulationInput, localizer: HostLocalizer
+):
+    os.symlink(
+        simulation_input.run_specs.Distribution,
+        localizer.simulation_path(simulation_input.run_dir, "run.0000.001"),
+    )
+
+
+def dispatch_simulation(
     simulation_input: SimulationInput, localizer: HostLocalizer
 ) -> None:
-    _link_initial_particle_distribution(simulation_input, localizer)
+    """
+    Dispatches the simulation by running the ASTRA binary with the appropriate input file.
+    """
     raw_process_output = run(
         _run_command(simulation_input, localizer),
         cwd=localizer.simulation_path(simulation_input.run_dir),
@@ -79,15 +91,6 @@ def process_simulation_input(
     os.makedirs(os.path.dirname(output_file_name), exist_ok=True)
     with open(output_file_name, "w") as file:
         file.write(terminal_output)
-
-
-def _link_initial_particle_distribution(
-    simulation_input: SimulationInput, localizer: HostLocalizer
-):
-    os.symlink(
-        simulation_input.run_specs.Distribution,
-        localizer.simulation_path(simulation_input.run_dir, "run.0000.001"),
-    )
 
 
 def _run_command(
@@ -111,6 +114,9 @@ def _astra_binary(simulation_input: SimulationInput, localizer: HostLocalizer) -
 def load_simulation_output(
     sim_id: str, localizer: HostLocalizer
 ) -> SimulationOutput | None:
+    """
+    Loads the simulation output for a given simulation ID.
+    Returns None if the simulation does not exist."""
 
     path = localizer.simulation_path(sim_id)
     if not os.path.exists(path):
@@ -158,7 +164,15 @@ def _load(file_path: str, model_cls):
         return None
 
 
-def get_statistics(sim_id: str, localizer: HostLocalizer) -> StatisticsOutput:
+def get_statistics(sim_id: str, localizer: HostLocalizer) -> StatisticsOutput | None:
+    """
+    Returns statistics about the simulation.
+    Returns None if the simulation does not exist.
+    """
+
+    path = localizer.simulation_path(sim_id)
+    if not os.path.exists(path):
+        return None
 
     particles = _read_particle_file(_particle_paths(sim_id, localizer)[-1])
 

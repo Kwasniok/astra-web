@@ -17,13 +17,13 @@ from .simulation.schemas.io import (
 )
 from .generator.host_localized import (
     write_generator_files,
-    process_generator_input,
+    dispatch_generation,
     read_particle_file,
     read_generator_file,
 )
 from .simulation.host_localized import (
     write_simulation_files,
-    process_simulation_input,
+    dispatch_simulation,
     load_simulation_output,
     get_statistics,
 )
@@ -86,7 +86,7 @@ async def generate_particle_distribution(
     """
     localizer = LocalHostLocalizer.instance()
     write_generator_files(generator_input, localizer)
-    process_generator_input(generator_input, localizer)
+    dispatch_generation(generator_input, localizer)
     return GeneratorID(gen_id=generator_input.gen_id)
 
 
@@ -112,12 +112,13 @@ def upload_particle_distribution(data: Particles, gen_id: str | None = None) -> 
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-def download_generator_results(gen_id: str) -> GeneratorOutput | None:
+def download_generator_results(gen_id: str) -> GeneratorOutput:
     localizer = LocalHostLocalizer.instance()
     path = localizer.generator_path(gen_id, ".ini")
     if not os.path.exists(path):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Item '{gen_id}' not found."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Generator output for '{gen_id}' not found.",
         )
     return GeneratorOutput(
         gen_id=gen_id,
@@ -163,7 +164,7 @@ def list_available_particle_distributions() -> list[str]:
 async def run_simulation(simulation_input: SimulationInput) -> SimulationID:
     localizer = LocalHostLocalizer.instance()
     write_simulation_files(simulation_input, localizer)
-    process_simulation_input(simulation_input, localizer)
+    dispatch_simulation(simulation_input, localizer)
     return SimulationID(sim_id=simulation_input.sim_id)
 
 
@@ -172,7 +173,7 @@ async def run_simulation(simulation_input: SimulationInput) -> SimulationID:
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-def download_simulation_results(sim_id: str) -> SimulationOutput | None:
+def download_simulation_results(sim_id: str) -> SimulationOutput:
     """
     Returns the output of a specific ASTRA simulation on the requested server depending
     on the given ID.
@@ -208,4 +209,9 @@ async def delete_simulation(sim_id: str) -> None:
 async def statistics(data: StatisticsInput, sim_id: str) -> StatisticsOutput:
     localizer = LocalHostLocalizer.instance()
     stats = get_statistics(sim_id, localizer)
+    if stats is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Simulation '{sim_id}' not found.",
+        )
     return stats
