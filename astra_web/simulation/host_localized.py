@@ -1,11 +1,8 @@
 import os
 import glob
-import numpy as np
 import pandas as pd
 import json
 from subprocess import run
-from pmd_beamphysics import ParticleGroup
-from astra_web.generator.schemas.particles import Particles
 from astra_web.simulation.schemas.io import StatisticsOutput
 from astra_web.host_localizer import HostLocalizer
 from astra_web.generator.util import _read_particle_file
