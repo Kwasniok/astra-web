@@ -118,16 +118,9 @@ In order to fix the problem, one can enable lingering by executing
 on the remote host.
 Source: [Stackoverflow](https://stackoverflow.com/a/73312070)
 
-# Cite this project
+# Original Project
 
-If you use this project in your scientific work and find it useful, you could use the following BibTeX entry to cite this project.
+The original project his is based on can be found at:
 
-      @misc{astra-web,
-        Author = {A. Klemps},
-        Title = {ASTRA-Web},
-        Year = {2024},
-        publisher = {GitHub},
-        version = {0.1.0},
-        doi = {10.5281/zenodo.12606498},
-        url = {https://doi.org/10.5281/zenodo.12606498}
-      }
+- https://doi.org/10.5281/zenodo.12606498
+- https://github.com/AlexanderKlemps/astra-web
