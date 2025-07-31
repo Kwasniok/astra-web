@@ -89,8 +89,8 @@ class SLURMHostLocalizer(HostLocalizer):
                     "LD_LIBRARY_PATH=/lib/:/lib64/:/usr/local/lib",
                 ],
                 # separate SLURM output if desired
-                "standard_output": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm_%j.out",
-                "standard_error": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm_%j.err",
+                "standard_output": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm-%j.out",
+                "standard_error": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm-%j.err",
                 "script": f"""#!/usr/bin/env bash
 {cmd} > '{output_file_name_base}.out' 2> '{output_file_name_base}.err'
 [ ! -s '{output_file_name_base}.out' ] && rm -f '{output_file_name_base}.out'
