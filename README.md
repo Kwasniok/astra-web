@@ -22,7 +22,7 @@ Ensure the following environment variables are set (e.g. in `./docker/.env`)
 
 | Variable          | Required | Description                                                                  |
 |-------------------|----------|------------------------------------------------------------------------------|
-| `ASTRA_API_KEY`   | yes      | The API key to access the ASTRA web API. This is required for authorization. |
+| `ASTRA_WEB_API_KEY`   | yes      | The API key to access the ASTRA web API. This is required for authorization. |
 | `ASTRA_DATA_PATH` | optional | The path to a local data directory where all results are stored. If not specified an internal storage volume will be used.|
 
 note: Ensure that the user starting the Docker container has read and write access to the `ASTRA_DATA_PATH` directory when specified.

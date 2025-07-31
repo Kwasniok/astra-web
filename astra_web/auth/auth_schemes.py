@@ -2,7 +2,7 @@ import os
 from fastapi import Depends, HTTPException, status
 from fastapi.security.api_key import APIKeyHeader
 
-API_KEYS = [os.getenv("API_KEY")]
+API_KEYS = [os.getenv("ASTRA_WEB_API_KEY")]
 auth_scheme = APIKeyHeader(name="x-api-key", auto_error=False)
 
 

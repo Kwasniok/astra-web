@@ -11,9 +11,5 @@ RUN python3 -m pip install --upgrade pip && pip install --upgrade -r requirement
 COPY .. /app
 RUN chmod 777 start.sh
 
-# Set api key env variable
-ARG API_KEY
-ENV API_KEY=${API_KEY}
-
 # Run FastAPI server
 ENTRYPOINT ["/bin/bash", "-c", "./start.sh"]

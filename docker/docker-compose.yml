@@ -3,8 +3,8 @@ services:
     build:
       context: ..
       dockerfile: docker/api.Dockerfile
-      args:
-        API_KEY: $ASTRA_API_KEY
+    env_file:
+      - .env
     environment:
       ASTRA_BINARY_PATH: /usr/local/bin
       GENERATOR_DATA_PATH: "/data/generator"
@@ -17,6 +17,7 @@ services:
 
 volumes:
   data:
+
 
 networks:
   astra:
