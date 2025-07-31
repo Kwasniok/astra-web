@@ -1,0 +1,13 @@
+services:
+  api:
+    extra_hosts:
+      # required for forwarding the SSH tunnel from the localhost to the container
+      - "host.docker.internal:host-gateway"
+    environment:
+      SLURM_URL: ${SLURM_URL}
+      SLURM_PROXY: ${SLURM_PROXY}
+      SLURM_USER_NAME: ${SLURM_USER_NAME}
+      SLURM_USER_TOKEN: ${SLURM_USER_TOKEN}
+      SLURM_ENVIRONMENT: ${SLURM_ENVIRONMENT}
+      SLURM_ASTRA_BINARY_PATH: ${SLURM_ASTRA_BINARY_PATH}
+      SLURM_DATA_PATH: ${SLURM_DATA_PATH}

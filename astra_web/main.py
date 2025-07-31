@@ -76,12 +76,9 @@ def list_available_particle_distributions() -> list[str]:
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-async def generate_particle_distribution(
+async def dispatch_particle_distribution_generation(
     generator_input: GeneratorInput,
 ) -> GeneratorID:
-    """
-    Description to be done
-    """
     localizer = LocalHostLocalizer.instance()
     write_generator_files(generator_input, localizer)
     localizer.dispatch_generation(generator_input)
@@ -159,7 +156,7 @@ def list_available_particle_distributions() -> list[str]:
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-async def run_simulation(simulation_input: SimulationInput) -> SimulationID:
+async def dispatch_simulation(simulation_input: SimulationInput) -> SimulationID:
     localizer = LocalHostLocalizer.instance()
     write_simulation_files(simulation_input, localizer)
     localizer.dispatch_simulation(simulation_input)

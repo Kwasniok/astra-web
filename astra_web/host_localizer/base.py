@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import os
 from astra_web.generator.schemas.io import GeneratorInput
 from astra_web.simulation.schemas.io import SimulationInput
+from .schemas.dispatch import DispatchResponse
 
 
 class HostLocalizer(ABC):
@@ -41,23 +42,44 @@ class HostLocalizer(ABC):
         """
         pass
 
-    @abstractmethod
-    def dispatch_generation(
-        self,
-        generator_input: GeneratorInput,
-    ) -> None:
+    def dispatch_generation(self, generator_input: GeneratorInput) -> DispatchResponse:
         """
         Dispatches the generation process by running the ASTRA generator binary with the appropriate input file.
         """
-        pass
+        return self._dispatch_command(
+            self._generator_command(generator_input),
+            cwd=self.generator_path(),
+            output_file_name_base=generator_input.gen_id,
+        )
 
-    @abstractmethod
     def dispatch_simulation(
-        self,
-        simulation_input: SimulationInput,
-    ) -> None:
+        self, simulation_input: SimulationInput
+    ) -> DispatchResponse:
         """
         Dispatches a simulation to the host system.
+        """
+        return self._dispatch_command(
+            self._simulation_command(simulation_input),
+            cwd=self.simulation_path(simulation_input.run_dir),
+            output_file_name_base="run",
+            timeout=simulation_input.run_specs.timeout,
+        )
+
+    @abstractmethod
+    def _dispatch_command(
+        self,
+        command: list[str],
+        cwd: str,
+        output_file_name_base: str,
+        timeout: int | None = None,
+    ) -> DispatchResponse:
+        """
+        Dispatches a command with the specified directory and output configuration.
+
+        :param command: The command to be executed on the host.
+        :param cwd: The working directory where the command should be executed.
+        :param output_file_name_base: The base name for the output files to be written to the working directory. (will be extended by .out and .err)
+        :param timeout: Optional timeout for the command execution.
         """
         pass
 
