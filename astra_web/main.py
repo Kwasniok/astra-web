@@ -1,10 +1,8 @@
 import os, glob
 from shutil import rmtree
-from datetime import datetime
-from shortuuid import uuid
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.responses import ORJSONResponse
-from .host_localizer import LocalHostLocalizer
+from .uuid import get_uuid
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
 from .generator.schemas.io import GeneratorInput, GeneratorID, GeneratorOutput
@@ -93,7 +91,7 @@ async def dispatch_particle_distribution_generation(
 def upload_particle_distribution(data: Particles, gen_id: str | None = None) -> dict:
     localizer = LocalHostLocalizer.instance()
     if gen_id is None:
-        gen_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
+        gen_id = get_uuid()
     path = localizer.generator_path(gen_id, ".ini")
     if os.path.exists(path):
         os.remove(path)

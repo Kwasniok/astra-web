@@ -1,12 +1,9 @@
-import os
-import json
 import numpy as np
-from datetime import datetime
-from shortuuid import uuid
 from typing import Optional
 from pydantic import BaseModel, Field
 from astra_web.decorators.decorators import ini_exportable
 from astra_web.generator.schemas.particles import Particles
+from astra_web.uuid import get_uuid
 from .run import SimulationRunSpecifications
 from .modules import Solenoid, Cavity
 from .space_charge import SpaceCharge
@@ -114,7 +111,7 @@ class SimulationInput(BaseModel):
             element.id = idx
 
     def model_post_init(self, __context) -> None:
-        self._sim_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
+        self._sim_id = get_uuid()
         self._sort_and_set_ids("cavities")
         self._sort_and_set_ids("solenoids")
 

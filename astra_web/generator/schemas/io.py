@@ -1,8 +1,6 @@
-from datetime import datetime
-from typing import Optional
-from shortuuid import uuid
 from pydantic import BaseModel, Field, ConfigDict, computed_field
 from astra_web.decorators.decorators import ini_exportable
+from astra_web.uuid import get_uuid
 from .enums import Distribution, ParticleType
 from .particles import Particles
 
@@ -220,7 +218,7 @@ class GeneratorInput(BaseModel):
         return f"&INPUT{self._to_ini()}/"
 
     def model_post_init(self, __context) -> None:
-        self._gen_id = f"{datetime.now().strftime('%Y-%m-%d')}-{uuid()[:8]}"
+        self._gen_id = get_uuid()
 
 
 class GeneratorID(BaseModel):
