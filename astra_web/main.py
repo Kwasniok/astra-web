@@ -1,8 +1,13 @@
 import os, glob
 from shutil import rmtree
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, Query, HTTPException, status
 from fastapi.responses import ORJSONResponse
 from .uuid import get_uuid
+from .host_localizer import (
+    Hosts,
+    HostLocalizerTypes,
+    LocalHostLocalizer,
+)
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
 from .generator.schemas.io import GeneratorInput, GeneratorID, GeneratorOutput
@@ -13,6 +18,7 @@ from .simulation.schemas.io import (
     StatisticsInput,
     StatisticsOutput,
 )
+from .host_localizer.schemas.dispatch import DispatchResponse
 from .generator.host_localized import (
     write_generator_files,
     read_particle_file,
@@ -76,10 +82,14 @@ def list_available_particle_distributions() -> list[str]:
 )
 async def dispatch_particle_distribution_generation(
     generator_input: GeneratorInput,
+    host: Hosts = Query(default=Hosts.LOCAL),
 ) -> GeneratorID:
-    localizer = LocalHostLocalizer.instance()
-    write_generator_files(generator_input, localizer)
-    localizer.dispatch_generation(generator_input)
+    # local
+    local_localizer = LocalHostLocalizer.instance()
+    write_generator_files(generator_input, local_localizer)
+    # 'remote'
+    host_localizer = HostLocalizerTypes.get_localizer(host)
+    host_localizer.dispatch_generation(generator_input)
     return GeneratorID(gen_id=generator_input.gen_id)
 
 
@@ -154,10 +164,16 @@ def list_available_particle_distributions() -> list[str]:
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-async def dispatch_simulation(simulation_input: SimulationInput) -> SimulationID:
-    localizer = LocalHostLocalizer.instance()
-    write_simulation_files(simulation_input, localizer)
-    localizer.dispatch_simulation(simulation_input)
+async def dispatch_simulation(
+    simulation_input: SimulationInput,
+    host: Hosts = Query(default=Hosts.LOCAL),
+) -> SimulationID:
+    # local
+    local_localizer = LocalHostLocalizer.instance()
+    write_simulation_files(simulation_input, local_localizer)
+    # 'remote'
+    host_localizer = HostLocalizerTypes.get_localizer(host)
+    host_localizer.dispatch_simulation(simulation_input)
     return SimulationID(sim_id=simulation_input.sim_id)
 
 
