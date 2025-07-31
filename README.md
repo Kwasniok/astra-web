@@ -10,6 +10,7 @@ This fork includes modification for improved interoperability with a SLURM envir
 - Linux (kernel v6.12+)
 - docker compose (v2.38+)
 - python (v3.13+)
+- SLURM (v0.0.40+, optional)
 
 Older versions may work, but are not tested.
 
@@ -73,11 +74,13 @@ Some operations may be simple enough to be executed locally and it is recommende
 | `SLURM_ENVIRONMENT` [2]       | yes      | The environment variables to set for the SLURM job.                                |`"PATH=/bin:/usr/bin/:/usr/local/bin/","MORE="values"` |
 | `SLURM_ASTRA_BINARY_PATH` [3] | yes      | The path to the ASTRA binary **as seen by the SLURM cluster!**                     | `/home/<user>/astra/bin`                              |
 | `SLURM_DATA_PATH` [4]         | yes      | The path to the data directory **as seen by the SLURM cluster!**                   | `/home/<user>/astra/data`                             |
+| `SLURM_OUTPUT_PATH` [5]       | optional | The path to a directory where the slurm output should be written to (relative to the cwd or absolute). | `/home/<user>/slurm` or `../slurm`|
 
 - [1]: In case the SLURM server is not reachable from the local host and requires a tunnel. See section on [Using a Proxy](#using-a-proxy).
 - [2]: List of quoted strings separated by commas without spaces! Escaping commas inside strings is not possible!
 - [3]: Ensure the versions of ASTRA match your local ones and the **⚠️binaries are renamed to [`astra`](https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/) and [`parallel_astra`](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux)⚠️**.
 - [4]: The paths for these files will most likely differ from the local paths on your machine. It is important that your local paths bind to the same directories as for the remote host as described in [Mount Data Directory](#mount-data-directory).
+- [5]: The output of the SLURM job itself is allways separated from the output of the ASTRA computations and may be ignored. This keeps the output files from ASTRA clean and independent of the execution host.
 
 ## Mount Data Directory
 This step is critical to ensure local and remote execution work together seamlessly.

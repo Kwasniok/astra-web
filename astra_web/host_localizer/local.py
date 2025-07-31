@@ -62,7 +62,7 @@ class LocalHostLocalizer(HostLocalizer):
             timeout=timeout,
         )
 
-        # write captured output to file
+        # write stdout/stderr
         stdout = process.stdout.decode()
         if stdout:
             stdout_path = os.path.join(cwd, output_file_name_base + ".out")

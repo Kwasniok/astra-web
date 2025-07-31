@@ -19,6 +19,8 @@ class SLURMHostLocalizer(HostLocalizer):
             cls._DATA_PATH = os.environ["SLURM_DATA_PATH"]
             cls._GENERATOR_DATA_PATH = os.path.join(cls._DATA_PATH, "generator")
             cls._SIMULATION_DATA_PATH = os.path.join(cls._DATA_PATH, "simulation")
+            # separate SLURM output if desired (relative to cwd or absolute path)
+            cls._OUTPUT_PATH = os.environ.get("SLURM_OUTPUT_PATH", "")
 
             cls._URL = os.environ["SLURM_URL"]
             cls._PROXY = os.environ.get("SLURM_PROXY", None)
@@ -86,10 +88,15 @@ class SLURMHostLocalizer(HostLocalizer):
                     "PATH=/bin:/usr/bin/:/usr/local/bin/",
                     "LD_LIBRARY_PATH=/lib/:/lib64/:/usr/local/lib",
                 ],
-                "standard_output": f"{output_file_name_base}.out",
-                "standard_error": f"{output_file_name_base}.err",
+                # separate SLURM output if desired
+                "standard_output": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm_%j.out",
+                "standard_error": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm_%j.err",
+                "script": f"""#!/usr/bin/env bash
+{cmd} > '{output_file_name_base}.out' 2> '{output_file_name_base}.err'
+[ ! -s '{output_file_name_base}.out' ] && rm -f '{output_file_name_base}.out'
+[ ! -s '{output_file_name_base}.err' ] && rm -f '{output_file_name_base}.err'
+""",
             },
-            "script": f"#!/usr/bin/env bash\n{cmd}\n",
         }
         proxies = (
             {
