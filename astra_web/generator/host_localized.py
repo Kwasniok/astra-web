@@ -1,12 +1,32 @@
 import os
 import glob
+from shutil import rmtree
 from astra_web.host_localizer import HostLocalizer
-from .schemas.io import GeneratorInput
+from .schemas.io import GeneratorInput, GeneratorOutput, GeneratorDispatchOutput
 from .schemas.particles import Particles
 from .util import _read_particle_file
+from astra_web.uuid import get_uuid
 
 
-def write_generator_files(
+def dispatch_particle_distribution_generation(
+    generator_input: GeneratorInput,
+    local_localizer: HostLocalizer,
+    host_localizer: HostLocalizer,
+) -> GeneratorDispatchOutput:
+    """Dispatches the generation of a particle distribution based on the provided generator input.
+    The generator input is written to disk, and the generation is dispatched to the appropriate host.
+    """
+    # local
+    _write_generator_files(generator_input, local_localizer)
+    # 'remote'
+    response = host_localizer.dispatch_generation(generator_input)
+    return GeneratorDispatchOutput(
+        gen_id=generator_input.gen_id,
+        dispatch_response=response,
+    )
+
+
+def _write_generator_files(
     generator_input: GeneratorInput, localizer: HostLocalizer
 ) -> str:
     """Writes all required files for the generator to disk."""
@@ -17,6 +37,24 @@ def write_generator_files(
         input_file.write(ini_content)
 
     return ini_content
+
+
+def load_generator_output(
+    gen_id: str, localizer: HostLocalizer
+) -> GeneratorOutput | None:
+    """
+    Loads the generator output for a given generator ID.
+    Returns None if the particle distribution does not exist.
+    """
+    if not os.path.exists(localizer.generator_path(gen_id, "distribution.ini")):
+        return None
+
+    return GeneratorOutput(
+        gen_id=gen_id,
+        particles=read_particle_file(gen_id, localizer),
+        generator_input=read_generator_file(gen_id, "generator.in", localizer),
+        generator_output=read_generator_file(gen_id, "generator.out", localizer),
+    )
 
 
 def read_particle_file(gen_id: str, localizer: HostLocalizer) -> Particles:
@@ -47,3 +85,25 @@ def list_finished_generator_ids(localizer: HostLocalizer) -> list[str]:
     files = list(map(lambda p: p.split("/")[-2], files))
 
     return sorted(files)
+
+
+def delete_particle_distribution(gen_id: str, localizer: HostLocalizer) -> None:
+    """
+    Deletes the particle distribution file for a given generator ID.
+    """
+    path = localizer.generator_path(gen_id)
+    if os.path.exists(path):
+        rmtree(path)
+
+
+def write_particle_distribution(particles: Particles, localizer: HostLocalizer) -> str:
+    """
+    Writes the particle distribution to disk.
+    """
+    gen_id = get_uuid()
+    path = localizer.generator_path(gen_id, "distribution.ini")
+    if os.path.exists(path):
+        os.remove(path)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    particles.to_csv(path)
+    return gen_id
