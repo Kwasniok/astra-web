@@ -6,6 +6,8 @@ from astra_web.decorators.decorators import ini_exportable
 
 
 class Module(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     @model_serializer
     def ser_model(self) -> dict[str, Any]:
         out_dict = dict()
@@ -18,6 +20,8 @@ class Module(BaseModel):
 
 @ini_exportable
 class Cavity(Module):
+    model_config = ConfigDict(extra="forbid")
+
     id: int = Field(exclude=True, default=None, description="The ID of the cavity.")
 
     field_table: FieldTable = Field(
@@ -87,7 +91,7 @@ class Cavity(Module):
 
 @ini_exportable
 class Solenoid(Module):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     id: int = Field(default=None, exclude=True, description="The ID of the solenoid.")
     field_table: FieldTable = Field(

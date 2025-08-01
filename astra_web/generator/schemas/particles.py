@@ -2,12 +2,14 @@ import pandas as pd
 import numpy as np
 from pmd_beamphysics import ParticleGroup
 from typing import Type, TypeVar
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T", bound="Parent")
 
 
 class Particles(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     x: list[float] = Field(
         default=[],
         description="List of particle x values.",

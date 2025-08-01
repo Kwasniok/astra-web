@@ -143,7 +143,10 @@ def get_statistics(sim_id: str, localizer: HostLocalizer) -> StatisticsOutput | 
     if not os.path.exists(path):
         return None
 
-    particles = _read_particle_file(_particle_paths(sim_id, localizer)[-1])
+    particle_paths = _particle_paths(sim_id, localizer)
+    if not particle_paths:
+        return None
+    particles = _read_particle_file(particle_paths[-1])
 
     return StatisticsOutput(
         sim_id=sim_id,

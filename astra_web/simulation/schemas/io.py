@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from astra_web.decorators.decorators import ini_exportable
 from astra_web.generator.schemas.particles import Particles
 from astra_web.host_localizer.schemas.dispatch import DispatchResponse
@@ -13,6 +13,8 @@ from .tables import XYEmittanceTable, ZEmittanceTable
 
 @ini_exportable
 class SimulationOutputSpecification(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     ZSTART: float = Field(
         default=0.0,
         validation_alias="z_start",
@@ -74,6 +76,8 @@ class SimulationOutputSpecification(BaseModel):
 
 @ini_exportable
 class SimulationInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     _sim_id: str
 
     @property
@@ -132,11 +136,15 @@ class SimulationInput(BaseModel):
 
 
 class SimulationDispatchOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     sim_id: str
     dispatch_response: DispatchResponse
 
 
 class SimulationOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     sim_id: str
     input_ini: str
     run_output: str
@@ -151,10 +159,14 @@ class SimulationOutput(BaseModel):
 
 
 class StatisticsInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     pass
 
 
 class StatisticsOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     sim_id: str
     particle_counts: dict = Field(
         description="Number of particles - active, inactive, total."

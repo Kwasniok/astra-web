@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DispatchResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
     dispatch_type: str = Field(
         description="Type of the dispatch system used, e.g., 'local' or 'slurm'."

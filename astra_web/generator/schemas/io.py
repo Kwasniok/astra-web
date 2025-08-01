@@ -8,8 +8,8 @@ from .particles import Particles
 
 @ini_exportable
 class GeneratorInput(BaseModel):
-    # Model config
-    model_config = ConfigDict(use_enum_values=True)
+    model_config = ConfigDict(use_enum_values=True, extra="forbid")
+
     # Internal attributes
     _gen_id: str
 
@@ -223,11 +223,15 @@ class GeneratorInput(BaseModel):
 
 
 class GeneratorDispatchOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     gen_id: str
     dispatch_response: DispatchResponse
 
 
 class GeneratorOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     gen_id: str
     particles: Particles
     input_ini: str

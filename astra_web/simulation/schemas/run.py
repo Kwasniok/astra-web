@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 from astra_web.decorators.decorators import ini_exportable
 
 
 @ini_exportable
 class SimulationRunSpecifications(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
     run_dir: str = Field(
         default=None,

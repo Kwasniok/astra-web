@@ -1,11 +1,13 @@
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Type, TypeVar
 
 T = TypeVar("T", bound="Parent")
 
 
 class FieldTable(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     z: list[float] = Field(
         description="Longitudinal positions along z-axis.",
         json_schema_extra={"format": "Unit: [m]"},
@@ -22,6 +24,8 @@ class FieldTable(BaseModel):
 
 
 class XYEmittanceTable(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     z: list[float] = Field(
         description="Longitudinal positions.", json_schema_extra={"format": "Unit: [m]"}
     )
@@ -56,6 +60,8 @@ class XYEmittanceTable(BaseModel):
 
 
 class ZEmittanceTable(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     z: list[float] = Field(
         description="Longitudinal positions.", json_schema_extra={"format": "Unit: [m]"}
     )

@@ -1,9 +1,11 @@
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, ConfigDict, ConfigDict, Field, computed_field
 from astra_web.decorators.decorators import ini_exportable
 
 
 @ini_exportable
 class SpaceCharge(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     LSPCH: bool = Field(
         default=False,
         validation_alias="use_space_charge",
