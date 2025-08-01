@@ -3,6 +3,7 @@ from typing import Optional
 from pydantic import BaseModel, Field
 from astra_web.decorators.decorators import ini_exportable
 from astra_web.generator.schemas.particles import Particles
+from astra_web.host_localizer.schemas.dispatch import DispatchResponse
 from astra_web.uuid import get_uuid
 from .run import SimulationRunSpecifications
 from .modules import Solenoid, Cavity
@@ -130,8 +131,9 @@ class SimulationInput(BaseModel):
         )
 
 
-class SimulationID(BaseModel):
+class SimulationDispatchOutput(BaseModel):
     sim_id: str
+    dispatch_response: DispatchResponse
 
 
 class SimulationOutput(BaseModel):

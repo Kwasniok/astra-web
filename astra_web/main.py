@@ -10,11 +10,15 @@ from .host_localizer import (
 )
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
-from .generator.schemas.io import GeneratorInput, GeneratorID, GeneratorOutput
+from .generator.schemas.io import (
+    GeneratorInput,
+    GeneratorDispatchOutput,
+    GeneratorOutput,
+)
 from .simulation.schemas.io import (
     SimulationInput,
     SimulationOutput,
-    SimulationID,
+    SimulationDispatchOutput,
     StatisticsInput,
     StatisticsOutput,
 )
@@ -83,14 +87,17 @@ def list_available_particle_distributions() -> list[str]:
 async def dispatch_particle_distribution_generation(
     generator_input: GeneratorInput,
     host: Hosts = Query(default=Hosts.LOCAL),
-) -> GeneratorID:
+) -> GeneratorDispatchOutput:
     # local
     local_localizer = LocalHostLocalizer.instance()
     write_generator_files(generator_input, local_localizer)
     # 'remote'
     host_localizer = HostLocalizerTypes.get_localizer(host)
-    host_localizer.dispatch_generation(generator_input)
-    return GeneratorID(gen_id=generator_input.gen_id)
+    response = host_localizer.dispatch_generation(generator_input)
+    return GeneratorDispatchOutput(
+        gen_id=generator_input.gen_id,
+        dispatch_response=response,
+    )
 
 
 @app.put(
@@ -167,14 +174,17 @@ def list_available_particle_distributions() -> list[str]:
 async def dispatch_simulation(
     simulation_input: SimulationInput,
     host: Hosts = Query(default=Hosts.LOCAL),
-) -> SimulationID:
+) -> SimulationDispatchOutput:
     # local
     local_localizer = LocalHostLocalizer.instance()
     write_simulation_files(simulation_input, local_localizer)
     # 'remote'
     host_localizer = HostLocalizerTypes.get_localizer(host)
-    host_localizer.dispatch_simulation(simulation_input)
-    return SimulationID(sim_id=simulation_input.sim_id)
+    response = host_localizer.dispatch_simulation(simulation_input)
+    return SimulationDispatchOutput(
+        sim_id=simulation_input.sim_id,
+        dispatch_response=response,
+    )
 
 
 @app.get(

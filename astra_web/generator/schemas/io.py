@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict, computed_field
 from astra_web.decorators.decorators import ini_exportable
+from astra_web.host_localizer.schemas.dispatch import DispatchResponse
 from astra_web.uuid import get_uuid
 from .enums import Distribution, ParticleType
 from .particles import Particles
@@ -221,8 +222,9 @@ class GeneratorInput(BaseModel):
         self._gen_id = get_uuid()
 
 
-class GeneratorID(BaseModel):
+class GeneratorDispatchOutput(BaseModel):
     gen_id: str
+    dispatch_response: DispatchResponse
 
 
 class GeneratorOutput(BaseModel):
