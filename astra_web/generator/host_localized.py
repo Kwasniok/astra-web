@@ -87,13 +87,48 @@ def list_finished_generator_ids(localizer: HostLocalizer) -> list[str]:
     return sorted(files)
 
 
-def delete_particle_distribution(gen_id: str, localizer: HostLocalizer) -> None:
+def delete_particle_distribution(
+    gen_id: str, localizer: HostLocalizer
+) -> list[str] | None:
     """
     Deletes the particle distribution file for a given generator ID.
+
+    Returns a list of symlinks that are referencing the distribution file and blocking the deletion.
     """
     path = localizer.generator_path(gen_id)
-    if os.path.exists(path):
-        rmtree(path)
+    if not os.path.exists(path):
+        return
+
+    # delete only when nothing is referencing it
+    links = _find_symlinks(
+        localizer.generator_path(gen_id, "distribution.ini"),
+        localizer.data_path(),
+        link_name="distribution.ini",
+    )
+    if len(links) > 0:
+        return links
+
+    # now its safe to remove
+    rmtree(path)
+    return
+
+
+def _find_symlinks(target_file, root_dir, link_name="distribution.ini"):
+    target_realpath = os.path.realpath(target_file)
+    matching_symlinks = []
+
+    for dirpath, _, filenames in os.walk(root_dir):
+        if link_name in filenames:
+            full_path = os.path.join(dirpath, link_name)
+            if os.path.islink(full_path):
+                try:
+                    link_target = os.path.realpath(full_path)
+                    if link_target == target_realpath:
+                        matching_symlinks.append(full_path)
+                except OSError:
+                    continue  # skip broken/inaccessible symlinks
+
+    return matching_symlinks
 
 
 def write_particle_distribution(particles: Particles, localizer: HostLocalizer) -> str:

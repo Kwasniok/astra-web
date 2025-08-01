@@ -127,7 +127,12 @@ def download_generator_results(gen_id: str) -> GeneratorOutput:
 )
 async def delete_particle_distribution_(gen_id: str) -> None:
     localizer = LocalHostLocalizer.instance()
-    return delete_particle_distribution(gen_id, localizer)
+    blocking_links = delete_particle_distribution(gen_id, localizer)
+    if blocking_links is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Particle distribution '{gen_id}' cannot be deleted because it is referenced by: {blocking_links}",
+        )
 
 
 @app.get(
