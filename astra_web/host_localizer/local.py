@@ -35,10 +35,17 @@ class LocalHostLocalizer(HostLocalizer):
         cwd: str,
         output_file_name_base: str,
         timeout: int | None = None,
+        confirm_finished_successfully=False,
     ) -> DispatchResponse:
         """
         Runs a command in the specified directory and captures the output.
         """
+
+        try:
+            os.remove(os.path.join(cwd, "SUCCESS"))
+        except FileNotFoundError:
+            pass
+
         process = run(
             command,
             cwd=cwd,
@@ -55,5 +62,9 @@ class LocalHostLocalizer(HostLocalizer):
         if stderr:
             stderr_path = os.path.join(cwd, output_file_name_base + ".err")
             write_to_file(stderr, stderr_path)
+
+        if process.returncode == 0 and confirm_finished_successfully:
+            success_path = os.path.join(cwd, "SUCCESS")
+            write_to_file("", success_path)
 
         return DispatchResponse(dispatch_type="local")

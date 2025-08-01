@@ -45,6 +45,7 @@ class SLURMHostLocalizer(HostLocalizer):
         cwd: str,
         output_file_name_base: str,
         timeout: int | None = None,
+        confirm_finished_successfully=False,
     ) -> DispatchResponse:
         """
         Dispatches a command for the specified directory and captures the output.
@@ -53,6 +54,21 @@ class SLURMHostLocalizer(HostLocalizer):
         quote = lambda s: f'"{s}"' if " " in s else s
 
         cmd: str = " ".join(map(quote, command))
+
+        script = f"""#!/usr/bin/env bash
+
+set -euo pipefail
+
+rm -f SUCCESS
+        
+{cmd} > '{output_file_name_base}.out' 2> '{output_file_name_base}.err'
+status=$?
+[ ! -s '{output_file_name_base}.out' ] && rm -f '{output_file_name_base}.out'
+[ ! -s '{output_file_name_base}.err' ] && rm -f '{output_file_name_base}.err'
+"""
+        if confirm_finished_successfully:
+            script += "if [ $status -eq 0 ]; then touch SUCCESS; fi\n"
+
         url = f"{self._URL}/job/submit"
         headers = {
             "Content-Type": "application/json",
@@ -75,11 +91,7 @@ class SLURMHostLocalizer(HostLocalizer):
                 # separate SLURM output if desired
                 "standard_output": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm-%j.out",
                 "standard_error": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm-%j.err",
-                "script": f"""#!/usr/bin/env bash
-{cmd} > '{output_file_name_base}.out' 2> '{output_file_name_base}.err'
-[ ! -s '{output_file_name_base}.out' ] && rm -f '{output_file_name_base}.out'
-[ ! -s '{output_file_name_base}.err' ] && rm -f '{output_file_name_base}.err'
-""",
+                "script": script,
             },
         }
         proxies = (
