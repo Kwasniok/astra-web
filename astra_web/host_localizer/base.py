@@ -25,16 +25,16 @@ class HostLocalizer(ABC):
         """
         pass
 
-    def generator_path(self, id: str | None = None, extention: str = "") -> str:
+    def generator_path(self, id: str, file_name: str | None = None) -> str:
         """
-        Returns the path to the generator file for the given id and extension.
+        Returns the path to the generator file for the given ID.
         """
-        path = os.path.join(self.data_path(), "generator")
-        return path if id is None else os.path.join(path, f"{id}{extention}")
+        path = os.path.join(self.data_path(), "generator", id)
+        return path if file_name is None else os.path.join(path, file_name)
 
     def simulation_path(self, id: str, file_name: str | None = None) -> str:
         """
-        Returns the path to the simulation output for a given ID.
+        Returns the path to the simulation file for the given ID.
 
         note: If no file_name is provided, the path to the simulation directory is returned.
             Otherwise, the path to the specific file is returned.
@@ -55,8 +55,8 @@ class HostLocalizer(ABC):
         """
         return self._dispatch_command(
             self._generator_command(generator_input),
-            cwd=self.generator_path(),
-            output_file_name_base=generator_input.gen_id,
+            cwd=self.generator_path(generator_input.gen_id),
+            output_file_name_base="generator",
         )
 
     def dispatch_simulation(
@@ -95,7 +95,7 @@ class HostLocalizer(ABC):
     def _generator_command(self, generator_input: GeneratorInput) -> list[str]:
         return [
             self.astra_binary_path("generator"),
-            f"{generator_input.gen_id}.in",
+            f"generator.in",
         ]
 
     def _simulation_command(self, simulation_input: SimulationInput) -> list[str]:

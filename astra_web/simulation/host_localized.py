@@ -68,7 +68,9 @@ def _link_initial_particle_distribution(
     simulation_input: SimulationInput, localizer: HostLocalizer
 ):
     # make link relative to ensure compatibility across hosts
-    target = localizer.generator_path(simulation_input.run_specs.generator_id, ".ini")
+    target = localizer.generator_path(
+        simulation_input.run_specs.generator_id, "distribution.ini"
+    )
     target = os.path.relpath(
         target, localizer.simulation_path(simulation_input.run_dir)
     )
@@ -164,3 +166,13 @@ def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
         files,
         key=lambda s: s.split(".")[1],
     )
+
+
+def list_finished_simulation_ids(localizer: HostLocalizer) -> list[str]:
+    """
+    Lists all ID of completed simulation runs.
+    """
+    files = glob.glob(localizer.simulation_path("*", "run.out"))
+    files = list(map(lambda p: p.split("/")[-2], files))
+
+    return sorted(files)

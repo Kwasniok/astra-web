@@ -19,7 +19,7 @@ class GeneratorInput(BaseModel):
     @computed_field(return_type=str)
     @property
     def FNAME(self) -> str:
-        return self._gen_id + ".ini"
+        return "distribution.ini"
 
     Add: bool | None = False
     N_add: int | None = 0
@@ -234,5 +234,5 @@ class GeneratorOutput(BaseModel):
 
     gen_id: str
     particles: Particles
-    input_ini: str
-    run_output: str
+    generator_input: str
+    generator_output: str

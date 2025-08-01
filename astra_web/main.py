@@ -1,4 +1,4 @@
-import os, glob
+import os
 from shutil import rmtree
 from fastapi import FastAPI, Depends, Query, HTTPException, status
 from fastapi.responses import ORJSONResponse
@@ -27,11 +27,13 @@ from .generator.host_localized import (
     write_generator_files,
     read_particle_file,
     read_generator_file,
+    list_finished_generator_ids,
 )
 from .simulation.host_localized import (
     write_simulation_files,
     load_simulation_output,
     get_statistics,
+    list_finished_simulation_ids,
 )
 
 tags_metadata = [
@@ -70,13 +72,10 @@ app = FastAPI(
 )
 def list_available_particle_distributions() -> list[str]:
     """
-    Returns a list of all existing particle distributions on the requested server.
+    Returns a list of all existing particle distribution IDs on the requested server.
     """
     localizer = LocalHostLocalizer.instance()
-    files = glob.glob(localizer.generator_path("*", ".ini"))
-    files = list(map(lambda p: p.split("/")[-1].split(".ini")[0], files))
-
-    return sorted(files)
+    return list_finished_generator_ids(localizer)
 
 
 @app.post(
@@ -109,7 +108,7 @@ def upload_particle_distribution(data: Particles, gen_id: str | None = None) -> 
     localizer = LocalHostLocalizer.instance()
     if gen_id is None:
         gen_id = get_uuid()
-    path = localizer.generator_path(gen_id, ".ini")
+    path = localizer.generator_path(gen_id, "distribution.ini")
     if os.path.exists(path):
         os.remove(path)
 
@@ -124,7 +123,7 @@ def upload_particle_distribution(data: Particles, gen_id: str | None = None) -> 
 )
 def download_generator_results(gen_id: str) -> GeneratorOutput:
     localizer = LocalHostLocalizer.instance()
-    path = localizer.generator_path(gen_id, ".ini")
+    path = localizer.generator_path(gen_id, "distribution.ini")
     if not os.path.exists(path):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -133,8 +132,8 @@ def download_generator_results(gen_id: str) -> GeneratorOutput:
     return GeneratorOutput(
         gen_id=gen_id,
         particles=read_particle_file(gen_id, localizer),
-        input_ini=read_generator_file(gen_id, ".in", localizer),
-        run_output=read_generator_file(gen_id, ".out", localizer),
+        generator_input=read_generator_file(gen_id, "generator.in", localizer),
+        generator_output=read_generator_file(gen_id, "generator.out", localizer),
     )
 
 
@@ -145,9 +144,9 @@ def download_generator_results(gen_id: str) -> GeneratorOutput:
 )
 async def delete_particle_distribution(gen_id: str) -> None:
     localizer = LocalHostLocalizer.instance()
-    path = localizer.generator_path(gen_id, ".ini")
+    path = localizer.generator_path(gen_id)
     if os.path.exists(path):
-        os.remove(path)
+        rmtree(path)
 
 
 @app.get(
@@ -155,15 +154,12 @@ async def delete_particle_distribution(gen_id: str) -> None:
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-def list_available_particle_distributions() -> list[str]:
+def list_avilable_simulation_ids() -> list[str]:
     """
-    Returns a list of all existing simulations on the requested server.
+    Returns a list of all existing simulation IDs on the requested server.
     """
     localizer = LocalHostLocalizer.instance()
-    files = glob.glob(localizer.simulation_path("*"))
-    files = list(map(lambda p: p.split("/")[-1], files))
-
-    return sorted(files)
+    return list_finished_simulation_ids(localizer)
 
 
 @app.post(
@@ -231,6 +227,6 @@ async def statistics(data: StatisticsInput, sim_id: str) -> StatisticsOutput:
     if stats is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Simulation '{sim_id}' not found.",
+            detail=f"Simulation data for '{sim_id}' not found.",
         )
     return stats
