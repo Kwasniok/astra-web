@@ -67,10 +67,15 @@ def _write_input_json(simulation_input: SimulationInput, run_path: str) -> None:
 def _link_initial_particle_distribution(
     simulation_input: SimulationInput, localizer: HostLocalizer
 ):
+    # make link relative to ensure compatibility across hosts
+    target = localizer.generator_path(
+        simulation_input.run_specs.particle_base_file_name, ".ini"
+    )
+    target = os.path.relpath(
+        target, localizer.simulation_path(simulation_input.run_dir)
+    )
     os.symlink(
-        localizer.generator_path(
-            simulation_input.run_specs.particle_base_file_name, ".ini"
-        ),
+        target,
         localizer.simulation_path(simulation_input.run_dir, "run.0000.001"),
     )
 

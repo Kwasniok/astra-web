@@ -19,13 +19,19 @@ class HostLocalizer(ABC):
         pass
 
     @abstractmethod
+    def data_path(self) -> str:
+        """
+        Returns the path to the data directory.
+        """
+        pass
+
     def generator_path(self, id: str | None = None, extention: str = "") -> str:
         """
         Returns the path to the generator file for the given id and extension.
         """
-        pass
+        path = os.path.join(self.data_path(), "generator")
+        return path if id is None else os.path.join(path, f"{id}{extention}")
 
-    @abstractmethod
     def simulation_path(self, id: str, file_name: str | None = None) -> str:
         """
         Returns the path to the simulation output for a given ID.
@@ -33,7 +39,8 @@ class HostLocalizer(ABC):
         note: If no file_name is provided, the path to the simulation directory is returned.
             Otherwise, the path to the specific file is returned.
         """
-        pass
+        path = os.path.join(self.data_path(), "simulation", id)
+        return path if file_name is None else os.path.join(path, file_name)
 
     @abstractmethod
     def astra_binary_path(self, binary: str) -> str:
