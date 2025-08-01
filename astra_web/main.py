@@ -1,5 +1,4 @@
 import os
-from shutil import rmtree
 from fastapi import FastAPI, Depends, Query, HTTPException, status
 from fastapi.responses import ORJSONResponse
 from .uuid import get_uuid
@@ -25,15 +24,16 @@ from .simulation.schemas.io import (
 from .host_localizer.schemas.dispatch import DispatchResponse
 from .generator.host_localized import (
     write_generator_files,
-    read_particle_file,
-    read_generator_file,
+    load_generator_output,
     list_finished_generator_ids,
+    delete_particle_distribution,
 )
 from .simulation.host_localized import (
     write_simulation_files,
     load_simulation_output,
-    get_statistics,
     list_finished_simulation_ids,
+    delete_simulation,
+    get_statistics,
 )
 
 tags_metadata = [
@@ -123,18 +123,13 @@ def upload_particle_distribution(data: Particles, gen_id: str | None = None) -> 
 )
 def download_generator_results(gen_id: str) -> GeneratorOutput:
     localizer = LocalHostLocalizer.instance()
-    path = localizer.generator_path(gen_id, "distribution.ini")
-    if not os.path.exists(path):
+    output = load_generator_output(gen_id, localizer)
+    if output is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Generator output for '{gen_id}' not found.",
         )
-    return GeneratorOutput(
-        gen_id=gen_id,
-        particles=read_particle_file(gen_id, localizer),
-        generator_input=read_generator_file(gen_id, "generator.in", localizer),
-        generator_output=read_generator_file(gen_id, "generator.out", localizer),
-    )
+    return output
 
 
 @app.delete(
@@ -142,11 +137,9 @@ def download_generator_results(gen_id: str) -> GeneratorOutput:
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-async def delete_particle_distribution(gen_id: str) -> None:
+async def delete_particle_distribution_(gen_id: str) -> None:
     localizer = LocalHostLocalizer.instance()
-    path = localizer.generator_path(gen_id)
-    if os.path.exists(path):
-        rmtree(path)
+    return delete_particle_distribution(gen_id, localizer)
 
 
 @app.get(
@@ -154,7 +147,7 @@ async def delete_particle_distribution(gen_id: str) -> None:
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-def list_avilable_simulation_ids() -> list[str]:
+def list_finished_simulation_ids_() -> list[str]:
     """
     Returns a list of all existing simulation IDs on the requested server.
     """
@@ -194,6 +187,7 @@ def download_simulation_results(sim_id: str) -> SimulationOutput:
     on the given ID.
     """
     localizer = LocalHostLocalizer.instance()
+
     output = load_simulation_output(sim_id, localizer)
     if output is None:
         raise HTTPException(
@@ -209,11 +203,9 @@ def download_simulation_results(sim_id: str) -> SimulationOutput:
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-async def delete_simulation(sim_id: str) -> None:
+async def delete_simulation_(sim_id: str) -> None:
     localizer = LocalHostLocalizer.instance()
-    path = localizer.simulation_path(sim_id)
-    if os.path.exists(path):
-        rmtree(path)
+    return delete_simulation(sim_id, localizer)
 
 
 @app.get(
