@@ -60,6 +60,39 @@ Some operations may be simple enough to be executed locally and it is recommende
 
 > ⚠️ Connecting to SLURM requires some advanced knowledge! Check the log files of the container if you recive internal errors.
 
+```mermaid
+flowchart LR
+    you((your device))
+    astra_web[ASTRA Web
+    Server]
+    SLURM[SLURM Cluster
+    Server]
+    server_data[(server data)]
+    cluster_data[(persistent storage)]
+
+    you--https-->astra_web
+    astra_web--https-->SLURM
+    astra_web--bind-->server_data
+    server_data--sshfs-->cluster_data
+    SLURM--mount-->cluster_data
+
+    style you fill:#fff,stroke:#333,color:#000
+    style astra_web fill:#fff,stroke:#333,color:#000
+    style server_data fill:#fff,stroke:#333,color:#000
+    style SLURM fill:#aaa,stroke:#000,color:#000
+    style cluster_data fill:#aaa,stroke:#000,color:#000
+
+    %% legend
+    subgraph legend [ ]
+        legend_item1(["ASTRA Web"])
+        legend_item2(["SLURM (optional)"])
+        style legend_item1 fill:#fff,stroke:#333,color:#000
+        style legend_item2 fill:#aaa,stroke:#000,color:#000
+    end
+    style legend fill:transparent,stroke:transparent,color:transparent
+```
+Fig. 1: Schematic overview of the ASTRA Web with SLURM support. ASTRA Web is accessed via a REST API over the https protocol. Some actions may be dispatched to a SLURM cluster for asynchronous execution via its REST API. All data is stored persistently in the cluster. Any access to the data from the server is relayed via SSHFS to the storage.
+
 ## Setup
 1. Ensure `docker-compose.slurm.yml` is included in your docker compose setup. (e.g. in `.env` under `COMPOSE_FILE`)
 
