@@ -16,7 +16,7 @@ class SimulationRunSpecifications(BaseModel):
     @computed_field(return_type=str, description="Run name for protocol", repr=True)
     @property
     def Head(self) -> str:
-        return f"Simulation run with initial particle distribution {self.particle_base_file_name}"
+        return f"Simulation run with initial particle distribution {self.generator_id}"
 
     thread_num: int = Field(
         default=1,
@@ -41,9 +41,9 @@ class SimulationRunSpecifications(BaseModel):
         description="The run_number is used as extension for all generated output files.",
     )
 
-    particle_base_file_name: str = Field(
-        default="example",
-        description="Name of a particle file generated with the /generate endpoint of this API without the file extension",
+    generator_id: str = Field(
+        default="YYYY-MM-DD-HH-MM-SS-UUUUUUUU",
+        description="Identifier of a particle distribution generated with the /generate endpoint of this API.",
         exclude=True,
     )
 
@@ -54,7 +54,7 @@ class SimulationRunSpecifications(BaseModel):
     )
     @property
     def Distribution(self) -> str:
-        return self.particle_base_file_name + ".ini"
+        return "distribution.ini"
 
     Qbunch: float = Field(
         default=None,

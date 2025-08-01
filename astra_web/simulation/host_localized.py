@@ -52,7 +52,7 @@ def _write_input_json(simulation_input: SimulationInput, run_path: str) -> None:
             "emission_time": simulation_input.run_specs.Trms,
             "gun_phase": simulation_input.cavities[0].Phi,
             "gun_gradient": simulation_input.cavities[0].MaxE,
-            "input_distribution": simulation_input.run_specs.particle_base_file_name,
+            "generator_id": simulation_input.run_specs.generator_id,
         }
         str_ = json.dumps(
             data,
@@ -68,15 +68,15 @@ def _link_initial_particle_distribution(
     simulation_input: SimulationInput, localizer: HostLocalizer
 ):
     # make link relative to ensure compatibility across hosts
-    target = localizer.generator_path(
-        simulation_input.run_specs.particle_base_file_name, ".ini"
-    )
+    target = localizer.generator_path(simulation_input.run_specs.generator_id, ".ini")
     target = os.path.relpath(
         target, localizer.simulation_path(simulation_input.run_dir)
     )
     os.symlink(
         target,
-        localizer.simulation_path(simulation_input.run_dir, "run.0000.001"),
+        localizer.simulation_path(
+            simulation_input.run_dir, simulation_input.run_specs.Distribution
+        ),
     )
 
 
