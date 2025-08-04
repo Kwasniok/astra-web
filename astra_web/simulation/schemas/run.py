@@ -55,7 +55,9 @@ class SimulationRunSpecifications(BaseModel):
     )
     @property
     def Distribution(self) -> str:
-        return "distribution.ini"
+        # name initial particle distribution file in the same convention as the run output files
+        # see manual of ASTRA v3.2 (Mach 2017) chapter 2
+        return f"run.{0:04d}.{self.RUN:03d}"
 
     Qbunch: float = Field(
         default=None,
