@@ -6,6 +6,7 @@ from .schemas.io import GeneratorInput, GeneratorOutput, GeneratorDispatchOutput
 from .schemas.particles import Particles
 from .util import _read_particle_file
 from astra_web.uuid import get_uuid
+from astra_web.json import write_json
 
 
 def dispatch_particle_distribution_generation(
@@ -28,15 +29,19 @@ def dispatch_particle_distribution_generation(
 
 def _write_generator_files(
     generator_input: GeneratorInput, localizer: HostLocalizer
-) -> str:
+) -> None:
+    path = localizer.generator_path(generator_input.gen_id)
+    os.makedirs(path, exist_ok=True)
+    write_json(generator_input, os.path.join(path, "input.json"))
+    _write_generator_in(generator_input, path)
+
+
+def _write_generator_in(generator_input: GeneratorInput, gen_path: str) -> None:
     """Writes all required files for the generator to disk."""
-    path = localizer.generator_path(generator_input.gen_id, "generator.in")
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    path = os.path.join(gen_path, "generator.in")
     ini_content = generator_input.to_ini()
     with open(path, "w") as input_file:
         input_file.write(ini_content)
-
-    return ini_content
 
 
 def load_generator_output(

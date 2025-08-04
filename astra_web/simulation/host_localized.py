@@ -2,12 +2,12 @@ import os
 import glob
 from shutil import rmtree
 import pandas as pd
-import json
 from astra_web.simulation.schemas.io import StatisticsOutput
 from astra_web.host_localizer import HostLocalizer
 from astra_web.generator.util import _read_particle_file
 from .schemas.io import SimulationInput, SimulationOutput, SimulationDispatchOutput
 from .schemas.tables import XYEmittanceTable, ZEmittanceTable
+from astra_web.json import write_json
 
 
 def dispatch_simulation_run(
@@ -36,13 +36,13 @@ def write_simulation_files(
     """
     run_path = localizer.simulation_path(simulation_input.run_dir)
     os.makedirs(run_path, exist_ok=True)
-    _write_simulation_ini(simulation_input, run_path)
+    write_json(simulation_input, os.path.join(run_path, "input.json"))
+    _write_run_in(simulation_input, run_path)
     _write_element_files(simulation_input, run_path)
-    _write_input_json(simulation_input, run_path)
     _link_initial_particle_distribution(simulation_input, localizer)
 
 
-def _write_simulation_ini(simulation_input: SimulationInput, run_path: str) -> None:
+def _write_run_in(simulation_input: SimulationInput, run_path: str) -> None:
     """
     Write the simulation INI file.
     """
@@ -57,29 +57,6 @@ def _write_element_files(simulation_input: SimulationInput, run_path: str) -> No
     """
     for o in simulation_input.solenoids + simulation_input.cavities:
         o.write_to_disk(run_path)
-
-
-def _write_input_json(simulation_input: SimulationInput, run_path: str) -> None:
-    """
-    Write the input parameters to a JSON file.
-    """
-    with open(os.path.join(run_path, "input.json"), "w") as f:
-        data = {
-            "solenoid_strength": simulation_input.solenoids[0].MaxB,
-            "spot_size": simulation_input.run_specs.XYrms,
-            "emission_time": simulation_input.run_specs.Trms,
-            "gun_phase": simulation_input.cavities[0].Phi,
-            "gun_gradient": simulation_input.cavities[0].MaxE,
-            "generator_id": simulation_input.run_specs.generator_id,
-        }
-        str_ = json.dumps(
-            data,
-            indent=4,
-            sort_keys=True,
-            separators=(",", ": "),
-            ensure_ascii=False,
-        )
-        f.write(str_)
 
 
 def _link_initial_particle_distribution(
