@@ -1,13 +1,18 @@
 import os
 import glob
 from shutil import rmtree
-import pandas as pd
+from typing import Type, TypeVar
 from astra_web.simulation.schemas.io import StatisticsOutput
 from astra_web.host_localizer import HostLocalizer
-from astra_web.generator.util import _read_particle_file
-from .schemas.io import SimulationInput, SimulationOutput, SimulationDispatchOutput
+from astra_web.generator.schemas.particles import Particles
+from .schemas.io import (
+    SimulationInput,
+    SimulationData,
+    SimulationAllData,
+    SimulationDispatchOutput,
+)
 from .schemas.tables import XYEmittanceTable, ZEmittanceTable
-from astra_web.json import write_json
+from astra_web.file import write_txt, read_txt, write_json, read_json
 
 
 def dispatch_simulation_run(
@@ -32,23 +37,20 @@ def write_simulation_files(
     simulation_input: SimulationInput, localizer: HostLocalizer
 ) -> None:
     """
-    Write the simulation input to disk, including the INI file, element files, input JSON and linking the initial particle distribution.
+    Write the simulation input to disk, including the INI file, element files, input JSON and linking the initial parSimulationDataticle distribution.
     """
     run_path = localizer.simulation_path(simulation_input.run_dir)
     os.makedirs(run_path, exist_ok=True)
-    write_json(simulation_input, os.path.join(run_path, "input.json"))
-    _write_run_in(simulation_input, run_path)
+    write_json(
+        simulation_input,
+        localizer.simulation_path(simulation_input.run_dir, "input.json"),
+    )
+    write_txt(
+        simulation_input.to_ini(),
+        localizer.simulation_path(simulation_input.run_dir, "run.in"),
+    )
     _write_element_files(simulation_input, run_path)
     _link_initial_particle_distribution(simulation_input, localizer)
-
-
-def _write_run_in(simulation_input: SimulationInput, run_path: str) -> None:
-    """
-    Write the simulation INI file.
-    """
-    ini_string = simulation_input.to_ini()
-    with open(os.path.join(run_path, "run.in"), "w") as input_file:
-        input_file.write(ini_string)
 
 
 def _write_element_files(simulation_input: SimulationInput, run_path: str) -> None:
@@ -56,7 +58,7 @@ def _write_element_files(simulation_input: SimulationInput, run_path: str) -> No
     Write the files of all elements in the simulation setup to disk.
     """
     for o in simulation_input.solenoids + simulation_input.cavities:
-        o.write_to_disk(run_path)
+        o.write_to_csv(run_path)
 
 
 def _link_initial_particle_distribution(
@@ -77,55 +79,58 @@ def _link_initial_particle_distribution(
     )
 
 
-def load_simulation_output(
+def load_simulation_data(
     sim_id: str, localizer: HostLocalizer
-) -> SimulationOutput | None:
+) -> SimulationAllData | None:
     """
-    Loads the simulation output for a given simulation ID.
-    Returns None if the simulation does not exist or was unsuccessful."""
+    Loads the entire simulation data for a given simulation ID.
+    Returns None if the simulation does not exist.
+    """
 
-    if not os.path.exists(localizer.simulation_path(sim_id, "SUCCESS")):
+    if not os.path.exists(localizer.simulation_path(sim_id)):
         return None
 
-    path = localizer.simulation_path(sim_id)
-    x_table, y_table, z_table = _load_emittance_output(path)
-    with open(os.path.join(path, "run.out"), "r") as f:
-        output = f.read()
-    with open(os.path.join(path, "run.in"), "r") as f:
-        input_ini = f.read()
+    web_input = read_json(
+        SimulationInput, localizer.simulation_path(sim_id, "input.json")
+    )
 
+    emittance_x, emittance_y, emittance_z = _load_emittances(sim_id, localizer)
     particle_paths = _particle_paths(sim_id, localizer)
-    particles = [_read_particle_file(path) for path in particle_paths]
+    particles = [Particles.read_from_csv(path) for path in particle_paths]
 
-    return SimulationOutput(
-        sim_id=sim_id,
-        input_ini=input_ini,
-        run_output=output,
+    data = SimulationData(
         particles=particles,
-        emittance_x=x_table,
-        emittance_y=y_table,
-        emittance_z=z_table,
+        emittance_x=emittance_x,
+        emittance_y=emittance_y,
+        emittance_z=emittance_z,
+    )
+
+    run_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
+    run_output = read_txt(localizer.simulation_path(sim_id, "run.out"))
+
+    return SimulationAllData(
+        web_input=web_input,
+        data=data,
+        run_input=run_input,
+        run_output=run_output,
     )
 
 
-def _load_emittance_output(run_dir: str) -> list[XYEmittanceTable]:
-    tables = []
-    for coordinate in ["x", "y", "z"]:
-        file_name = os.path.join(run_dir, f"run.{coordinate.upper()}emit.001")
-        model_cls = ZEmittanceTable if coordinate == "z" else XYEmittanceTable
-        tables.append(_load(file_name, model_cls))
+def _load_emittances(
+    sim_id: str, localizer: HostLocalizer
+) -> tuple[XYEmittanceTable, XYEmittanceTable, ZEmittanceTable]:
 
-    return tables
+    T = TypeVar("T", bound=XYEmittanceTable | ZEmittanceTable)
 
+    def load(cls: Type[T], coordinate: str) -> T:
+        path = localizer.simulation_path(sim_id, f"run.{coordinate.upper()}emit.001")
+        return cls.load_from_csv(path)
 
-def _load(file_path: str, model_cls):
-    try:
-        if os.path.exists(file_path):
-            return model_cls.from_csv(file_path)
-        else:
-            return None
-    except pd.errors.EmptyDataError:
-        return None
+    return (
+        load(XYEmittanceTable, "x"),
+        load(XYEmittanceTable, "y"),
+        load(ZEmittanceTable, "z"),
+    )
 
 
 def list_finished_simulation_ids(localizer: HostLocalizer) -> list[str]:
@@ -160,7 +165,7 @@ def get_statistics(sim_id: str, localizer: HostLocalizer) -> StatisticsOutput | 
     particle_paths = _particle_paths(sim_id, localizer)
     if not particle_paths:
         return None
-    particles = _read_particle_file(particle_paths[-1])
+    particles = Particles.read_from_csv(particle_paths[-1])
 
     return StatisticsOutput(
         sim_id=sim_id,

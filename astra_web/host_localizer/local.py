@@ -1,7 +1,8 @@
 import os
 from subprocess import run
-from .base import HostLocalizer, write_to_file
+from .base import HostLocalizer
 from .schemas.dispatch import DispatchResponse
+from astra_web.file import write_txt
 
 
 class LocalHostLocalizer(HostLocalizer):
@@ -46,6 +47,8 @@ class LocalHostLocalizer(HostLocalizer):
         except FileNotFoundError:
             pass
 
+        os.makedirs(cwd, exist_ok=True)
+
         process = run(
             command,
             cwd=cwd,
@@ -57,14 +60,14 @@ class LocalHostLocalizer(HostLocalizer):
         stdout = process.stdout.decode()
         if stdout:
             stdout_path = os.path.join(cwd, output_file_name_base + ".out")
-            write_to_file(stdout, stdout_path)
+            write_txt(stdout, stdout_path)
         stderr = process.stderr.decode()
         if stderr:
             stderr_path = os.path.join(cwd, output_file_name_base + ".err")
-            write_to_file(stderr, stderr_path)
+            write_txt(stderr, stderr_path)
 
         if process.returncode == 0 and confirm_finished_successfully:
             success_path = os.path.join(cwd, "SUCCESS")
-            write_to_file("", success_path)
+            write_txt("", success_path)
 
         return DispatchResponse(dispatch_type="local")

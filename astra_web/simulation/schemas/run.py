@@ -1,20 +1,13 @@
 from pydantic import BaseModel, ConfigDict, Field, computed_field
-from astra_web.decorators.decorators import ini_exportable
+from astra_web.file import IniExportableModel
 
 
-@ini_exportable
-class SimulationRunSpecifications(BaseModel):
+class SimulationRunSpecifications(IniExportableModel):
     model_config = ConfigDict(extra="forbid")
-
-    run_dir: str = Field(
-        default=None,
-        description="Name of the directory the simulation will be executed in.",
-        exclude=True,
-    )
 
     Version: int = Field(default=4)
 
-    @computed_field(return_type=str, description="Run name for protocol", repr=True)
+    @computed_field(description="Run name for protocol", repr=True)
     @property
     def Head(self) -> str:
         return f"Simulation run with initial particle distribution {self.generator_id}"
@@ -26,7 +19,7 @@ class SimulationRunSpecifications(BaseModel):
         exclude=True,
     )
 
-    Z_min: float = Field(
+    Z_min: float | None = Field(
         default=None, description="Lower boundary for discarding particless."
     )
 
@@ -36,8 +29,9 @@ class SimulationRunSpecifications(BaseModel):
         exclude=True,
     )
 
-    RUN: int = Field(
+    run_number: int = Field(
         default=1,
+        alias="RUN",
         validation_alias="run_number",
         description="The run_number is used as extension for all generated output files.",
     )
@@ -49,7 +43,6 @@ class SimulationRunSpecifications(BaseModel):
     )
 
     @computed_field(
-        return_type=str,
         description="Name of the file containing the initial particle distribution to be used.",
         repr=True,
     )
@@ -57,64 +50,74 @@ class SimulationRunSpecifications(BaseModel):
     def Distribution(self) -> str:
         # name initial particle distribution file in the same convention as the run output files
         # see manual of ASTRA v3.2 (Mach 2017) chapter 2
-        return f"run.{0:04d}.{self.RUN:03d}"
+        return f"run.{0:04d}.{self.run_number:03d}"
 
-    Qbunch: float = Field(
+    bunch_charge: float | None = Field(
         default=None,
+        alias="Qbunch",
         validation_alias="bunch_charge",
         description="Bunch charge in [nC]. Scaling is active if bunch_charge != 0.",
         json_schema_extra={"format": "Unit: [nC]"},
     )
-    Q_Schottky: float = Field(
+    schottky_coefficient: float = Field(
         default=0.0,
+        alias="Q_Schottky",
         validation_alias="schottky_coefficient",
         description="Linear variation of the bunch charge with the field on the cathode. Scaling is \
                      active if Q_Schottky != 0.",
         json_schema_extra={"format": "Unit: [nC*m/MV]"},
     )
-    XYrms: float = Field(
+    rms_laser_spot_size: float = Field(
         default=-1.0,
+        alias="XYrms",
         validation_alias="rms_laser_spot_size",
         description="Horizontal and vertical rms beam size. Scaling is active if rms_laser_spot_size > 0.0.",
         json_schema_extra={"format": "Unit: [mm]"},
     )
-    Trms: float = Field(
+    rms_emission_time: float = Field(
         default=-1.0,
+        alias="Trms",
         validation_alias="rms_emission_time",
         description="RMS emission time of the bunch. Scaling is active if rms_emission_time > 0.0.",
         json_schema_extra={"format": "Unit: [ns]"},
     )
-    H_min: float = Field(
+    start_time: float = Field(
         default=0.0,
+        alias="H_min",
         validation_alias="start_time",
         description="Minimum time step for the Runge-Kutta integration and min. time step for the \
                      space charge calculation.",
         json_schema_extra={"format": "Unit: [ns]"},
     )
-    H_max: float = Field(
+    end_time: float = Field(
         default=0.001,
+        alias="H_max",
         validation_alias="end_time",
         description="Maximum time step for the Runge-Kutta integration.",
         json_schema_extra={"format": "Unit: [ns]"},
     )
-    Max_step: int = Field(
+    max_iteration: int = Field(
         default=100000,
+        alias="Max_step",
         validation_alias="max_iteration",
         description="Safety termination: after Max_step Runge_Kutta steps the run is terminated.",
     )
-    Z_Cathode: float = Field(
+    z_cathode: float = Field(
         default=0.0,
+        alias="Z_Cathode",
         validation_alias="z_cathode",
         description="Position of the cathode for the calculation of the mirror charge.",
         json_schema_extra={"format": "Unit: [m]"},
     )
-    Track_All: bool = Field(
+    track_all_particles: bool = Field(
         default=True,
+        alias="Track_All",
         validation_alias="track_all_particles",
         description="If false, only the reference particle will be tracked.",
     )
-    Auto_Phase: bool = Field(
+    auto_phase: bool = Field(
         default=True,
+        alias="Auto_Phase",
         validation_alias="auto_phase",
         description="If true, the RF phases will be set relative to the phase with maximum energy gain.",
     )

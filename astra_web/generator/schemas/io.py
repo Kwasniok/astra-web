@@ -1,97 +1,106 @@
 from pydantic import BaseModel, Field, ConfigDict, computed_field
-from astra_web.decorators.decorators import ini_exportable
+from astra_web.file import IniExportableModel
 from astra_web.host_localizer.schemas.dispatch import DispatchResponse
 from astra_web.uuid import get_uuid
 from .enums import Distribution, ParticleType
 from .particles import Particles
 
 
-@ini_exportable
-class GeneratorInput(BaseModel):
+class GeneratorInput(IniExportableModel):
     model_config = ConfigDict(use_enum_values=True, extra="forbid")
 
-    # Internal attributes
     _gen_id: str
 
-    # Attributes relevant for dump to ASTRA input file
-    # Aliases correspond to possibly externally used keywords
-    # attribute names correspond to ASTRA interface
-    @computed_field(return_type=str)
+    @computed_field
     @property
     def FNAME(self) -> str:
         return "distribution.ini"
 
     Add: bool | None = False
     N_add: int | None = 0
-    IPart: int = Field(
+    particle_count: int = Field(
         default=100,
+        alias="IPart",
         validation_alias="particle_count",
         description="Number of particles to be generated.",
     )
-    Species: ParticleType = Field(
-        default="electrons",
+    particle_type: ParticleType = Field(
+        default=ParticleType("electrons"),
+        alias="Species",
         validation_alias="particle_type",
         description="Species of particles to be generated.",
     )
-    Probe: bool = Field(
+    generate_probe_particles: bool = Field(
         default=True,
+        alias="Probe",
         validation_alias="generate_probe_particles",
         description="If true, 6 probe particles are generated.",
     )
-    Noise_reduc: bool = Field(
+    quasi_random: bool = Field(
         default=True,
+        alias="Noise_reduc",
         validation_alias="quasi_random",
         description="If true, particle coordinates are generated quasi-randomly following a Hammersley sequence.",
     )
-    Cathode: bool = Field(
+    time_spread: bool = Field(
         default=True,
+        alias="Cathode",
         validation_alias="time_spread",
         description="If true the particles will be generated with a time spread rather than with a \
                      spread in the longitudinal position.",
     )
-    High_res: bool = Field(
+    high_accuracy: bool = Field(
         default=True,
+        alias="High_res",
         validation_alias="high_accuracy",
         description="If true, the particle distribution is saved with increased accuracy.",
     )
-    Q_total: float = Field(
+    total_charge: float = Field(
         default=1.0,
+        alias="Q_total",
         validation_alias="total_charge",
         description="Total charge of the particles, equally distributed on the number of particles.",
         json_schema_extra={"format": "Unit: [nC]"},
     )
-    Dist_z: Distribution = Field(
-        default="gauss",
+    dist_z: Distribution = Field(
+        default=Distribution("gauss"),
+        alias="Dist_z",
         validation_alias="dist_z",
         description="Specifies the type of the longitudinal particle distribution.",
     )
-    Dist_pz: Distribution = Field(
-        default="gauss",
+    dist_pz: Distribution = Field(
+        default=Distribution("gauss"),
+        alias="Dist_pz",
         validation_alias="dist_pz",
         description="Specifies the longitudinal energy and momentum distribution, respectively.",
     )
-    Dist_x: Distribution = Field(
-        default="gauss",
+    dist_x: Distribution = Field(
+        default=Distribution("gauss"),
+        alias="Dist_x",
         validation_alias="dist_x",
         description="Specifies the transverse particle distribution in the horizontal direction.",
     )
-    Dist_px: Distribution = Field(
-        default="gauss",
+    dist_px: Distribution = Field(
+        default=Distribution("gauss"),
+        alias="Dist_px",
         validation_alias="dist_px",
         description="Specifies the transverse momentum distribution in the horizontal direction.",
     )
-    Dist_y: Distribution = Field(
-        default="gauss",
+    dist_y: Distribution = Field(
+        default=Distribution("gauss"),
+        alias="Dist_y",
         validation_alias="dist_y",
         description="Specifies the transverse particle distribution in the vertical direction.",
     )
-    Dist_py: Distribution = Field(
-        default="gauss",
+    dist_py: Distribution = Field(
+        default=Distribution("gauss"),
+        alias="Dist_py",
         validation_alias="dist_py",
         description="Specifies the transverse momentum distribution in the vertical direction.",
     )
-    cor_Ekin: float = Field(
+    cor_energy_spread: float = Field(
         default=0.0,
+        alias="cor_Ekin",
         validation_alias="cor_energy_spread",
         description="Correlated energy spread.",
     )
@@ -105,107 +114,125 @@ class GeneratorInput(BaseModel):
         description="Correlated beam divergence in the vertical direction.",
         json_schema_extra={"format": "Unit: [mrad]"},
     )
-    Ref_Ekin: float = Field(
+    reference_kinetic_energy: float = Field(
         default=0.0,
+        alias="Ref_Ekin",
         validation_alias="reference_kinetic_energy",
         description="initial kinetic energy of the reference particle",
         json_schema_extra={"format": "Unit: [keV]"},
     )
-    Ref_zpos: float = Field(
+    z_0_ref: float = Field(
         default=0.0,
+        alias="Ref_zpos",
         validation_alias="z_0_ref",
         description="z position of the reference particle, i.e. the longitudinal bunch position.",
         json_schema_extra={"format": "Unit: [m]"},
     )
-    sig_Ekin: float = Field(
+    rms_energy_spread: float | None = Field(
         default=None,
+        alias="sig_Ekin",
         validation_alias="rms_energy_spread",
         description="RMS value of the energy spread.",
         json_schema_extra={"format": "Unit: [keV]"},
     )
-    sig_x: float = Field(
+    rms_bunch_size_x: float = Field(
         default=1.0,
+        alias="sig_x",
         validation_alias="rms_bunch_size_x",
         description="RMS bunch size in the horizontal direction.",
         json_schema_extra={"format": "Unit: [mm]"},
     )
-    sig_px: float = Field(
+    rms_dist_px: float | None = Field(
         default=None,
+        alias="sig_px",
         validation_alias="rms_dist_px",
         description="RMS value of the horizontal momentum distribution.",
         json_schema_extra={"format": "Unit: [eV/c]"},
     )
-    sig_y: float = Field(
+    rms_bunch_size_y: float | None = Field(
         default=None,
+        alias="sig_y",
         validation_alias="rms_bunch_size_y",
         description="RMS bunch size in the vertical direction.",
         json_schema_extra={"format": "Unit: [mm]"},
     )
-    sig_py: float = Field(
+    rms_dist_py: float | None = Field(
         default=None,
+        alias="sig_py",
         validation_alias="rms_dist_py",
         description="RMS value of the vertical momentum distribution.",
         json_schema_extra={"format": "Unit: [eV/c]"},
     )
-    sig_z: float = Field(
+    rms_bunch_size_z: float | None = Field(
         default=None,
+        alias="sig_z",
         validation_alias="rms_bunch_size_z",
         description="RMS value of the bunch length.",
         json_schema_extra={"format": "Unit: [mm]"},
     )
-    sig_clock: float = Field(
+    sig_t: float | None = Field(
         default=None,
+        alias="sig_clock",
         validation_alias="sig_t",
         description="RMS rms value of the emission time, i.e. the bunch length if generated from a cathode.",
         json_schema_extra={"format": "Unit: [ns]"},
     )
-    Nemit_x: float = Field(
+    x_emittance: float | None = Field(
         default=None,
+        alias="Nemit_x",
         validation_alias="x_emittance",
         description="Normalized transverse emittance in the horizontal direction.",
         json_schema_extra={"format": "Unit: [pi*mrad*mm]"},
     )
-    Nemit_y: float = Field(
+    y_emittance: float | None = Field(
         default=None,
+        alias="Nemit_y",
         validation_alias="y_emittance",
         description="Normalized transverse emittance in the vertical direction.",
         json_schema_extra={"format": "Unit: [pi*mrad*mm]"},
     )
-    C_sig_x: float = Field(
+    gaussian_cutoff_x: float | None = Field(
         default=None,
+        alias="C_sig_x",
         validation_alias="gaussian_cutoff_x",
         description="Cuts off a Gaussian longitudinal distribution at C_sig_z times sig_z.",
     )
-    C_sig_y: float = Field(
+    gaussian_cutoff_y: float | None = Field(
         default=None,
+        alias="C_sig_y",
         validation_alias="gaussian_cutoff_y",
         description="Cuts off a Gaussian longitudinal distribution at C_sig_z times sig_z.",
     )
-    C_sig_z: float = Field(
+    gaussian_cutoff_z: float | None = Field(
         default=None,
+        alias="C_sig_z",
         validation_alias="gaussian_cutoff_z",
         description="Cuts off a Gaussian longitudinal distribution at C_sig_z times sig_z.",
     )
-    Lz: float = Field(
+    flattop_z_length: float | None = Field(
         default=None,
+        alias="Lz",
         validation_alias="flattop_z_length",
         description="Length of the bunch.",
         json_schema_extra={"format": "Unit: [mm]"},
     )
-    rz: float = Field(
+    flattop_rise_z: float | None = Field(
         default=None,
+        alias="rz",
         validation_alias="flattop_rise_z",
         description="Rise time of a bunch with flattop distribution.",
         json_schema_extra={"format": "Unit: [mm]"},
     )
-    Lt: float = Field(
+    flattop_time_length: float | None = Field(
         default=None,
+        alias="Lt",
         validation_alias="flattop_time_length",
         description="Length of the bunch with flattop distribution.",
         json_schema_extra={"format": "Unit: [ns]"},
     )
-    rt: float = Field(
+    flattop_rise_time: float | None = Field(
         default=None,
+        alias="rt",
         validation_alias="flattop_rise_time",
         description="Rise time of a bunch with flattop distribution.",
         json_schema_extra={"format": "Unit: [ns]"},
@@ -229,10 +256,19 @@ class GeneratorDispatchOutput(BaseModel):
     dispatch_response: DispatchResponse
 
 
-class GeneratorOutput(BaseModel):
+class GeneratorData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    gen_id: str
     particles: Particles
+
+
+class GeneratorCompleteData(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    web_input: GeneratorInput
+    data: GeneratorData | None = Field(
+        default=None,
+        description="Generator data, if the generation has finished successfully.",
+    )
     generator_input: str
     generator_output: str

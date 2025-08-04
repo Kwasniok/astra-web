@@ -1,30 +1,35 @@
 import os
-from .tables import FieldTable
+from abc import ABC, abstractmethod
 from typing import Any
-from pydantic import BaseModel, Field, ConfigDict, computed_field, model_serializer
-from astra_web.decorators.decorators import ini_exportable
+from pydantic import Field, ConfigDict, computed_field
+from .tables import FieldTable
+from astra_web.file import IniExportableModel
 
 
-class Module(BaseModel):
+class Module(IniExportableModel, ABC):
     model_config = ConfigDict(extra="forbid")
 
-    @model_serializer
-    def ser_model(self) -> dict[str, Any]:
-        out_dict = dict()
-        for key, val in self:
-            if not self.model_fields[key].exclude == True and val is not None:
-                out_dict[f"{key}({self.id})"] = val
+    id: int = Field(exclude=True, default=-1, description="The ID of the module.")
 
+    def _to_ini_dict(self) -> dict[str, Any]:
+        # non-excluded, non-none, aliased fields with enumeration suffixes
+
+        out_dict = super()._to_ini_dict()
+        out_dict = {f"{k}({self.id})": v for k, v in out_dict.items()}
         return out_dict
 
+    @abstractmethod
+    def write_to_csv(self, run_path: str) -> None:
+        """
+        Write the module's data to disk as CSV file.
+        """
+        pass
 
-@ini_exportable
+
 class Cavity(Module):
     model_config = ConfigDict(extra="forbid")
 
-    id: int = Field(exclude=True, default=None, description="The ID of the cavity.")
-
-    field_table: FieldTable = Field(
+    field_table: FieldTable | None = Field(
         exclude=True,
         default=None,
         description="Table containing lists of longitudinal positions z and corresponding \
@@ -32,69 +37,69 @@ class Cavity(Module):
         json_schema_extra={"format": "Unit: [m]"},
     )
 
-    @computed_field(return_type=str)
+    @computed_field
     @property
     def File_Efield(self) -> str:
         return f"C{self.id}_E.dat"
 
-    Nue: float = Field(
+    frequency: float = Field(
         default=1.3e0,
+        alias="Nue",
         validation_alias="frequency",
         description="Frequency of the RF field.",
         json_schema_extra={"format": "Unit: [GHz]"},
     )
-    C_pos: float = Field(
+    z_0: float = Field(
         default=0.0e0,
+        alias="C_pos",
         validation_alias="z_0",
         description="Leftmost longitudinal cavity position.",
         json_schema_extra={"format": "Unit: [m]"},
     )
-    C_smooth: int = Field(
+    smoothing_iterations: int = Field(
         default=10,
+        alias="C_smooth",
         validation_alias="smoothing_iterations",
         description="Number of iterations for smoothing of transverse field components.",
     )
-    C_higher_order: bool = Field(
+    higher_order: bool = Field(
         default=True,
+        alias="C_higher_order",
         validation_alias="higher_order",
         description="If true, field expansion extends to 3rd order, 1st order if false.",
     )
-    Phi: float = Field(
+    phase: float = Field(
         default=0.0e0,
+        alias="Phi",
         validation_alias="phase",
         description="Initial phase of the RF field.",
         json_schema_extra={"format": "Unit: [deg]"},
     )
-    MaxE: float = Field(
+    max_field_strength: float = Field(
         default=130.0e0,
+        alias="MaxE",
         validation_alias="max_field_strength",
         description="Maximum on-axis longitudinal amplitude of the RF field",
         json_schema_extra={"format": "Unit: [MV/m] | [T]"},
     )
 
-    def write_to_disk(self, run_path: str) -> None:
+    def write_to_csv(self, run_path: str) -> None:
         """Write the field table to a CSV file in the specified path."""
         if self.field_table is None:
             return
-        self.field_table.to_csv(os.path.join(run_path, self.File_Efield))
+        self.field_table.write_to_csv(os.path.join(run_path, self.File_Efield))
 
-    @property
-    def z_0(self):
-        return self.C_pos
-
-    def ser_model(self) -> dict[str, Any]:
-        out_dict = super().ser_model()
+    def _to_ini_dict(self) -> dict[str, Any]:
+        out_dict = super()._to_ini_dict()
         out_dict[f"File_Efield({self.id})"] = self.File_Efield
 
         return out_dict
 
 
-@ini_exportable
 class Solenoid(Module):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-    id: int = Field(default=None, exclude=True, description="The ID of the solenoid.")
-    field_table: FieldTable = Field(
+    field_table: FieldTable | None = Field(
         default=None,
         exclude=True,
         description="Table containing lists of longitudinal positions z and corresponding \
@@ -102,41 +107,40 @@ class Solenoid(Module):
         json_schema_extra={"format": "Unit: [m]"},
     )
 
-    @computed_field(return_type=str)
+    @computed_field
     @property
     def File_Bfield(self) -> str:
         return f"S{self.id}_B.dat"
 
-    S_pos: float = Field(
+    z_0: float | None = Field(
         default=None,
+        alias="S_pos",
         validation_alias="z_0",
         description="Leftmost longitudinal solenoid position.",
         json_schema_extra={"format": "Unit: [m]"},
     )
-    S_smooth: int = Field(
+    smoothing_iterations: int = Field(
         default=10,
+        alias="S_smooth",
         validation_alias="smoothing_iterations",
         description="Number of iterations for smoothing of transverse field components.",
     )
-    MaxB: float = Field(
+    max_field_strength: float | None = Field(
         default=None,
+        alias="MaxB",
         validation_alias="max_field_strength",
         description="Maximum on-axis longitudinal amplitude of the magnetic field.",
         json_schema_extra={"format": "Unit: [T]"},
     )
 
-    @property
-    def z_0(self):
-        return self.S_pos
-
-    def ser_model(self) -> dict[str, Any]:
-        out_dict = super().ser_model()
+    def _to_ini_dict(self) -> dict[str, Any]:
+        out_dict = super()._to_ini_dict()
         out_dict[f"File_Bfield({self.id})"] = self.File_Bfield
 
         return out_dict
 
-    def write_to_disk(self, run_path: str) -> None:
+    def write_to_csv(self, run_path: str) -> None:
         """Write the field table to a CSV file in the specified path."""
         if self.field_table is None:
             return
-        self.field_table.to_csv(os.path.join(run_path, self.File_Bfield))
+        self.field_table.write_to_csv(os.path.join(run_path, self.File_Bfield))

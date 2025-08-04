@@ -3,6 +3,7 @@ import os
 from astra_web.generator.schemas.io import GeneratorInput
 from astra_web.simulation.schemas.io import SimulationInput
 from .schemas.dispatch import DispatchResponse
+from astra_web.file import write_txt
 
 
 class HostLocalizer(ABC):
@@ -117,12 +118,3 @@ class HostLocalizer(ABC):
             binary = "parallel_" + binary
 
         return self.astra_binary_path(binary)
-
-
-def write_to_file(content: str, file_path: str) -> None:
-    """
-    Writes the content to a file.
-    """
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)
-    with open(file_path, "w") as file:
-        file.write(content)

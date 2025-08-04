@@ -1,11 +1,28 @@
-import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Type, TypeVar
+from astra_web.file import write_csv, read_csv
 
 T = TypeVar("T", bound="Parent")
 
 
-class FieldTable(BaseModel):
+class Table(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    def write_to_csv(self, path: str) -> None:
+        """
+        Write the table data to a CSV file.
+        """
+        write_csv(self, path)
+
+    @classmethod
+    def load_from_csv(cls: Type[T], path: str) -> T:
+        """
+        Load the table data from a CSV file.
+        """
+        return read_csv(cls, path)
+
+
+class FieldTable(Table):
     model_config = ConfigDict(extra="forbid")
 
     z: list[float] = Field(
@@ -17,13 +34,8 @@ class FieldTable(BaseModel):
         json_schema_extra={"format": "Unit: free"},
     )
 
-    def to_csv(self, file_name) -> None:
-        pd.DataFrame({"z": self.z, "v": self.v}).to_csv(
-            file_name, sep=" ", header=False, index=False
-        )
 
-
-class XYEmittanceTable(BaseModel):
+class XYEmittanceTable(Table):
     model_config = ConfigDict(extra="forbid")
 
     z: list[float] = Field(
@@ -53,13 +65,8 @@ class XYEmittanceTable(BaseModel):
         json_schema_extra={"format": "Unit: [mrad]"},
     )
 
-    @classmethod
-    def from_csv(cls: Type[T], filename: str) -> T:
-        df = pd.read_csv(filename, names=list(cls.model_fields.keys()), sep=r"\s+")
-        return cls(**df.to_dict("list"))
 
-
-class ZEmittanceTable(BaseModel):
+class ZEmittanceTable(Table):
     model_config = ConfigDict(extra="forbid")
 
     z: list[float] = Field(
@@ -88,8 +95,3 @@ class ZEmittanceTable(BaseModel):
         description="Correlation of position coordinates and mean energy in x or y direction.",
         json_schema_extra={"format": "Unit: [keV]"},
     )
-
-    @classmethod
-    def from_csv(cls: Type[T], filename: str) -> T:
-        df = pd.read_csv(filename, names=list(cls.model_fields.keys()), sep=r"\s+")
-        return cls(**df.to_dict("list"))

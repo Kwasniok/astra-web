@@ -11,25 +11,25 @@ from .generator.schemas.particles import Particles
 from .generator.schemas.io import (
     GeneratorInput,
     GeneratorDispatchOutput,
-    GeneratorOutput,
+    GeneratorCompleteData,
 )
 from .simulation.schemas.io import (
     SimulationInput,
-    SimulationOutput,
+    SimulationAllData,
     SimulationDispatchOutput,
     StatisticsInput,
     StatisticsOutput,
 )
 from .generator.host_localized import (
     dispatch_particle_distribution_generation,
-    load_generator_output,
+    load_generator_data,
     list_finished_generator_ids,
     delete_particle_distribution,
     write_particle_distribution,
 )
 from .simulation.host_localized import (
     dispatch_simulation_run,
-    load_simulation_output,
+    load_simulation_data,
     list_finished_simulation_ids,
     delete_simulation,
     get_statistics,
@@ -109,9 +109,9 @@ def upload_particle_distribution(data: Particles) -> dict:
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-def download_generator_results(gen_id: str) -> GeneratorOutput:
+def download_generator_results(gen_id: str) -> GeneratorCompleteData:
     localizer = LocalHostLocalizer.instance()
-    output = load_generator_output(gen_id, localizer)
+    output = load_generator_data(gen_id, localizer)
     if output is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -168,13 +168,13 @@ async def dispatch_simulation(
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-def download_simulation_results(sim_id: str) -> SimulationOutput:
+def download_simulation_data(sim_id: str) -> SimulationAllData:
     """
     Returns the output of a specific ASTRA simulation on the requested server depending
     on the given ID.
     """
     localizer = LocalHostLocalizer.instance()
-    output = load_simulation_output(sim_id, localizer)
+    output = load_simulation_data(sim_id, localizer)
     if output is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

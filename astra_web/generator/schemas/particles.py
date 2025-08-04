@@ -3,8 +3,9 @@ import numpy as np
 from pmd_beamphysics import ParticleGroup
 from typing import Type, TypeVar
 from pydantic import BaseModel, ConfigDict, Field
+from astra_web.file import read_csv, write_csv
 
-T = TypeVar("T", bound="Parent")
+T = TypeVar("T", bound=BaseModel)
 
 
 class Particles(BaseModel):
@@ -57,13 +58,12 @@ class Particles(BaseModel):
     def lost_particles(self):
         return np.array(self.status) < 0
 
-    def to_csv(self, filename) -> None:
-        pd.DataFrame(dict(self)).to_csv(filename, sep=" ", header=False, index=False)
+    def write_to_csv(self, path) -> None:
+        write_csv(self, path)
 
     @classmethod
-    def from_csv(cls: Type[T], filename: str) -> T:
-        df = pd.read_csv(filename, names=list(cls.model_fields.keys()), sep=r"\s+")
-        return cls(**df.to_dict("list"))
+    def read_from_csv(cls: Type[T], path: str) -> T:
+        return read_csv(cls, path)
 
     def to_df(self):
         return pd.DataFrame(self.dict())

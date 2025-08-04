@@ -1,103 +1,115 @@
 from pydantic import BaseModel, ConfigDict, ConfigDict, Field, computed_field
-from astra_web.decorators.decorators import ini_exportable
+from astra_web.file import IniExportableModel
 
 
-@ini_exportable
-class SpaceCharge(BaseModel):
+class SpaceCharge(IniExportableModel):
     model_config = ConfigDict(extra="forbid")
 
-    LSPCH: bool = Field(
+    use_space_charge: bool = Field(
         default=False,
+        alias="LSPCH",
         validation_alias="use_space_charge",
         description="Toggle whether to calculate space charge fields or not.",
     )
-    LSPCH3D: bool = Field(
+    use_3d_space_charge: bool = Field(
         default=False,
+        alias="LSPCH3D",
         validation_alias="use_3d_space_charge",
         description="Toggle whether to calculate 3D space charge fields with an FFT algorithm or not.",
     )
-    z_trans: float = Field(
+    z_trans: float | None = Field(
         default=None,
         description="Longitudinal position for automatic transition of 2D to 3D space charge\
                     calculation.",
         json_schema_extra={"format": "Unit: [m]"},
     )
-    Lmirror: bool = Field(
+    use_mirror_charge: bool = Field(
         default=True,
+        alias="Lmirror",
         validation_alias="use_mirror_charge",
         description="If true, mirror charges at the cathode are taken into account.",
     )
-    Nrad: int = Field(
+    grid_cell_count: int = Field(
         gt=0,
         default=32,
+        alias="Nrad",
         validation_alias="grid_cell_count",
         description="Number of grid cells in radial direction up to the bunch radius.",
     )
-    Cell_var: float = Field(
+    cell_size_scale: float = Field(
         default=2.0,
+        alias="Cell_var",
         validation_alias="cell_size_scale",
         description="Variation of the cell height in radial direction. \
                     The innermost cell is cell_var times higher than the outermost cell",
     )
-    Max_Scale: float = Field(
+    max_scale: float = Field(
         default=0.05,
+        alias="Max_Scale",
         validation_alias="max_scale",
         description="If one of the space charge scaling factors exceeds the limit 1± max_scale a new \
                     space charge calculation is initiated.",
     )
-    Max_Count: int = Field(
+    max_scale_count: int = Field(
         default=40,
         gt=0,
+        alias="Max_Count",
         validation_alias="max_scale_count",
         description="If the space charge field has been scaled max_scale_count times, a new \
                      space charge calculation is initiated.",
     )
-    Exp_Control: float = Field(
+    variation_threshold: float = Field(
         default=0.1,
+        alias="Exp_Control",
         validation_alias="variation_threshold",
         description="Specifies the maximum tolerable variation of the bunch extensions relative to \
                     the grid cell size within one time step.",
     )
-    Nlong_in: int = Field(
+    longitudinal_2d_grid_size: int = Field(
         default=10,
-        validation_alias="2D_longitudinal_grid_size",
+        alias="Nlong_in",
+        validation_alias="longitudinal_2d_grid_size",
         description="Maximum number of grid cells in longitudinal direction within the bunch \
                      length. During the emission process the number is reduced, according to the \
                      specification of the minimum cell length min_grid. Only for cylindrical grid \
                      algorithm.",
     )
-    N_min: int = Field(
+    emitted_particle_num_per_step: int = Field(
         default=10,
+        alias="N_min",
         validation_alias="emitted_particle_num_per_step",
         description="Average number of particles to be emitted in one step during the emission from \
                      a cathode. N_min is needed to set H_min automatically during emission. Only \
                      for cylindrical grid algorithm.",
     )
-    Nxf: int = Field(
+    x_3d_grid_size: int | None = Field(
         default=None,
         ge=4,
-        validation_alias="3D_x_grid_size",
+        alias="Nxf",
+        validation_alias="x_3d_grid_size",
         description="Maximum number of grid cells in x direction within the bunch \
                          length. Only for 3D grid algorithm.",
     )
-    Nyf: int = Field(
+    y_3d_grid_size: int | None = Field(
         default=None,
         ge=4,
-        validation_alias="3D_y_grid_size",
+        alias="Nyf",
+        validation_alias="y_3d_grid_size",
         description="Maximum number of grid cells in x direction within the bunch \
                              length. Only for 3D grid algorithm.",
     )
-    Nzf: int = Field(
+    z_3d_grid_size: int | None = Field(
         default=None,
         ge=4,
-        validation_alias="3D_z_grid_size",
+        alias="Nzf",
+        validation_alias="z_3d_grid_size",
         description="Maximum number of grid cells in longitudinal direction within the bunch \
                      length. Only for 3D grid algorithm.",
     )
 
-    @computed_field(return_type=bool, repr=True)
+    @computed_field(repr=True)
     @property
-    def L2D_3D(self):
+    def L2D_3D(self) -> bool:
         if self.z_trans is None:
             return False
         else:
