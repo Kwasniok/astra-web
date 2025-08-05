@@ -1,7 +1,7 @@
 from enum import Enum
 from .base import HostLocalizer
 from .local import LocalHostLocalizer
-from .slurm import SLURMHostLocalizer
+from .slurm import SLURMHostLocalizer, SLURMJobState
 
 
 class Hosts(Enum):

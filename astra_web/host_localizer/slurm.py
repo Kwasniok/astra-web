@@ -5,6 +5,7 @@ import requests
 from .base import HostLocalizer
 from .schemas.config import SLURMConfiguration
 from .schemas.dispatch import DispatchResponse
+from .schemas.io import JobIdsOutput
 
 
 class _RequestType(Enum):
@@ -12,6 +13,27 @@ class _RequestType(Enum):
     GET = "get"
     POST = "post"
     PUT = "put"
+
+
+class SLURMJobState(str, Enum):
+    """
+    Enum representing the possible states of a SLURM job.
+
+    see https://slurm.schedmd.com/job_state_codes.html
+    """
+
+    BOOT_FAIL = "boot_fail"
+    CANCELLED = "cancelled"
+    COMPLETED = "completed"
+    DEADLINE = "deadline"
+    FAILED = "failed"
+    NODE_FAIL = "node_fail"
+    OUT_OF_MEMORY = "out_of_memory"
+    PENDING = "pending"
+    PREEMPTED = "preempted"
+    RUNNING = "running"
+    SUSPENDED = "suspended"
+    TIMEOUT = "timeout"
 
 
 class SLURMHostLocalizer(HostLocalizer):
@@ -204,6 +226,65 @@ status=$?
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to diagnose connection to SLURM.") from e
+        return response
+
+    def list_jobs(self, state: set[SLURMJobState]) -> list[dict[str, Any]]:
+        """
+        Lists all jobs currently managed by SLURM.
+        """
+        data = {
+            "users": self._config.user_name,
+            # state: does not work due to bug in SLURM REST API
+        }
+        try:
+            response = self._request(
+                request=_RequestType.GET,
+                url=f"{self._config.base_url}/slurmdb/{self._config.api_version}/jobs",
+                headers={
+                    "Content-Type": "application/json",
+                    **self._header_credentials,
+                },
+                json=data,
+                proxies=self._proxies,
+            )
+        except RuntimeError as e:
+            raise RuntimeError(f"Failed to list SLURM job IDs.") from e
+        # manual filtering due to bug in SLURM REST API
+        jobs = response["jobs"]
+        if state:
+            filter = lambda j: set(s.lower() for s in j["state"]["current"]) & set(
+                s.value for s in state
+            )
+            jobs = list(j for j in jobs if filter(j))
+        return jobs
+
+    def list_job_ids(
+        self, state: set[SLURMJobState], local_localizer: HostLocalizer
+    ) -> JobIdsOutput:
+        """
+        Lists all IDs for jobs currently managed by SLURM.
+        """
+        job_ids = [j["name"] for j in self.list_jobs(state)]
+
+        response = JobIdsOutput(
+            particles=[
+                j.removeprefix(self.GENERATE_DISPATCH_NAME_PREFIX)
+                for j in job_ids
+                if j.startswith(self.GENERATE_DISPATCH_NAME_PREFIX)
+            ],
+            simulations=[
+                j.removeprefix(self.SIMULATE_DISPATCH_NAME_PREFIX)
+                for j in job_ids
+                if j.startswith(self.SIMULATE_DISPATCH_NAME_PREFIX)
+            ],
+        )
+
+        # filter for managed ids
+        gen_ids = local_localizer.generator_ids
+        sim_ids = local_localizer.simulation_ids
+        response.particles = [id for id in response.particles if id in gen_ids]
+        response.simulations = [id for id in response.simulations if id in sim_ids]
+
         return response
 
     def _request(

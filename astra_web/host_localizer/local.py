@@ -8,10 +8,7 @@ from astra_web.file import write_txt
 class LocalHostLocalizer(HostLocalizer):
 
     _ASTRA_BINARY_PATH = os.environ["ASTRA_BINARY_PATH"]
-
     _DATA_PATH = "/app/data"
-    _GENERATOR_DATA_PATH = os.path.join(_DATA_PATH, "generator")
-    _SIMULATION_DATA_PATH = os.path.join(_DATA_PATH, "simulation")
 
     _instance = None
 

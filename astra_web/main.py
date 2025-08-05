@@ -7,8 +7,10 @@ from .host_localizer import (
     HostLocalizerTypes,
     LocalHostLocalizer,
     SLURMHostLocalizer,
+    SLURMJobState,
 )
 from .host_localizer.schemas.config import SLURMConfiguration
+from .host_localizer.schemas.io import JobIdsOutput
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
 from .generator.schemas.io import (
@@ -268,6 +270,55 @@ async def diagnose_slurm() -> dict[str, Any]:
     slurm_localizer = SLURMHostLocalizer.instance()
     try:
         return slurm_localizer.diagnose()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )
+
+
+@app.get(
+    "/slurm/jobs",
+    dependencies=[Depends(api_key_auth)],
+    tags=["slurm"],
+)
+async def list_slurm_jobs(
+    state: set[SLURMJobState] = Query(default=set()),
+) -> list[dict[str, Any]]:
+    """
+    Lists jobs currently managed by SLURM.
+
+    see: https://slurm.schedmd.com/rest_api.html#slurmdbV0043GetJobs
+    """
+    slurm_localizer = SLURMHostLocalizer.instance()
+    try:
+        return slurm_localizer.list_jobs(state=state)
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )
+
+
+@app.get(
+    "/slurm/jobs/ids",
+    dependencies=[Depends(api_key_auth)],
+    tags=["slurm"],
+)
+async def list_slurm_managed_ids(
+    state: set[SLURMJobState] = Query(default=set()),
+) -> JobIdsOutput:
+    """
+    Lists IDs of existing generations or simulations which have been dispatched to and are still remembered by SLURM.
+
+    note: This means that jobs which have been deleted or are too old are not included in the list.
+    """
+    slurm_localizer = SLURMHostLocalizer.instance()
+    try:
+        return slurm_localizer.list_job_ids(
+            state=state,
+            local_localizer=LocalHostLocalizer.instance(),
+        )
     except RuntimeError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

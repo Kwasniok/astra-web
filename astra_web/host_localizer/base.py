@@ -11,6 +11,9 @@ class HostLocalizer(ABC):
     def __init__(self, *, do_not_init_manually_use_instance: None):
         pass
 
+    GENERATE_DISPATCH_NAME_PREFIX = "generate-"
+    SIMULATE_DISPATCH_NAME_PREFIX = "simulate-"
+
     @classmethod
     @abstractmethod
     def instance(cls) -> "HostLocalizer":
@@ -43,6 +46,22 @@ class HostLocalizer(ABC):
         path = os.path.join(self.data_path(), "simulation", id)
         return path if file_name is None else os.path.join(path, file_name)
 
+    @property
+    def generator_ids(self) -> list[str]:
+        """
+        Returns the list of all managed generator IDs.
+        """
+        path = os.path.join(self.data_path(), "generator")
+        return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
+
+    @property
+    def simulation_ids(self) -> list[str]:
+        """
+        Returns the list of all managed simulation IDs.
+        """
+        path = os.path.join(self.data_path(), "simulation")
+        return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
+
     @abstractmethod
     def astra_binary_path(self, binary: str) -> str:
         """
@@ -55,7 +74,7 @@ class HostLocalizer(ABC):
         Dispatches the generation process by running the ASTRA generator binary with the appropriate input file.
         """
         return self._dispatch_command(
-            name=f"generate-{generator_input.gen_id}",
+            name=f"{self.GENERATE_DISPATCH_NAME_PREFIX}{generator_input.gen_id}",
             command=self._generator_command(generator_input),
             cwd=self.generator_path(generator_input.gen_id),
             output_file_name_base="generator",
@@ -68,7 +87,7 @@ class HostLocalizer(ABC):
         Dispatches a simulation to the host system.
         """
         return self._dispatch_command(
-            name=f"simulate-{simulation_input.sim_id}",
+            name=f"{self.SIMULATE_DISPATCH_NAME_PREFIX}{simulation_input.sim_id}",
             command=self._simulation_command(simulation_input),
             cwd=self.simulation_path(simulation_input.run_dir),
             output_file_name_base="run",
