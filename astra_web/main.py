@@ -1,3 +1,4 @@
+from typing import Any
 import os
 from fastapi import FastAPI, Depends, Query, HTTPException, status
 from fastapi.responses import ORJSONResponse
@@ -5,6 +6,7 @@ from .host_localizer import (
     Hosts,
     HostLocalizerTypes,
     LocalHostLocalizer,
+    SLURMHostLocalizer,
 )
 from .auth.auth_schemes import api_key_auth
 from .generator.schemas.particles import Particles
@@ -47,6 +49,10 @@ tags_metadata = [
         "name": "simulations",
         "description": "All CRUD methods for beam dynamics simulations. Simulations are run \
                                            by ASTRA binary.",
+    },
+    {
+        "name": "slurm",
+        "description": "Configure and diagnose the SLURM backend.",
     },
 ]
 
@@ -214,3 +220,46 @@ async def statistics(data: StatisticsInput, sim_id: str) -> StatisticsOutput:
             detail=f"Simulation data for '{sim_id}' not found.",
         )
     return stats
+
+
+@app.put(
+    "/slurm/configure",
+    dependencies=[Depends(api_key_auth)],
+    tags=["slurm"],
+)
+async def configure_slurm(user: str, token: str) -> dict[str, Any]:
+    slurm_localizer = SLURMHostLocalizer.instance()
+    slurm_localizer.configure(user, token)
+    return slurm_localizer.configuration
+
+
+@app.get(
+    "/slurm/ping",
+    dependencies=[Depends(api_key_auth)],
+    tags=["slurm"],
+)
+async def ping_slurm() -> dict[str, Any]:
+    slurm_localizer = SLURMHostLocalizer.instance()
+    try:
+        return slurm_localizer.ping()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )
+
+
+@app.get(
+    "/slurm/diagnose",
+    dependencies=[Depends(api_key_auth)],
+    tags=["slurm"],
+)
+async def diagnose_slurm() -> dict[str, Any]:
+    slurm_localizer = SLURMHostLocalizer.instance()
+    try:
+        return slurm_localizer.diagnose()
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        )

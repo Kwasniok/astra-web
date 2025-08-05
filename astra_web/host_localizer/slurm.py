@@ -1,7 +1,16 @@
+from typing import Any
 import os
+from enum import Enum
 import requests
 from .base import HostLocalizer
 from .schemas.dispatch import DispatchResponse
+
+
+class _RequestType(Enum):
+
+    GET = "get"
+    POST = "post"
+    PUT = "put"
 
 
 class SLURMHostLocalizer(HostLocalizer):
@@ -29,6 +38,52 @@ class SLURMHostLocalizer(HostLocalizer):
             cls._ENVIRONMENT = os.environ["SLURM_ENVIRONMENT"].split(",")
 
         return cls._instance
+
+    def configure(self, user: str | None = None, token: str | None = None) -> None:
+        """
+        Configure the SLURM access.
+        """
+        if user is not None:
+            self._USER_NAME = user
+        if token is not None:
+            self._USER_TOKEN = token
+
+    @property
+    def configuration(self) -> dict[str, Any]:
+        """
+        Returns the current configuration of the SLURM host localizer.
+        """
+        return {
+            "url": self._URL,
+            "proxy": self._PROXY,
+            "user_name": self._USER_NAME,
+            "user_token": self._USER_TOKEN,
+            "environment": self._ENVIRONMENT,
+        }
+
+    @property
+    def _proxies(self) -> dict[str, str] | None:
+        """
+        Returns the proxies used for SLURM requests.
+        """
+        return (
+            {
+                "http": self._PROXY,
+                "https": self._PROXY,
+            }
+            if self._PROXY
+            else None
+        )
+
+    @property
+    def _header_credentials(self) -> dict[str, str]:
+        """
+        Returns the headers used for SLURM requests.
+        """
+        return {
+            "X-SLURM-USER-NAME": self._USER_NAME,
+            "X-SLURM-USER-TOKEN": self._USER_TOKEN,
+        }
 
     def data_path(self) -> str:
         return self._DATA_PATH
@@ -69,12 +124,6 @@ status=$?
         if confirm_finished_successfully:
             script += "if [ $status -eq 0 ]; then touch FINISHED; fi\n"
 
-        url = f"{self._URL}/job/submit"
-        headers = {
-            "Content-Type": "application/json",
-            "X-SLURM-USER-NAME": self._USER_NAME,
-            "X-SLURM-USER-TOKEN": self._USER_TOKEN,
-        }
         data = {
             "job": {
                 "partition": "maxcpu",
@@ -94,34 +143,103 @@ status=$?
                 "script": script,
             },
         }
-        proxies = (
-            {
-                "http": self._PROXY,
-                "https": self._PROXY,
-            }
-            if self._PROXY
-            else None
-        )
 
         try:
-            response = requests.post(
-                url=url,
-                headers=headers,
+            response = self._request(
+                request=_RequestType.POST,
+                url=f"{self._URL}/job/submit",
+                headers={
+                    "Content-Type": "application/json",
+                    **self._header_credentials,
+                },
                 json=data,
-                proxies=proxies,
+                proxies=self._proxies,
             )
-        except requests.RequestException as e:
+        except RuntimeError as e:
             raise RuntimeError(
-                f"Failed to dispatch command '{cmd}' @ '{cwd}' to SLURM '{url}' (user='{self._USER_NAME}', proxies={proxies})."
+                f"Failed to dispatch command '{cmd}' @ '{cwd}' to SLURM"
             ) from e
-
-        if response.status_code != 200:
-            raise RuntimeError(
-                f"Failed to dispatch command to SLURM '{url}' (user='{self._USER_NAME}', proxies={proxies}, response_status={response.status_code})\n\n{data=}\n\nresponse_text='{response.text}'"
-            )
 
         return DispatchResponse(
             dispatch_type="slurm",
             slurm_submission=data,
-            slurm_response=response.json(),
+            slurm_response=response,
         )
+
+    def ping(self) -> dict[str, Any]:
+        """
+        Pings the SLURM server to check if it is reachable.
+
+        Returns slurm ping response data.
+        """
+        try:
+            response = self._request(
+                request=_RequestType.GET,
+                url=f"{self._URL}/ping",
+                headers={
+                    "Content-Type": "application/json",
+                    **self._header_credentials,
+                },
+                proxies=self._proxies,
+            )
+        except RuntimeError as e:
+            raise RuntimeError(f"Failed to ping SLURM.") from e
+        return response
+
+    def diagnose(self) -> dict[str, Any]:
+        """
+        Diagnoses the connection to SLURM.
+
+        Returns slurm diagnose response data.
+        """
+        try:
+            response = self._request(
+                request=_RequestType.GET,
+                url=f"{self._URL}/diag",
+                headers={
+                    "Content-Type": "application/json",
+                    **self._header_credentials,
+                },
+                proxies=self._proxies,
+            )
+        except RuntimeError as e:
+            raise RuntimeError(f"Failed to diagnose connection to SLURM.") from e
+        return response
+
+    def _request(
+        self,
+        request: _RequestType,
+        url: str,
+        headers: dict[str, str],
+        json: dict[str, Any] | None = None,
+        proxies: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        try:
+            match request:
+                case _RequestType.GET:
+                    response = requests.get(
+                        url=url,
+                        headers=headers,
+                        json=json,
+                        proxies=proxies,
+                    )
+                case _RequestType.POST:
+                    response = requests.post(
+                        url=url,
+                        headers=headers,
+                        json=json,
+                        proxies=proxies,
+                    )
+                case _RequestType.PUT:
+                    response = requests.put(
+                        url=url,
+                        headers=headers,
+                        json=json,
+                        proxies=proxies,
+                    )
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException as e:
+            raise RuntimeError(
+                f"Failed to send {request.name} request to SLURM '{url}' (user='{self._USER_NAME}', token='{self._USER_TOKEN[:4]}****{self._USER_TOKEN[-4:]}', proxies={proxies})."
+            ) from e

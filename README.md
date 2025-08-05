@@ -103,17 +103,18 @@ Fig. 1: Schematic overview of the ASTRA Web with SLURM support. ASTRA Web is acc
 | `SLURM_URL`                   | yes      | The URL of the [SLURM REST API](https://slurm.schedmd.com/rest_api.html).          | `https://slurm-rest.example.com/sapi/slurm/v0.0.40`   |
 | `SLURM_PROXY` [1]             | optional | The URL of a SOCKS5 proxy to connect to the SLURM REST API.                        | `socks5h://host.docker.internal:1081`                 |
 | `SLURM_USER_NAME`             | yes      | The SLURM user name.                                                               | `<user>`                                              |
-| `SLURM_USER_TOKEN`            | yes      | The [JWT token](https://slurm.schedmd.com/jwt.html) to authenticate the SLURM user.|                                                 |
-| `SLURM_ENVIRONMENT` [2]       | yes      | The environment variables to set for the SLURM job.                                |`"PATH=/bin:/usr/bin/:/usr/local/bin/","MORE="values"` |
-| `SLURM_ASTRA_BINARY_PATH` [3] | yes      | The path to the ASTRA binary **as seen by the SLURM cluster!**                     | `/home/<user>/astra/bin`                              |
-| `SLURM_DATA_PATH` [4]         | yes      | The path to the data directory **as seen by the SLURM cluster!**                   | `/home/<user>/astra/data`                             |
-| `SLURM_OUTPUT_PATH` [5]       | optional | The path to a directory where the slurm output should be written to (relative to the cwd or absolute). | `/home/<user>/slurm` or `../slurm`|
+| `SLURM_USER_TOKEN` [2]          | yes      | The [JWT token](https://slurm.schedmd.com/jwt.html) to authenticate the SLURM user.|                                                 |
+| `SLURM_ENVIRONMENT` [3]       | yes      | The environment variables to set for the SLURM job.                                |`"PATH=/bin:/usr/bin/:/usr/local/bin/","MORE="values"` |
+| `SLURM_ASTRA_BINARY_PATH` [4] | yes      | The path to the ASTRA binary **as seen by the SLURM cluster!**                     | `/home/<user>/astra/bin`                              |
+| `SLURM_DATA_PATH` [5]         | yes      | The path to the data directory **as seen by the SLURM cluster!**                   | `/home/<user>/astra/data`                             |
+| `SLURM_OUTPUT_PATH` [6]       | optional | The path to a directory where the slurm output should be written to (relative to the cwd or absolute). | `/home/<user>/slurm` or `../slurm`|
 
 - [1]: In case the SLURM server is not reachable from the local host and requires a tunnel. See section on [Using a Proxy](#using-a-proxy).
-- [2]: List of quoted strings separated by commas without spaces! Escaping commas inside strings is not possible!
-- [3]: Ensure the versions of ASTRA match your local ones and the **⚠️binaries are renamed to [`astra`](https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/) and [`parallel_astra`](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux)⚠️**.
-- [4]: The paths for these files will most likely differ from the local paths on your machine. It is important that your local paths bind to the same directories as for the remote host as described in [Mount Data Directory](#mount-data-directory).
-- [5]: The output of the SLURM job itself is allways separated from the output of the ASTRA computations and may be ignored. This keeps the output files from ASTRA clean and independent of the execution host.
+- [2]: The **⚠️SLURM token may expire⚠️** due to limited a lifetime. Make sure to refresh it regularly via the endpoint `slurm/configure`.
+- [3]: List of quoted strings separated by commas without spaces! Escaping commas inside strings is not possible!
+- [4]: Ensure the versions of ASTRA match your local ones and the **⚠️binaries are renamed to [`astra`](https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/) and [`parallel_astra`](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux)⚠️**.
+- [5]: The paths for these files will most likely differ from the local paths on your machine. It is important that your local paths bind to the same directories as for the remote host as described in [Mount Data Directory](#mount-data-directory).
+- [6]: The output of the SLURM job itself is allways separated from the output of the ASTRA computations and may be ignored. This keeps the output files from ASTRA clean and independent of the execution host.
 
 ## Mount Data Directory
 This step is critical to ensure local and remote execution work together seamlessly.
