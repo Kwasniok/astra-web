@@ -35,11 +35,20 @@ class SLURMHostLocalizer(HostLocalizer):
             cls._PROXY = os.environ.get("SLURM_PROXY", None)
             cls._USER_NAME = os.environ["SLURM_USER_NAME"]
             cls._USER_TOKEN = os.environ["SLURM_USER_TOKEN"]
+            cls._PARTITION = os.environ["SLURM_PARTITION"]
+            cls._CONSTRAINTS = os.environ.get("SLURM_CONSTRAINTS", None)
             cls._ENVIRONMENT = os.environ["SLURM_ENVIRONMENT"].split(",")
 
         return cls._instance
 
-    def configure(self, user: str | None = None, token: str | None = None) -> None:
+    def configure(
+        self,
+        user: str | None = None,
+        token: str | None = None,
+        partition: str | None = None,
+        constraints: str | None = None,
+        environment: str | None = None,
+    ) -> None:
         """
         Configure the SLURM access.
         """
@@ -47,6 +56,12 @@ class SLURMHostLocalizer(HostLocalizer):
             self._USER_NAME = user
         if token is not None:
             self._USER_TOKEN = token
+        if partition is not None:
+            self._PARTITION = partition
+        if constraints is not None:
+            self._CONSTRAINTS = constraints if constraints != "none" else None
+        if environment is not None:
+            self._ENVIRONMENT = environment.split(",")
 
     @property
     def configuration(self) -> dict[str, Any]:
@@ -58,6 +73,8 @@ class SLURMHostLocalizer(HostLocalizer):
             "proxy": self._PROXY,
             "user_name": self._USER_NAME,
             "user_token": self._USER_TOKEN,
+            "partition": self._PARTITION,
+            "constraints": self._CONSTRAINTS,
             "environment": self._ENVIRONMENT,
         }
 
@@ -96,6 +113,7 @@ class SLURMHostLocalizer(HostLocalizer):
 
     def _dispatch_command(
         self,
+        name: str,
         command: list[str],
         cwd: str,
         output_file_name_base: str,
@@ -126,8 +144,15 @@ status=$?
 
         data = {
             "job": {
-                "partition": "maxcpu",
-                "name": "testapi",
+                "name": name,
+                "partition": self._PARTITION,
+                **(
+                    {
+                        "constraints": self._CONSTRAINTS,
+                    }
+                    if self._CONSTRAINTS is not None
+                    else {}
+                ),
                 "time_limit": {
                     "set": timeout is not None,
                     "number": timeout or 0,

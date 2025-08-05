@@ -223,13 +223,25 @@ async def statistics(data: StatisticsInput, sim_id: str) -> StatisticsOutput:
 
 
 @app.put(
-    "/slurm/configure",
+    "/slurm/configuration",
     dependencies=[Depends(api_key_auth)],
     tags=["slurm"],
 )
-async def configure_slurm(user: str, token: str) -> dict[str, Any]:
+async def configure_slurm(
+    user: str | None = None,
+    token: str | None = None,
+    partition: str | None = None,
+    constraints: str | None = None,
+    environment: str | None = None,
+) -> dict[str, Any]:
     slurm_localizer = SLURMHostLocalizer.instance()
-    slurm_localizer.configure(user, token)
+    slurm_localizer.configure(
+        user=user,
+        token=token,
+        partition=partition,
+        constraints=constraints,
+        environment=environment,
+    )
     return slurm_localizer.configuration
 
 

@@ -32,6 +32,7 @@ class LocalHostLocalizer(HostLocalizer):
 
     def _dispatch_command(
         self,
+        name: str,
         command: list[str],
         cwd: str,
         output_file_name_base: str,

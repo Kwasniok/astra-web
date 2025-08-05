@@ -55,7 +55,8 @@ class HostLocalizer(ABC):
         Dispatches the generation process by running the ASTRA generator binary with the appropriate input file.
         """
         return self._dispatch_command(
-            self._generator_command(generator_input),
+            name=f"generate-{generator_input.gen_id}",
+            command=self._generator_command(generator_input),
             cwd=self.generator_path(generator_input.gen_id),
             output_file_name_base="generator",
         )
@@ -67,7 +68,8 @@ class HostLocalizer(ABC):
         Dispatches a simulation to the host system.
         """
         return self._dispatch_command(
-            self._simulation_command(simulation_input),
+            name=f"simulate-{simulation_input.sim_id}",
+            command=self._simulation_command(simulation_input),
             cwd=self.simulation_path(simulation_input.run_dir),
             output_file_name_base="run",
             timeout=simulation_input.run_specs.timeout,
@@ -77,6 +79,7 @@ class HostLocalizer(ABC):
     @abstractmethod
     def _dispatch_command(
         self,
+        name: str,
         command: list[str],
         cwd: str,
         output_file_name_base: str,
