@@ -50,6 +50,7 @@ class SLURMHostLocalizer(HostLocalizer):
             cls._config = SLURMConfiguration(
                 astra_binary_path=os.environ["SLURM_ASTRA_BINARY_PATH"],
                 data_path=os.environ["SLURM_DATA_PATH"],
+                output_path=os.environ.get("SLURM_OUTPUT_PATH", "."),
                 base_url=os.environ["SLURM_BASE_URL"],
                 api_version=os.environ["SLURM_API_VERSION"],
                 proxy=os.environ.get("SLURM_PROXY", None),
