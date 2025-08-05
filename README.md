@@ -100,7 +100,8 @@ Fig. 1: Schematic overview of the ASTRA Web with SLURM support. ASTRA Web is acc
 
 | Variable                      | Required | Description                                                                        | Example                                               |
 |-------------------------------|----------|------------------------------------------------------------------------------------|-------------------------------------------------------|
-| `SLURM_URL`                   | yes      | The URL of the [SLURM REST API](https://slurm.schedmd.com/rest_api.html).          | `https://slurm-rest.example.com/sapi/slurm/v0.0.40`   |
+| `SLURM_BASE_URL`                   | yes      | The URL of the [SLURM REST API](https://slurm.schedmd.com/rest_api.html).          | `https://slurm-rest.example.com/sapi`   |
+| `SLURM_API_VERSION` [0]       | yes      | The version of the SLURM REST API to use.                                          | `v0.0.40`                                            |
 | `SLURM_PROXY` [1]             | optional | The URL of a SOCKS5 proxy to connect to the SLURM REST API.                        | `socks5h://host.docker.internal:1081`                 |
 | `SLURM_USER_NAME`             | yes      | The SLURM user name.                                                               | `<user>`                                              |
 | `SLURM_USER_TOKEN` [2]          | yes      | The [JWT token](https://slurm.schedmd.com/jwt.html) to authenticate the SLURM user.|                                                 |
@@ -111,6 +112,7 @@ Fig. 1: Schematic overview of the ASTRA Web with SLURM support. ASTRA Web is acc
 | `SLURM_DATA_PATH` [5]         | yes      | The path to the data directory **as seen by the SLURM cluster!**                   | `/home/<user>/astra/data`                             |
 | `SLURM_OUTPUT_PATH` [6]       | optional | The path to a directory where the slurm output should be written to (relative to the cwd or absolute). | `/home/<user>/slurm` or `../slurm`|
 
+- [0]: A complete example URL of an endpoint is `https://slurm-rest.example.com/sapi/slurm/v0.0.40/jobs`.
 - [1]: In case the SLURM server is not reachable from the local host and requires a tunnel. See section on [Using a Proxy](#using-a-proxy).
 - [2]: The **⚠️SLURM token may expire⚠️** due to limited a lifetime. Make sure to refresh it regularly via the endpoint `slurm/configuration`.
 - [3]: List of quoted strings separated by commas without spaces! Escaping commas inside strings is not possible!

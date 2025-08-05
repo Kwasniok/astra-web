@@ -3,6 +3,7 @@ import os
 from enum import Enum
 import requests
 from .base import HostLocalizer
+from .schemas.config import SLURMConfiguration
 from .schemas.dispatch import DispatchResponse
 
 
@@ -22,61 +23,35 @@ class SLURMHostLocalizer(HostLocalizer):
         if cls._instance is None:
             cls._instance = SLURMHostLocalizer(do_not_init_manually_use_instance=None)
 
-            # aquire environment variables only when needed
-            cls._ASTRA_BINARY_PATH = os.environ["SLURM_ASTRA_BINARY_PATH"]
-
-            cls._DATA_PATH = os.environ["SLURM_DATA_PATH"]
-            cls._GENERATOR_DATA_PATH = os.path.join(cls._DATA_PATH, "generator")
-            cls._SIMULATION_DATA_PATH = os.path.join(cls._DATA_PATH, "simulation")
-            # separate SLURM output if desired (relative to cwd or absolute path)
-            cls._OUTPUT_PATH = os.environ.get("SLURM_OUTPUT_PATH", "")
-
-            cls._URL = os.environ["SLURM_URL"]
-            cls._PROXY = os.environ.get("SLURM_PROXY", None)
-            cls._USER_NAME = os.environ["SLURM_USER_NAME"]
-            cls._USER_TOKEN = os.environ["SLURM_USER_TOKEN"]
-            cls._PARTITION = os.environ["SLURM_PARTITION"]
-            cls._CONSTRAINTS = os.environ.get("SLURM_CONSTRAINTS", None)
-            cls._ENVIRONMENT = os.environ["SLURM_ENVIRONMENT"].split(",")
+            # aquire environment variables only upon first use
+            # avoids errors due to undefined env if SLURM is never used
+            cls._config = SLURMConfiguration(
+                astra_binary_path=os.environ["SLURM_ASTRA_BINARY_PATH"],
+                data_path=os.environ["SLURM_DATA_PATH"],
+                base_url=os.environ["SLURM_BASE_URL"],
+                api_version=os.environ["SLURM_API_VERSION"],
+                proxy=os.environ.get("SLURM_PROXY", None),
+                user_name=os.environ["SLURM_USER_NAME"],
+                user_token=os.environ["SLURM_USER_TOKEN"],
+                partition=os.environ["SLURM_PARTITION"],
+                constraints=os.environ.get("SLURM_CONSTRAINTS", None),
+                environment=os.environ["SLURM_ENVIRONMENT"].split(","),
+            )
 
         return cls._instance
 
-    def configure(
-        self,
-        user: str | None = None,
-        token: str | None = None,
-        partition: str | None = None,
-        constraints: str | None = None,
-        environment: str | None = None,
-    ) -> None:
+    def configure(self, config: SLURMConfiguration) -> None:
         """
         Configure the SLURM access.
         """
-        if user is not None:
-            self._USER_NAME = user
-        if token is not None:
-            self._USER_TOKEN = token
-        if partition is not None:
-            self._PARTITION = partition
-        if constraints is not None:
-            self._CONSTRAINTS = constraints if constraints != "none" else None
-        if environment is not None:
-            self._ENVIRONMENT = environment.split(",")
+        self._config = config
 
     @property
-    def configuration(self) -> dict[str, Any]:
+    def configuration(self) -> SLURMConfiguration:
         """
         Returns the current configuration of the SLURM host localizer.
         """
-        return {
-            "url": self._URL,
-            "proxy": self._PROXY,
-            "user_name": self._USER_NAME,
-            "user_token": self._USER_TOKEN,
-            "partition": self._PARTITION,
-            "constraints": self._CONSTRAINTS,
-            "environment": self._ENVIRONMENT,
-        }
+        return self._config
 
     @property
     def _proxies(self) -> dict[str, str] | None:
@@ -85,10 +60,10 @@ class SLURMHostLocalizer(HostLocalizer):
         """
         return (
             {
-                "http": self._PROXY,
-                "https": self._PROXY,
+                "http": self._config.proxy,
+                "https": self._config.proxy,
             }
-            if self._PROXY
+            if self._config.proxy
             else None
         )
 
@@ -98,18 +73,18 @@ class SLURMHostLocalizer(HostLocalizer):
         Returns the headers used for SLURM requests.
         """
         return {
-            "X-SLURM-USER-NAME": self._USER_NAME,
-            "X-SLURM-USER-TOKEN": self._USER_TOKEN,
+            "X-SLURM-USER-NAME": self._config.user_name,
+            "X-SLURM-USER-TOKEN": self._config.user_token,
         }
 
     def data_path(self) -> str:
-        return self._DATA_PATH
+        return self._config.data_path
 
     def astra_binary_path(self, binary: str) -> str:
         """
         Returns the path to the Astra binary.
         """
-        return os.path.join(self._ASTRA_BINARY_PATH, binary)
+        return os.path.join(self._config.astra_binary_path, binary)
 
     def _dispatch_command(
         self,
@@ -145,12 +120,12 @@ status=$?
         data = {
             "job": {
                 "name": name,
-                "partition": self._PARTITION,
+                "partition": self._config.partition,
                 **(
                     {
-                        "constraints": self._CONSTRAINTS,
+                        "constraints": self._config.constraints,
                     }
-                    if self._CONSTRAINTS is not None
+                    if self._config.constraints is not None
                     else {}
                 ),
                 "time_limit": {
@@ -163,8 +138,8 @@ status=$?
                     "LD_LIBRARY_PATH=/lib/:/lib64/:/usr/local/lib",
                 ],
                 # separate SLURM output if desired
-                "standard_output": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm-%j.out",
-                "standard_error": f"{self._OUTPUT_PATH}/{output_file_name_base}-slurm-%j.err",
+                "standard_output": f"{self._config.output_path}/{output_file_name_base}-slurm-%j.out",
+                "standard_error": f"{self._config.output_path}/{output_file_name_base}-slurm-%j.err",
                 "script": script,
             },
         }
@@ -172,7 +147,7 @@ status=$?
         try:
             response = self._request(
                 request=_RequestType.POST,
-                url=f"{self._URL}/job/submit",
+                url=f"{self._config.base_url}/slurm/{self._config.api_version}/job/submit",
                 headers={
                     "Content-Type": "application/json",
                     **self._header_credentials,
@@ -200,7 +175,7 @@ status=$?
         try:
             response = self._request(
                 request=_RequestType.GET,
-                url=f"{self._URL}/ping",
+                url=f"{self._config.base_url}/slurm/{self._config.api_version}/ping",
                 headers={
                     "Content-Type": "application/json",
                     **self._header_credentials,
@@ -220,7 +195,7 @@ status=$?
         try:
             response = self._request(
                 request=_RequestType.GET,
-                url=f"{self._URL}/diag",
+                url=f"{self._config.base_url}/slurm/{self._config.api_version}/diag",
                 headers={
                     "Content-Type": "application/json",
                     **self._header_credentials,
@@ -266,5 +241,5 @@ status=$?
             return response.json()
         except requests.RequestException as e:
             raise RuntimeError(
-                f"Failed to send {request.name} request to SLURM '{url}' (user='{self._USER_NAME}', token='{self._USER_TOKEN[:4]}****{self._USER_TOKEN[-4:]}', proxies={proxies})."
+                f"Failed to send {request.name} request to SLURM '{url}' (user_name='{self._config.user_name}', user_token='{self._config.user_token[:4]}****{self._config.user_token[-4:]}', proxies={proxies})."
             ) from e
