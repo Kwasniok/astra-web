@@ -43,7 +43,7 @@ class LocalHostLocalizer(HostLocalizer):
         """
 
         try:
-            os.remove(os.path.join(cwd, "SUCCESS"))
+            os.remove(os.path.join(cwd, "FINISHED"))
         except FileNotFoundError:
             pass
 
@@ -67,7 +67,7 @@ class LocalHostLocalizer(HostLocalizer):
             write_txt(stderr, stderr_path)
 
         if process.returncode == 0 and confirm_finished_successfully:
-            success_path = os.path.join(cwd, "SUCCESS")
+            success_path = os.path.join(cwd, "FINISHED")
             write_txt("", success_path)
 
         return DispatchResponse(dispatch_type="local")

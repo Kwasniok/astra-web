@@ -59,7 +59,7 @@ class SLURMHostLocalizer(HostLocalizer):
 
 set -euo pipefail
 
-rm -f SUCCESS
+rm -f FINISHED
         
 {cmd} > '{output_file_name_base}.out' 2> '{output_file_name_base}.err'
 status=$?
@@ -67,7 +67,7 @@ status=$?
 [ ! -s '{output_file_name_base}.err' ] && rm -f '{output_file_name_base}.err'
 """
         if confirm_finished_successfully:
-            script += "if [ $status -eq 0 ]; then touch SUCCESS; fi\n"
+            script += "if [ $status -eq 0 ]; then touch FINISHED; fi\n"
 
         url = f"{self._URL}/job/submit"
         headers = {

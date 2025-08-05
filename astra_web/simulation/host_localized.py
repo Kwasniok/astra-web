@@ -137,7 +137,7 @@ def list_finished_simulation_ids(localizer: HostLocalizer) -> list[str]:
     """
     Lists all ID of completed simulation runs.
     """
-    files = glob.glob(localizer.simulation_path("*", "SUCCESS"))
+    files = glob.glob(localizer.simulation_path("*", "FINISHED"))
     files = list(map(lambda p: p.split("/")[-2], files))
 
     return sorted(files)
@@ -158,7 +158,7 @@ def get_statistics(sim_id: str, localizer: HostLocalizer) -> StatisticsOutput | 
     Returns None if the simulation does not exist.
     """
 
-    path = localizer.simulation_path(sim_id, "SUCCESS")
+    path = localizer.simulation_path(sim_id, "FINISHED")
     if not os.path.exists(path):
         return None
 
