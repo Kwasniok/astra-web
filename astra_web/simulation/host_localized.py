@@ -13,6 +13,7 @@ from .schemas.io import (
 )
 from .schemas.tables import XYEmittanceTable, ZEmittanceTable
 from astra_web.file import write_txt, read_txt, write_json, read_json
+from astra_web.choices import ListCategory
 
 
 def dispatch_simulation_run(
@@ -133,14 +134,33 @@ def _load_emittances(
     )
 
 
-def list_finished_simulation_ids(localizer: HostLocalizer) -> list[str]:
+def list_simulation_ids(
+    localizer: HostLocalizer,
+    filter: ListCategory,
+) -> list[str]:
     """
-    Lists all ID of completed simulation runs.
+    Lists IDs of simulations.
     """
-    files = glob.glob(localizer.simulation_path("*", "FINISHED"))
-    files = list(map(lambda p: p.split("/")[-2], files))
+    all = lambda: set(
+        map(
+            lambda p: os.path.split(p)[-1],
+            glob.glob(localizer.simulation_path("*")),
+        )
+    )
+    finished = lambda: set(
+        map(
+            lambda p: os.path.split(os.path.split(p)[-2])[-1],
+            glob.glob(localizer.simulation_path("*", "FINISHED")),
+        )
+    )
 
-    return sorted(files)
+    match filter:
+        case ListCategory.ALL:
+            return sorted(all())
+        case ListCategory.FINISHED:
+            return sorted(finished())
+        case ListCategory.PENDING:
+            return sorted(all() - finished())
 
 
 def delete_simulation(sim_id: str, localizer: HostLocalizer) -> None:

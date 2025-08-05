@@ -23,17 +23,19 @@ from .simulation.schemas.io import (
 from .generator.host_localized import (
     dispatch_particle_distribution_generation,
     load_generator_data,
-    list_finished_generator_ids,
+    list_generator_ids,
     delete_particle_distribution,
     write_particle_distribution,
 )
 from .simulation.host_localized import (
     dispatch_simulation_run,
     load_simulation_data,
-    list_finished_simulation_ids,
+    list_simulation_ids,
     delete_simulation,
     get_statistics,
 )
+from .choices import ListCategory
+
 
 tags_metadata = [
     {
@@ -65,16 +67,18 @@ app = FastAPI(
 
 
 @app.get(
-    "/particles",
+    "/particles/ids",
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-def list_available_particle_distributions() -> list[str]:
+def list_particle_distribution_ids(
+    filter: ListCategory = Query(default=ListCategory.FINISHED),
+) -> list[str]:
     """
-    Returns a list of all existing particle distribution IDs on the requested server.
+    Returns a list of particle distribution IDs.
     """
     localizer = LocalHostLocalizer.instance()
-    return list_finished_generator_ids(localizer)
+    return list_generator_ids(localizer, filter=filter)
 
 
 @app.post(
@@ -136,16 +140,18 @@ async def delete_particle_distribution_(gen_id: str) -> None:
 
 
 @app.get(
-    "/simulations",
+    "/simulations/ids",
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-def list_finished_simulation_ids_() -> list[str]:
+def list_simulation_ids_(
+    filter: ListCategory = Query(default=ListCategory.FINISHED),
+) -> list[str]:
     """
-    Returns a list of all existing simulation IDs on the requested server.
+    Returns a list of  simulation IDs.
     """
     localizer = LocalHostLocalizer.instance()
-    return list_finished_simulation_ids(localizer)
+    return list_simulation_ids(localizer, filter=filter)
 
 
 @app.post(
