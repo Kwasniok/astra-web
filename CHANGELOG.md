@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-08-05
+
+Summary: Added SLURM support and major reworks of the front and backend.
+
+### Added
+- Support for optional remote SLURM job scheduler.
+
+### Changed
+- Renamed some endpoints and added query options for more refined control.
+- Extended data output to include all input and output files.
+- Scaled down statistics for simulations.
+- Internal file naming schemes.
+- Refactored various internal components for improved maintainability.
+
+### Fixed
+- Fixed naming bug in IO scheme.
+
 ## [0.2.0] - 2024-08-26
 
 Summary: Many convenience changes. Updated ASTRA version.
