@@ -254,6 +254,23 @@ async def configure_slurm(config: SLURMConfiguration) -> None:
     slurm_localizer.configure(config)
 
 
+@app.put(
+    "/slurm/configuration/user_token",
+    dependencies=[Depends(api_key_auth)],
+    tags=["slurm"],
+)
+async def update_slurm_user_token(
+    value: str = Query(..., description="The new SLURM user token.")
+) -> None:
+    """
+    Exclusively updates the SLURM user token used for authentication with the SLURM REST API and nothing more.
+
+    Usefull in case the previous token has expired or is no longer valid.
+    """
+    slurm_localizer = SLURMHostLocalizer.instance()
+    slurm_localizer.update_user_token(value)
+
+
 @app.get(
     "/slurm/ping",
     dependencies=[Depends(api_key_auth)],

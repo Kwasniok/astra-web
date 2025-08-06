@@ -71,6 +71,12 @@ class SLURMHostLocalizer(HostLocalizer):
         """
         self._config = config
 
+    def update_user_token(self, user_token: str) -> None:
+        """
+        Update the SLURM user token.
+        """
+        self._config.user_token = user_token
+
     @property
     def configuration(self) -> SLURMConfiguration:
         """
