@@ -17,7 +17,7 @@ class SLURMConfiguration(BaseModel):
     user_token: str
     partition: str
     constraints: str | None = None
-    environment: list[str]
+    environment: list[str] = []
 
     @computed_field
     @property

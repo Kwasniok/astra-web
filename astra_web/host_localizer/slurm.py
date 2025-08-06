@@ -47,6 +47,7 @@ class SLURMHostLocalizer(HostLocalizer):
 
             # aquire environment variables only upon first use
             # avoids errors due to undefined env if SLURM is never used
+            split = lambda csv: csv.split(",") if csv else []
             cls._config = SLURMConfiguration(
                 astra_binary_path=os.environ["SLURM_ASTRA_BINARY_PATH"],
                 data_path=os.environ["SLURM_DATA_PATH"],
@@ -58,7 +59,7 @@ class SLURMHostLocalizer(HostLocalizer):
                 user_token=os.environ["SLURM_USER_TOKEN"],
                 partition=os.environ["SLURM_PARTITION"],
                 constraints=os.environ.get("SLURM_CONSTRAINTS", None),
-                environment=os.environ["SLURM_ENVIRONMENT"].split(","),
+                environment=split(os.environ.get("SLURM_ENVIRONMENT", None)),
             )
 
         return cls._instance
