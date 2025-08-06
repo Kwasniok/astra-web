@@ -98,11 +98,15 @@ def list_particle_distribution_ids(
 async def dispatch_particle_distribution_generation_(
     generator_input: GeneratorInput,
     host: Hosts = Query(default=Hosts.LOCAL),
+    timeout: int = Query(default=600),
 ) -> GeneratorDispatchOutput:
     local_localizer = LocalHostLocalizer.instance()
     host_localizer = HostLocalizerTypes.get_localizer(host)
     return dispatch_particle_distribution_generation(
-        generator_input, local_localizer, host_localizer
+        generator_input,
+        local_localizer,
+        host_localizer,
+        timeout=timeout,
     )
 
 

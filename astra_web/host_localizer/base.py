@@ -69,7 +69,11 @@ class HostLocalizer(ABC):
         """
         pass
 
-    def dispatch_generation(self, generator_input: GeneratorInput) -> DispatchResponse:
+    def dispatch_generation(
+        self,
+        generator_input: GeneratorInput,
+        timeout: int,
+    ) -> DispatchResponse:
         """
         Dispatches the generation process by running the ASTRA generator binary with the appropriate input file.
         """
@@ -78,6 +82,7 @@ class HostLocalizer(ABC):
             command=self._generator_command(generator_input),
             cwd=self.generator_path(generator_input.gen_id),
             output_file_name_base="generator",
+            timeout=timeout,
         )
 
     def dispatch_simulation(
