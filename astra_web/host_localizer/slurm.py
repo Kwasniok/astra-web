@@ -322,7 +322,7 @@ status=$?
                     )
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except requests.exceptions.HTTPError as e:
             raise RuntimeError(
                 f"Failed to send {request.name} request to SLURM '{url}' (user_name='{self._config.user_name}', user_token='{self._config.user_token[:4]}****{self._config.user_token[-4:]}', proxies={proxies})."
             ) from e

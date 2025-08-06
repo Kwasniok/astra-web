@@ -256,13 +256,7 @@ async def configure_slurm(config: SLURMConfiguration) -> None:
 )
 async def ping_slurm() -> dict[str, Any]:
     slurm_localizer = SLURMHostLocalizer.instance()
-    try:
-        return slurm_localizer.ping()
-    except RuntimeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e),
-        )
+    return slurm_localizer.ping()
 
 
 @app.get(
@@ -272,13 +266,7 @@ async def ping_slurm() -> dict[str, Any]:
 )
 async def diagnose_slurm() -> dict[str, Any]:
     slurm_localizer = SLURMHostLocalizer.instance()
-    try:
-        return slurm_localizer.diagnose()
-    except RuntimeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e),
-        )
+    return slurm_localizer.diagnose()
 
 
 @app.get(
@@ -295,13 +283,7 @@ async def list_slurm_jobs(
     see: https://slurm.schedmd.com/rest_api.html#slurmdbV0043GetJobs
     """
     slurm_localizer = SLURMHostLocalizer.instance()
-    try:
-        return slurm_localizer.list_jobs(state=state)
-    except RuntimeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e),
-        )
+    return slurm_localizer.list_jobs(state=state)
 
 
 @app.get(
@@ -318,13 +300,7 @@ async def list_slurm_managed_ids(
     note: This means that jobs which have been deleted or are too old are not included in the list.
     """
     slurm_localizer = SLURMHostLocalizer.instance()
-    try:
-        return slurm_localizer.list_job_ids(
-            state=state,
-            local_localizer=LocalHostLocalizer.instance(),
-        )
-    except RuntimeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e),
-        )
+    return slurm_localizer.list_job_ids(
+        state=state,
+        local_localizer=LocalHostLocalizer.instance(),
+    )
