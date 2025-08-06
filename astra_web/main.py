@@ -1,7 +1,7 @@
 from typing import Any
 import os
 from fastapi import FastAPI, Depends, Query, HTTPException, status
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import RedirectResponse, ORJSONResponse
 from .host_localizer import (
     Hosts,
     HostLocalizerTypes,
@@ -73,6 +73,11 @@ app = FastAPI(
     openapi_tags=tags_metadata,
     default_response_class=ORJSONResponse,
 )
+
+
+@app.get("/", include_in_schema=False)
+async def root():
+    return RedirectResponse(url="/docs")
 
 
 @app.get(
