@@ -7,8 +7,6 @@ services:
       - .env
     environment:
       ASTRA_BINARY_PATH: /usr/local/bin
-      GENERATOR_DATA_PATH: "/data/generator"
-      SIMULATION_DATA_PATH: "/data/simulation"
     volumes:
       - ${ASTRA_DATA_PATH:-data}:/app/data
     networks:
