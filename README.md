@@ -83,6 +83,8 @@ Once the server is running you will find the interactive API documentation under
 
 where `<host>` is the URL of the host where the server is running. If you are running it locally (docker or bare), this will be `localhost` otherwise it is the adress of the remote server.
 
+⚠️ All communication with the host is done via HTTP which provides **no encryption**! Allways route your trafic through a secure connection like a VPN or SSH tunnel to ensure your data (e.g. tokens) is protected!
+
 # Environment
 
 Ensure the following environment variables are set:
