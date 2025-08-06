@@ -18,6 +18,7 @@ class SLURMConfiguration(BaseModel):
     partition: str
     constraints: str | None = None
     environment: list[str] = []
+    script_setup: str = ""
 
     @computed_field
     @property

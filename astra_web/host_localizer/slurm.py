@@ -60,6 +60,7 @@ class SLURMHostLocalizer(HostLocalizer):
                 partition=os.environ["SLURM_PARTITION"],
                 constraints=os.environ.get("SLURM_CONSTRAINTS", None),
                 environment=split(os.environ.get("SLURM_ENVIRONMENT", None)),
+                script_setup=os.environ.get("SLURM_SCRIPT_SETUP", ""),
             )
 
         return cls._instance
@@ -131,9 +132,13 @@ class SLURMHostLocalizer(HostLocalizer):
 
 set -euo pipefail
 
+# cleanup
 rm -f FINISHED
-        
+# setup
+{self._config.script_setup}
+# dispatched command
 {cmd} > '{output_file_name_base}.out' 2> '{output_file_name_base}.err'
+# finalize
 status=$?
 [ ! -s '{output_file_name_base}.out' ] && rm -f '{output_file_name_base}.out'
 [ ! -s '{output_file_name_base}.err' ] && rm -f '{output_file_name_base}.err'

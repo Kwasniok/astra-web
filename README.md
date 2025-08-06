@@ -158,6 +158,7 @@ Fig. 1: Schematic overview of the ASTRA Web with SLURM support. ASTRA Web is acc
 | `SLURM_ASTRA_BINARY_PATH` [4] | yes      | The path to the ASTRA binary **as seen by the SLURM cluster!**                     | `/home/<user>/astra/bin`                              |
 | `SLURM_DATA_PATH` [5]         | yes      | The path to the data directory **as seen by the SLURM cluster!**                   | `/home/<user>/astra/data`                             |
 | `SLURM_OUTPUT_PATH` [6]       | optional | The path to a directory where the slurm output should be written to (relative to the cwd or absolute). | `/home/<user>/slurm` or `../slurm`|
+| `SLURM_SCRIPT_SETUP` | optional | A BASH script fragment to be executed inside the job script before each dispatched command. | `module purge\nmodule load openmpi` |
 
 - [0]: A complete example URL of an endpoint is `https://slurm-rest.example.com/sapi/slurm/v0.0.40/jobs`.
 - [1]: In case the SLURM server is not reachable from the local host and requires a tunnel. See section on [Using a Proxy](#using-a-proxy).
