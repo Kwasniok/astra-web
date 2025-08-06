@@ -9,7 +9,7 @@ RUN python3 -m pip install --upgrade pip && pip install --upgrade -r requirement
 
 # Copy over rest of directory
 COPY .. /app
-RUN chmod 777 start.sh
+RUN chmod 777 start_docker.sh
 
 # Run FastAPI server
-ENTRYPOINT ["/bin/bash", "-c", "./start.sh"]
+ENTRYPOINT ["/bin/bash", "-c", "./start_docker.sh"]

@@ -186,3 +186,7 @@ fabric.properties
 
 # VS Code
 .vscode/
+
+# project specific
+docker.env
+start_bare.env

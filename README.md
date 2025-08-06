@@ -14,42 +14,89 @@ This fork includes modification for improved interoperability with a SLURM envir
 
 Older versions may work, but are not tested.
 
-# Startup
+# Running Modes
 
-## Environment
+The web server can be run in two modes:
+- [docker](#docker) (recommended)
+- [bare](#bare)
 
-Ensure the following environment variables are set (e.g. in `./docker/.env`)
+Startup and configuration of the environment variables differ slightly as explained in the following sections.
+
+In addition, each mode can be combined with remote dispatch of some computations to a [SLURM cluster](https://slurm.schedmd.com/) for asynchronous execution. This is recommended for larger simulations. Details are explained in [SLURM](#slurm).
+
+## Docker
+Use this mode for containerized execution of the API. This is the recommended way to run the API as it ensures all dependencies are met and its kept isolated.
+
+### Configuration
+Configure the [environment](#environment) in `./docker/.env` and select your desired `COMPOSE_FILE` in `.env`.
+
+### Build and Start
+Build the image and start container by execution of the following command
+
+    docker compose stop && docker compose up -d --build
+
+The container will be started in detached mode. If you want to see the logs, you can run
+
+    docker compose logs -f
+
+To stop the container, run
+
+    docker compose stop
+
+note: Until explicitly stopped, the container is automatically restarted if it crashes or when the host is restarted.
+
+### Deployment
+In case you would like to deploy the API in a productive environment, say on a remote server, it is recommended to do
+this via [Docker contexts](https://docs.docker.com/engine/context/working-with-contexts/).
+
+Uncomment the `COMPOSE_FILE` environment variable in the .env file contained within this project an run
+
+    docker context use [YOUR_REMOTE_CONTEXT]
+    docker compose stop && docker compose up -d --build
+
+## Bare
+Use this mode for running the API directly on the host machine without Docker. This is useful in case docker is not available but requires manual setup of some dependencies.
+
+### Requirements
+Ensure the following dependencies are installed on your system:
+- python (v3.13+)
+
+In case you want to run ASTRA in multi-threaded mode on the local host [1] also install (see [Parallel Astra Readme](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux/AAA_Readme.txt)):
+- gcc fortran (v4.8.5)
+- openmpi (v4.0.3)
+
+[1]: When using [SLURM](#slurm), the SLURM server may take care of the parallel execution in that case no additional dependencies are required.
+
+### Configuration
+Configure the [environment](#environment) in `bare/.env`.
+
+### Start
+Start the API by executing the following command in the root directory of this project:
+
+    ./start_bare.sh
+
+# API Documentation
+
+Once the server is running you will find the interactive API documentation under
+
+    http://<host>:8000/docs
+
+where `<host>` is the URL of the host where the server is running. If you are running it locally (docker or bare), this will be `localhost` otherwise it is the adress of the remote server.
+
+# Environment
+
+Ensure the following environment variables are set:
 
 | Variable          | Required | Description                                                                  |
 |-------------------|----------|------------------------------------------------------------------------------|
 | `ASTRA_WEB_API_KEY`   | yes      | The API key to access the ASTRA web API. This is required for authorization. |
 | `ASTRA_DATA_PATH` | optional | The path to a local data directory where all results are stored. If not specified an internal storage volume will be used.|
+| `ASTRA_BINARY_PATH` | yes[1] | The path to the folder with ASTRA binaries. Binaries must be called `generator`, `astra` and `parallel_astra` respectively. |
 
-note: Ensure that the user starting the Docker container has read and write access to the `ASTRA_DATA_PATH` directory when specified.
+- [1]: Ignored when using docker. The docker image uses its own internal binaries.
 
 See [SLURM](#slurm) for additional environment variables required to connect to a SLURM server for remote execution.
 
-## Local deployment in development environment 
-
-Build the image and start container by execution of the following command
-
-    docker compose stop && docker compose up -d --build
-
-## Deployment in productive environment
-
-In case you would like to deploy the API in a productive environment, say on a remote server, it is recommended to do
-this via [Docker contexts](https://docs.docker.com/engine/context/working-with-contexts/).
-
-Uncomment the COMPOSE_FILE environment variable in the .env file contained within this project an run
-
-    docker context use [YOUR_REMOTE_CONTEXT]
-    docker compose stop && docker compose up -d --build
-
-# API documentation
-
-In case you are running the API server locally, you will find the interactive API documentation under
-
-    http://localhost:8000/docs
 
 # SLURM
 If you want to dispatch some computations to a [SLURM cluster](https://slurm.schedmd.com) carefully follow the instructions below. Otherwise you can skip this section.
