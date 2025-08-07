@@ -1,38 +1,5 @@
-from pydantic import BaseModel, ConfigDict, Field
-from typing import Type, TypeVar
-from astra_web.file import write_csv, read_csv
-
-T = TypeVar("T", bound="Parent")
-
-
-class Table(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    def write_to_csv(self, path: str) -> None:
-        """
-        Write the table data to a CSV file.
-        """
-        write_csv(self, path)
-
-    @classmethod
-    def load_from_csv(cls: Type[T], path: str) -> T:
-        """
-        Load the table data from a CSV file.
-        """
-        return read_csv(cls, path)
-
-
-class FieldTable(Table):
-    model_config = ConfigDict(extra="forbid")
-
-    z: list[float] = Field(
-        description="Longitudinal positions along z-axis.",
-        json_schema_extra={"format": "Unit: [m]"},
-    )
-    v: list[float] = Field(
-        description="Field values at z positions in free units.",
-        json_schema_extra={"format": "Unit: free"},
-    )
+from astra_web.schemas.table import Table
+from pydantic import ConfigDict, Field
 
 
 class XYEmittanceTable(Table):

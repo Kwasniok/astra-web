@@ -8,7 +8,7 @@ from astra_web.file import IniExportableModel
 from .run import SimulationRunSpecifications
 from .modules import Solenoid, Cavity
 from .space_charge import SpaceCharge
-from .tables import XYEmittanceTable, ZEmittanceTable
+from .emittance_table import XYEmittanceTable, ZEmittanceTable
 
 
 class SimulationOutputSpecification(IniExportableModel):
@@ -140,6 +140,15 @@ class SimulationInput(IniExportableModel):
             "\n\n".join([run_str, output_str, charge_str, cavity_str, solenoid_str])
             + "\n"
         )
+
+    @property
+    def field_file_names(self) -> set[str]:
+        """
+        Returns a set of all field file names used in the simulation.
+        """
+        return {c.field_file_name for c in self.cavities} | {
+            s.field_file_name for s in self.solenoids
+        }
 
 
 class SimulationDispatchOutput(BaseModel):

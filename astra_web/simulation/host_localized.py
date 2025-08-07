@@ -11,7 +11,7 @@ from .schemas.io import (
     SimulationAllData,
     SimulationDispatchOutput,
 )
-from .schemas.tables import XYEmittanceTable, ZEmittanceTable
+from .schemas.emittance_table import XYEmittanceTable, ZEmittanceTable
 from astra_web.file import write_txt, read_txt, write_json, read_json
 from astra_web.choices import ListCategory
 
@@ -50,16 +50,8 @@ def write_simulation_files(
         simulation_input.to_ini(),
         localizer.simulation_path(simulation_input.run_dir, "run.in"),
     )
-    _write_element_files(simulation_input, run_path)
     _link_initial_particle_distribution(simulation_input, localizer)
-
-
-def _write_element_files(simulation_input: SimulationInput, run_path: str) -> None:
-    """
-    Write the files of all elements in the simulation setup to disk.
-    """
-    for o in simulation_input.solenoids + simulation_input.cavities:
-        o.write_to_csv(run_path)
+    _link_field_files(simulation_input, localizer)
 
 
 def _link_initial_particle_distribution(
@@ -78,6 +70,18 @@ def _link_initial_particle_distribution(
             simulation_input.run_dir, simulation_input.run_specs.Distribution
         ),
     )
+
+
+def _link_field_files(simulation_input: SimulationInput, localizer: HostLocalizer):
+    for file_name in simulation_input.field_file_names:
+        _link_field_file(file_name, simulation_input.run_dir, localizer)
+
+
+def _link_field_file(file_name: str, run_dir: str, localizer: HostLocalizer):
+    # make link relative to ensure compatibility across hosts
+    target = localizer.field_path(file_name)
+    target = os.path.relpath(target, localizer.simulation_path(run_dir))
+    os.symlink(target, localizer.simulation_path(run_dir, file_name))
 
 
 def load_simulation_data(
@@ -125,7 +129,7 @@ def _load_emittances(
 
     def load(cls: Type[T], coordinate: str) -> T:
         path = localizer.simulation_path(sim_id, f"run.{coordinate.upper()}emit.001")
-        return cls.load_from_csv(path)
+        return cls.read_from_csv(path)
 
     return (
         load(XYEmittanceTable, "x"),

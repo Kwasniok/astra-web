@@ -1,12 +1,9 @@
-import os
-from abc import ABC, abstractmethod
 from typing import Any
-from pydantic import Field, ConfigDict, computed_field
-from .tables import FieldTable
+from pydantic import Field, ConfigDict
 from astra_web.file import IniExportableModel
 
 
-class Module(IniExportableModel, ABC):
+class Module(IniExportableModel):
     model_config = ConfigDict(extra="forbid")
 
     id: int = Field(exclude=True, default=-1, description="The ID of the module.")
@@ -18,29 +15,15 @@ class Module(IniExportableModel, ABC):
         out_dict = {f"{k}({self.id})": v for k, v in out_dict.items()}
         return out_dict
 
-    @abstractmethod
-    def write_to_csv(self, run_path: str) -> None:
-        """
-        Write the module's data to disk as CSV file.
-        """
-        pass
-
 
 class Cavity(Module):
     model_config = ConfigDict(extra="forbid")
 
-    field_table: FieldTable | None = Field(
-        exclude=True,
-        default=None,
-        description="Table containing lists of longitudinal positions z and corresponding \
-                    field amplitudes v in free units.",
-        json_schema_extra={"format": "Unit: [m]"},
+    field_file_name: str = Field(
+        description="Name of the field file for the longitudinal on-axis electric field amplitudes.",
+        alias="File_Efield",
+        validation_alias="field_file_name",
     )
-
-    @computed_field
-    @property
-    def File_Efield(self) -> str:
-        return f"C{self.id}_E.dat"
 
     frequency: float = Field(
         default=1.3e0,
@@ -83,34 +66,15 @@ class Cavity(Module):
         json_schema_extra={"format": "Unit: [MV/m] | [T]"},
     )
 
-    def write_to_csv(self, run_path: str) -> None:
-        """Write the field table to a CSV file in the specified path."""
-        if self.field_table is None:
-            return
-        self.field_table.write_to_csv(os.path.join(run_path, self.File_Efield))
-
-    def _to_ini_dict(self) -> dict[str, Any]:
-        out_dict = super()._to_ini_dict()
-        out_dict[f"File_Efield({self.id})"] = self.File_Efield
-
-        return out_dict
-
 
 class Solenoid(Module):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-    field_table: FieldTable | None = Field(
-        default=None,
-        exclude=True,
-        description="Table containing lists of longitudinal positions z and corresponding \
-                    field amplitudes v in free units.",
-        json_schema_extra={"format": "Unit: [m]"},
+    field_file_name: str = Field(
+        description="Name of the field file for the longitudinal on-axis magnetic field amplitudes.",
+        alias="File_Bfield",
+        validation_alias="field_file_name",
     )
-
-    @computed_field
-    @property
-    def File_Bfield(self) -> str:
-        return f"S{self.id}_B.dat"
 
     z_0: float | None = Field(
         default=None,
@@ -132,15 +96,3 @@ class Solenoid(Module):
         description="Maximum on-axis longitudinal amplitude of the magnetic field.",
         json_schema_extra={"format": "Unit: [T]"},
     )
-
-    def _to_ini_dict(self) -> dict[str, Any]:
-        out_dict = super()._to_ini_dict()
-        out_dict[f"File_Bfield({self.id})"] = self.File_Bfield
-
-        return out_dict
-
-    def write_to_csv(self, run_path: str) -> None:
-        """Write the field table to a CSV file in the specified path."""
-        if self.field_table is None:
-            return
-        self.field_table.write_to_csv(os.path.join(run_path, self.File_Bfield))

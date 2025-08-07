@@ -17,7 +17,7 @@ class IniExportableModel(BaseModel):
         # use `alias` for ASTRA variable names
         return self.model_dump(exclude_none=True, by_alias=True)
 
-    def _to_ini(self, indent=4) -> str:
+    def _to_ini(self, indent: int = 4) -> str:
 
         s = json.dumps(
             self._to_ini_dict(),

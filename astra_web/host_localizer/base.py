@@ -36,6 +36,13 @@ class HostLocalizer(ABC):
         path = os.path.join(self.data_path(), "generator", id)
         return path if file_name is None else os.path.join(path, file_name)
 
+    def field_path(self, file_name: str | None = None) -> str:
+        """
+        Returns the path to the field file for the given ID.
+        """
+        path = os.path.join(self.data_path(), "field")
+        return path if file_name is None else os.path.join(path, file_name)
+
     def simulation_path(self, id: str, file_name: str | None = None) -> str:
         """
         Returns the path to the simulation file for the given ID.
