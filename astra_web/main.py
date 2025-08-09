@@ -98,7 +98,7 @@ async def root():
     tags=["particles"],
 )
 def list_particle_distribution_ids(
-    filter: ListCategory = Query(default=ListCategory.FINISHED),
+    filter: ListDispatchedCategory = Query(default=ListDispatchedCategory.FINISHED),
 ) -> list[str]:
     """
     Returns a list of particle distribution IDs.
@@ -233,7 +233,7 @@ async def delete_field_table_(file_name: str) -> None:
     tags=["simulations"],
 )
 def list_simulation_ids_(
-    filter: ListCategory = Query(default=ListCategory.FINISHED),
+    filter: ListDispatchedCategory = Query(default=ListDispatchedCategory.FINISHED),
 ) -> list[str]:
     """
     Returns a list of  simulation IDs.

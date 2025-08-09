@@ -1,7 +1,6 @@
 import os
 import glob
 from shutil import rmtree
-from unittest import case
 from astra_web.host_localizer import HostLocalizer
 from .schemas.io import (
     GeneratorInput,
@@ -12,7 +11,7 @@ from .schemas.io import (
 from .schemas.particles import Particles
 from astra_web.uuid import get_uuid
 from astra_web.file import write_json, read_json, write_txt, read_txt, find_symlinks
-from astra_web.choices import ListCategory
+from astra_web.choices import ListDispatchedCategory
 
 
 def dispatch_particle_distribution_generation(
@@ -87,7 +86,7 @@ def read_particle_file(gen_id: str, localizer: HostLocalizer) -> Particles:
 
 def list_generator_ids(
     localizer: HostLocalizer,
-    filter: ListCategory,
+    filter: ListDispatchedCategory,
 ) -> list[str]:
     """
     Lists IDs of particle distribution generations.
@@ -107,11 +106,11 @@ def list_generator_ids(
     )
 
     match filter:
-        case ListCategory.ALL:
+        case ListDispatchedCategory.ALL:
             return sorted(all())
-        case ListCategory.FINISHED:
+        case ListDispatchedCategory.FINISHED:
             return sorted(finished())
-        case ListCategory.PENDING:
+        case ListDispatchedCategory.PENDING:
             return sorted(all() - finished())
 
 

@@ -13,7 +13,7 @@ from .schemas.io import (
 )
 from .schemas.emittance_table import XYEmittanceTable, ZEmittanceTable
 from astra_web.file import write_txt, read_txt, write_json, read_json
-from astra_web.choices import ListCategory
+from astra_web.choices import ListDispatchedCategory
 
 
 def dispatch_simulation_run(
@@ -140,7 +140,7 @@ def _load_emittances(
 
 def list_simulation_ids(
     localizer: HostLocalizer,
-    filter: ListCategory,
+    filter: ListDispatchedCategory,
 ) -> list[str]:
     """
     Lists IDs of simulations.
@@ -159,11 +159,11 @@ def list_simulation_ids(
     )
 
     match filter:
-        case ListCategory.ALL:
+        case ListDispatchedCategory.ALL:
             return sorted(all())
-        case ListCategory.FINISHED:
+        case ListDispatchedCategory.FINISHED:
             return sorted(finished())
-        case ListCategory.PENDING:
+        case ListDispatchedCategory.PENDING:
             return sorted(all() - finished())
 
 
