@@ -7,7 +7,6 @@ from .particles import Particles
 
 
 class GeneratorInput(IniExportableModel):
-    model_config = ConfigDict(use_enum_values=True, extra="forbid")
 
     _gen_id: str
 

@@ -1,11 +1,17 @@
-from pydantic import ConfigDict, Field, computed_field
+from pydantic import Field, computed_field
 from astra_web.file import IniExportableModel
 
 
 class SimulationRunSpecifications(IniExportableModel):
-    model_config = ConfigDict(extra="forbid")
 
     Version: int = Field(default=4)
+
+    def excluded_ini_fields(self) -> set[str]:
+        return super().excluded_ini_fields() | {
+            "thread_num",
+            "timeout",
+            "generator_id",
+        }
 
     @computed_field(description="Run name for protocol", repr=True)
     @property
@@ -16,7 +22,6 @@ class SimulationRunSpecifications(IniExportableModel):
         default=1,
         gt=0,
         description="The number of concurrent threads used per simulation.",
-        exclude=True,
     )
 
     Z_min: float | None = Field(
@@ -26,7 +31,6 @@ class SimulationRunSpecifications(IniExportableModel):
     timeout: int = Field(
         default=600,
         description="The timeout for the simulation run. Simulation terminated if timeout time is exceeded.",
-        exclude=True,
     )
 
     run_number: int = Field(
@@ -39,7 +43,6 @@ class SimulationRunSpecifications(IniExportableModel):
     generator_id: str = Field(
         default="YYYY-MM-DD-HH-MM-SS-UUUUUUUU",
         description="Identifier of a particle distribution generated with the /generate endpoint of this API.",
-        exclude=True,
     )
 
     @computed_field(

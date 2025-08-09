@@ -1,12 +1,16 @@
 from typing import Any
-from pydantic import Field, ConfigDict
+from pydantic import Field
 from astra_web.file import IniExportableModel
 
 
 class Module(IniExportableModel):
-    model_config = ConfigDict(extra="forbid")
 
-    id: int = Field(exclude=True, default=-1, description="The ID of the module.")
+    def excluded_ini_fields(self) -> set[str]:
+        return super().excluded_ini_fields() | {
+            "id",
+        }
+
+    id: int = Field(default=-1, description="The ID of the module.")
 
     def _to_ini_dict(self) -> dict[str, Any]:
         # non-excluded, non-none, aliased fields with enumeration suffixes
@@ -17,7 +21,6 @@ class Module(IniExportableModel):
 
 
 class Cavity(Module):
-    model_config = ConfigDict(extra="forbid")
 
     field_file_name: str = Field(
         description="Name of the field file for the longitudinal on-axis electric field amplitudes.",
@@ -68,7 +71,6 @@ class Cavity(Module):
 
 
 class Solenoid(Module):
-    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
     field_file_name: str = Field(
         description="Name of the field file for the longitudinal on-axis magnetic field amplitudes.",

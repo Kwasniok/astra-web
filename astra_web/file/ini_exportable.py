@@ -1,5 +1,5 @@
 from typing import Any
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 import json
 
 
@@ -10,12 +10,26 @@ class IniExportableModel(BaseModel):
     In case the ASTRA name differs from the ASTRA web name, define the `alias` (for ASTRA) and `validation_alias` (for ASTRA web) fields.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_by_name=True,
+        use_enum_values=True,
+    )
+
+    def excluded_ini_fields(self) -> set[str]:
+        """
+        Returns a set of fields that should be excluded from the INI export.
+        """
+        return set()
+
     def _to_ini_dict(self) -> dict[str, Any]:
         """
         Convert the model to a dictionary suitable for INI export.
         """
         # use `alias` for ASTRA variable names
-        return self.model_dump(exclude_none=True, by_alias=True)
+        return self.model_dump(
+            exclude_none=True, by_alias=True, exclude=self.excluded_ini_fields()
+        )
 
     def _to_ini(self, indent: int = 4) -> str:
 

@@ -1,9 +1,8 @@
-from pydantic import BaseModel, ConfigDict, ConfigDict, Field, computed_field
+from pydantic import Field, computed_field
 from astra_web.file import IniExportableModel
 
 
 class SpaceCharge(IniExportableModel):
-    model_config = ConfigDict(extra="forbid")
 
     use_space_charge: bool = Field(
         default=False,

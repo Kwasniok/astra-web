@@ -12,7 +12,6 @@ from .emittance_table import XYEmittanceTable, ZEmittanceTable
 
 
 class SimulationOutputSpecification(IniExportableModel):
-    model_config = ConfigDict(extra="forbid")
 
     z_start: float = Field(
         default=0.0,
@@ -83,7 +82,6 @@ class SimulationOutputSpecification(IniExportableModel):
 
 
 class SimulationInput(IniExportableModel):
-    model_config = ConfigDict(extra="forbid")
 
     _sim_id: str
 
