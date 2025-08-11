@@ -31,50 +31,68 @@ class SimulationOutputSpecification(IniExportableModel):
         default=100,
         alias="Zemit",
         validation_alias="emittance_checkpoint_num",
-        description="The interval z_stop - z_start is divided into z_emit sub-intervals. At the end of \
+        description="The interval z_stop - z_start is divided into emittance_checkpoint_num sub-intervals. At the end of \
                      each sub-interval statistical bunch parameters such as emittance are saved. It is advised to set \
-                     a multiple of z_phase as value.",
+                     a multiple of distribution_checkpoint_num as value.",
         gt=1,
     )
     distribution_checkpoint_num: int = Field(
         default=1,
         alias="Zphase",
         validation_alias="distribution_checkpoint_num",
-        description="The interval z_stop - z_start is divided into z_emit sub-intervals. At the end of \
+        description="The interval z_stop - z_start is divided into emittance_checkpoint_num sub-intervals. At the end of \
                      each sub-interval a complete particle distribution is saved.",
     )
     high_resolution: bool = Field(
-        default=True,
+        default=False,
         alias="High_res",
         validation_alias="high_resolution",
         description="If true, particle distributions are saved with increased accuracy",
     )
-    high_accuracy: bool = Field(
-        default=True,
+    store_with_high_accuracy: bool = Field(
+        default=False,
         alias="RefS",
-        validation_alias="high_accuracy",
-        description="If true, ASTRA generates output of the off-axis reference trajectory, energy gain etc. at each \
+        validation_alias="store_with_high_accuracy",
+        description="If true, ASTRA store output of the off-axis reference trajectory, energy gain etc. at each \
                      Runge-Kutta time step.",
     )
-    generate_emittance_output: bool = Field(
-        default=True,
+    store_emittance: bool = Field(
+        default=False,
         alias="EmitS",
-        validation_alias="generate_emittance_output",
+        validation_alias="store_emittance",
         description="If true, output of the beam emittance and other statistical beam parameters is generated. The parameters \
-                    are calculated and stored at the end of each sub-interval defined by z_emit.",
+                    are calculated and stored at the end of each sub-interval defined by emittance_checkpoint_num.",
     )
-    generate_ts_emittance_output: bool = Field(
-        default=True,
+    store_ts_emittance: bool = Field(
+        default=False,
         alias="Tr_emitS",
-        validation_alias="generate_ts_emittance_output",
+        validation_alias="store_ts_emittance",
         description="If true, output of the trace space beam emittance and other statistical beam parameters is \
-                    generated. The parameters are calculated and stored at the end of each sub-interval defined by z_emit.",
+                    generated. The parameters are calculated and stored at the end of each sub-interval defined by emittance_checkpoint_num.",
     )
-    generate_complete_particle_output: bool = Field(
-        default=True,
+    store_complete_particle: bool = Field(
+        default=False,
         alias="PhaseS",
-        validation_alias="generate_complete_particle_output",
-        description="If true, the complete particle distribution is saved at z_phase different locations.",
+        validation_alias="store_complete_particle",
+        description="If true, the complete particle distribution is saved at distribution_checkpoint_num different locations as well as at screens and wake positions.",
+    )
+    store_track: bool = Field(
+        default=False,
+        alias="TrackS",
+        validation_alias="store_track",
+        description="If true, the particle trajectories are tracked as probe particles with space charge fields acting on them per Runge-Kutta time step.",
+    )
+    store_avg_step_size: bool = Field(
+        default=False,
+        alias="TcheckS",
+        validation_alias="store_avg_step_size",
+        description="If true, the development of the average step size is stored.",
+    )
+    store_space_charge_field_on_cathode: bool = Field(
+        default=False,
+        alias="CathodeS",
+        validation_alias="store_space_charge_field_on_cathode",
+        description="If true, the space charge field on the cathode is stored per Runge-Kutta time step.",
     )
 
     def to_ini(self) -> str:
@@ -191,4 +209,4 @@ class SimulationAllData(BaseModel):
         description="Simulation data, if the simulation has finished successfully.",
     )
     run_input: str
-    run_output: str
+    run: str
