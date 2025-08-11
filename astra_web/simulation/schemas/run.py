@@ -27,7 +27,6 @@ class SimulationRunSpecifications(IniExportableModel):
         }
 
     # ASTRA fields:
-    Version: int = Field(default=4)
     z_min: float | None = Field(
         default=None,
         alias="Z_min",
