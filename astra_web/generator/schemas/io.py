@@ -10,6 +10,11 @@ class GeneratorInput(IniExportableModel):
 
     _gen_id: str
 
+    comment: str | None = Field(
+        default=None,
+        description="Optional comment for the particle generation.",
+    )
+
     @computed_field
     @property
     def FNAME(self) -> str:
@@ -240,6 +245,9 @@ class GeneratorInput(IniExportableModel):
     @property
     def gen_id(self):
         return self._gen_id
+
+    def excluded_ini_fields(self) -> set[str]:
+        return {"comment"}
 
     def to_ini(self) -> str:
         return f"&INPUT{self._to_ini()}/"

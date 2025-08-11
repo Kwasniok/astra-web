@@ -93,6 +93,11 @@ class SimulationInput(IniExportableModel):
     def run_dir(self) -> str:
         return self.sim_id
 
+    comment: str | None = Field(
+        default=None,
+        description="Optional comment for the simulation.",
+    )
+
     run_specs: SimulationRunSpecifications = Field(
         default=SimulationRunSpecifications(),
         description="Specifications of operative run parameters such as thread numbers, run directories and more.",
@@ -124,6 +129,9 @@ class SimulationInput(IniExportableModel):
         self._sim_id = get_uuid()
         self._sort_and_set_ids("cavities")
         self._sort_and_set_ids("solenoids")
+
+    def excluded_ini_fields(self) -> set[str]:
+        return {"comment"}
 
     def to_ini(self) -> str:
         has_cavities = str(len(self.cavities) > 0).lower()

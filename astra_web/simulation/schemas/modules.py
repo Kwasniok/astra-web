@@ -8,9 +8,13 @@ class Module(IniExportableModel):
     def excluded_ini_fields(self) -> set[str]:
         return super().excluded_ini_fields() | {
             "id",
+            "comment",
         }
 
     id: int = Field(default=-1, description="The ID of the module.")
+    comment: str | None = Field(
+        default=None, description="Optional comment for the module."
+    )
 
     def _to_ini_dict(self) -> dict[str, Any]:
         # non-excluded, non-none, aliased fields with enumeration suffixes
