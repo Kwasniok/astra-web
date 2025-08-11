@@ -24,8 +24,11 @@ class SimulationRunSpecifications(IniExportableModel):
         description="The number of concurrent threads used per simulation.",
     )
 
-    Z_min: float | None = Field(
-        default=None, description="Lower boundary for discarding particless."
+    z_min: float | None = Field(
+        default=None,
+        alias="Z_min",
+        validation_alias="z_min",
+        description="Lower boundary for discarding particles.",
     )
 
     timeout: int = Field(
