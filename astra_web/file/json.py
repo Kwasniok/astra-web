@@ -4,6 +4,8 @@ from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
 
+JSONType = None | bool | int | float | str | list["JSONType"] | dict[str, "JSONType"]
+
 
 def write(
     object: BaseModel,

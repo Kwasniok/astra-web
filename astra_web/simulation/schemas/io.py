@@ -160,6 +160,9 @@ class SimulationData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     particles: Optional[list[Particles]] = Field(default=[Particles()])
+    final_particle_counts: dict[str, int] = Field(
+        description="Number of particles - active, inactive, total."
+    )
     emittance_x: Optional[XYEmittanceTable] = Field(
         default=None,
     )
@@ -179,18 +182,3 @@ class SimulationAllData(BaseModel):
     )
     run_input: str
     run_output: str
-
-
-class StatisticsInput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    pass
-
-
-class StatisticsOutput(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    sim_id: str
-    particle_counts: dict = Field(
-        description="Number of particles - active, inactive, total."
-    )

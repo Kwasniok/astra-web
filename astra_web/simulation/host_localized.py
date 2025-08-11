@@ -2,7 +2,6 @@ import os
 import glob
 from shutil import rmtree
 from typing import Type, TypeVar
-from astra_web.simulation.schemas.io import StatisticsOutput
 from astra_web.host_localizer import HostLocalizer
 from astra_web.generator.schemas.particles import Particles
 from .schemas.io import (
@@ -99,12 +98,18 @@ def load_simulation_data(
         SimulationInput, localizer.simulation_path(sim_id, "input.json")
     )
 
-    emittance_x, emittance_y, emittance_z = _load_emittances(sim_id, localizer)
     particle_paths = _particle_paths(sim_id, localizer)
     particles = [Particles.read_from_csv(path) for path in particle_paths]
+    final_particle_counts = {
+        "total": len(particles[-1].x),
+        "active": int(sum(particles[-1].active_particles)),
+        "lost": int(sum(particles[-1].lost_particles)),
+    }
+    emittance_x, emittance_y, emittance_z = _load_emittances(sim_id, localizer)
 
     data = SimulationData(
         particles=particles,
+        final_particle_counts=final_particle_counts,
         emittance_x=emittance_x,
         emittance_y=emittance_y,
         emittance_z=emittance_z,
@@ -174,31 +179,6 @@ def delete_simulation(sim_id: str, localizer: HostLocalizer) -> None:
     path = localizer.simulation_path(sim_id)
     if os.path.exists(path):
         rmtree(path)
-
-
-def get_statistics(sim_id: str, localizer: HostLocalizer) -> StatisticsOutput | None:
-    """
-    Returns statistics about the simulation.
-    Returns None if the simulation does not exist.
-    """
-
-    path = localizer.simulation_path(sim_id, "FINISHED")
-    if not os.path.exists(path):
-        return None
-
-    particle_paths = _particle_paths(sim_id, localizer)
-    if not particle_paths:
-        return None
-    particles = Particles.read_from_csv(particle_paths[-1])
-
-    return StatisticsOutput(
-        sim_id=sim_id,
-        particle_counts={
-            "total": len(particles.x),
-            "active": int(sum(particles.active_particles)),
-            "lost": int(sum(particles.lost_particles)),
-        },
-    )
 
 
 def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:

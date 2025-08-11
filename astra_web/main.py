@@ -1,6 +1,6 @@
 from typing import Any
 import os
-from fastapi import FastAPI, Depends, Query, HTTPException, status
+from fastapi import FastAPI, Depends, Query, Body, HTTPException, status
 from fastapi.responses import RedirectResponse, ORJSONResponse
 from .host_localizer import (
     Hosts,
@@ -23,9 +23,8 @@ from .simulation.schemas.io import (
     SimulationInput,
     SimulationAllData,
     SimulationDispatchOutput,
-    StatisticsInput,
-    StatisticsOutput,
 )
+from .features.schemas.io import FeatureTableInput, FeatureTable, CompleteData
 from .generator.host_localized import (
     dispatch_particle_distribution_generation,
     load_generator_data,
@@ -44,9 +43,13 @@ from .simulation.host_localized import (
     load_simulation_data,
     list_simulation_ids,
     delete_simulation,
-    get_statistics,
 )
-from .choices import ListCategory
+from .features.host_localized import (
+    make_feature_table,
+    get_all_features,
+    get_all_varying_features,
+)
+from .choices import ListDispatchedCategory
 
 
 tags_metadata = [
@@ -64,6 +67,10 @@ tags_metadata = [
         "name": "simulations",
         "description": "All CRUD methods for beam dynamics simulations.\
                         Simulations are run by ASTRA binary.",
+    },
+    {
+        "name": "features",
+        "description": "Extract features across the entire database.",
     },
     {
         "name": "slurm",
@@ -288,20 +295,85 @@ async def delete_simulation_(sim_id: str) -> None:
     return delete_simulation(sim_id, localizer)
 
 
-@app.get(
-    "/simulations/{sim_id}/statistics",
+# note: get is not allowed with a body, so post is used as a workaround
+# see: https://datatracker.ietf.org/doc/html/rfc9110#name-get
+@app.post(
+    "/features",
     dependencies=[Depends(api_key_auth)],
-    tags=["simulations"],
+    tags=["features"],
 )
-async def statistics(data: StatisticsInput, sim_id: str) -> StatisticsOutput:
+async def download_features_table(
+    sim_ids: list[str] | None = Body(default=None, examples=[["sim_id_1", "sim_id_2"]]),
+    features: FeatureTableInput = Body(
+        ...,
+        examples=[
+            [
+                "generator_input.particle_count",
+                "simulation_output.emittance_z",
+            ]
+        ],
+    ),
+) -> FeatureTable:
+    """
+    Returns a table of requested features.
+
+    The `sim_ids` parameter is a list of (finished) simulation IDs for which the features should be computed.
+    If none are provided, the features will be computed for all simulations in the database.
+
+    See `CompleteData` for a list of available features.
+    """
     localizer = LocalHostLocalizer.instance()
-    stats = get_statistics(sim_id, localizer)
-    if stats is None:
+    try:
+        return make_feature_table(sim_ids, features, localizer)
+    except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Simulation data for '{sim_id}' not found.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
-    return stats
+
+
+# note: get is not allowed with a body, so post is used as a workaround
+# see: https://datatracker.ietf.org/doc/html/rfc9110#name-get
+@app.post(
+    "/features/varying",
+    dependencies=[Depends(api_key_auth)],
+    tags=["features"],
+)
+async def download_varying_features(
+    sim_ids: list[str] | None = Body(default=None, examples=[["sim_id_1", "sim_id_2"]]),
+) -> dict[str, list[Any]]:
+    """
+    Returns all varying features of simulations. Features which are identical across all simulations are skipped.
+
+    The `sim_ids` parameter is a list of (finished) simulation IDs for which the features should be computed.
+    If none are provided, the features will be computed for all simulations in the database.
+    """
+    localizer = LocalHostLocalizer.instance()
+    return get_all_varying_features(sim_ids, localizer)
+
+
+# note: get is not allowed with a body, so post is used as a workaround
+# see: https://datatracker.ietf.org/doc/html/rfc9110#name-get
+# note: This enpoint is somewhat redundant with the above, but it is kept for discoverability and consistency.
+@app.post(
+    "/features/{sim_id}",
+    dependencies=[Depends(api_key_auth)],
+    tags=["features"],
+)
+async def download_all_features_for_simulation(
+    sim_id: str,
+) -> CompleteData:
+    """
+    Returns all features for a specific simulation.
+    """
+    localizer = LocalHostLocalizer.instance()
+    try:
+        return get_all_features(sim_id, localizer)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
 
 
 @app.get(
