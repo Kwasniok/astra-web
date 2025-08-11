@@ -5,16 +5,17 @@ from astra_web.file import IniExportableModel
 
 class Module(IniExportableModel):
 
+    # web exclusive fields:
+    id: int = Field(default=-1, description="The ID of the module.")
+    comment: str | None = Field(
+        default=None, description="Optional comment for the module."
+    )
+
     def excluded_ini_fields(self) -> set[str]:
         return super().excluded_ini_fields() | {
             "id",
             "comment",
         }
-
-    id: int = Field(default=-1, description="The ID of the module.")
-    comment: str | None = Field(
-        default=None, description="Optional comment for the module."
-    )
 
     def _to_ini_dict(self) -> dict[str, Any]:
         # non-excluded, non-none, aliased fields with enumeration suffixes
@@ -26,12 +27,12 @@ class Module(IniExportableModel):
 
 class Cavity(Module):
 
+    # ASTRA fields:
     field_file_name: str = Field(
         description="Name of the field file for the longitudinal on-axis electric field amplitudes.",
         alias="File_Efield",
         validation_alias="field_file_name",
     )
-
     frequency: float = Field(
         default=1.3e0,
         alias="Nue",
@@ -76,12 +77,12 @@ class Cavity(Module):
 
 class Solenoid(Module):
 
+    # ASTRA fields:
     field_file_name: str = Field(
         description="Name of the field file for the longitudinal on-axis magnetic field amplitudes.",
         alias="File_Bfield",
         validation_alias="field_file_name",
     )
-
     z_0: float | None = Field(
         default=None,
         alias="S_pos",

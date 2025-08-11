@@ -8,13 +8,22 @@ from .particles import Particles
 
 class GeneratorInput(IniExportableModel):
 
-    _gen_id: str
+    _id: str
+
+    # web exclusive fields:
+    @property
+    def id(self):
+        return self._id
 
     comment: str | None = Field(
         default=None,
         description="Optional comment for the particle generation.",
     )
 
+    def excluded_ini_fields(self) -> set[str]:
+        return {"id", "comment"}
+
+    # ASTRA fields:
     @computed_field
     @property
     def FNAME(self) -> str:
@@ -242,18 +251,11 @@ class GeneratorInput(IniExportableModel):
         json_schema_extra={"format": "Unit: [ns]"},
     )
 
-    @property
-    def gen_id(self):
-        return self._gen_id
-
-    def excluded_ini_fields(self) -> set[str]:
-        return {"comment"}
-
     def to_ini(self) -> str:
         return f"&INPUT{self._to_ini()}/"
 
     def model_post_init(self, __context) -> None:
-        self._gen_id = get_uuid()
+        self._id = get_uuid()
 
 
 class GeneratorDispatchOutput(BaseModel):

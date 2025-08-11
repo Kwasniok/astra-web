@@ -28,7 +28,7 @@ def dispatch_particle_distribution_generation(
     # 'remote'
     response = host_localizer.dispatch_generation(generator_input, timeout=timeout)
     return GeneratorDispatchOutput(
-        gen_id=generator_input.gen_id,
+        gen_id=generator_input.id,
         dispatch_response=response,
     )
 
@@ -36,14 +36,14 @@ def dispatch_particle_distribution_generation(
 def _write_generator_files(
     generator_input: GeneratorInput, localizer: HostLocalizer
 ) -> None:
-    path = localizer.generator_path(generator_input.gen_id)
+    path = localizer.generator_path(generator_input.id)
     os.makedirs(path, exist_ok=True)
     write_json(
-        generator_input, localizer.generator_path(generator_input.gen_id, "input.json")
+        generator_input, localizer.generator_path(generator_input.id, "input.json")
     )
     write_txt(
         generator_input.to_ini(),
-        localizer.generator_path(generator_input.gen_id, "generator.in"),
+        localizer.generator_path(generator_input.id, "generator.in"),
     )
 
 

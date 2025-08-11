@@ -4,6 +4,7 @@ from astra_web.file import IniExportableModel
 
 class SpaceCharge(IniExportableModel):
 
+    # ASTRA fields:
     use_space_charge: bool = Field(
         default=False,
         alias="LSPCH",

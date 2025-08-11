@@ -4,7 +4,20 @@ from astra_web.file import IniExportableModel
 
 class SimulationRunSpecifications(IniExportableModel):
 
-    Version: int = Field(default=4)
+    # web exclusive fields:
+    generator_id: str = Field(
+        default="YYYY-MM-DD-HH-MM-SS-UUUUUUUU",
+        description="Identifier of a particle distribution generated with the /generate endpoint of this API.",
+    )
+    thread_num: int = Field(
+        default=1,
+        gt=0,
+        description="The number of concurrent threads used per simulation.",
+    )
+    timeout: int = Field(
+        default=600,
+        description="The timeout for the simulation run. Simulation terminated if timeout time is exceeded.",
+    )
 
     def excluded_ini_fields(self) -> set[str]:
         return super().excluded_ini_fields() | {
@@ -13,51 +26,20 @@ class SimulationRunSpecifications(IniExportableModel):
             "generator_id",
         }
 
-    @computed_field(description="Run name for protocol", repr=True)
-    @property
-    def Head(self) -> str:
-        return f"Simulation run with initial particle distribution {self.generator_id}"
-
-    thread_num: int = Field(
-        default=1,
-        gt=0,
-        description="The number of concurrent threads used per simulation.",
-    )
-
+    # ASTRA fields:
+    Version: int = Field(default=4)
     z_min: float | None = Field(
         default=None,
         alias="Z_min",
         validation_alias="z_min",
         description="Lower boundary for discarding particles.",
     )
-
-    timeout: int = Field(
-        default=600,
-        description="The timeout for the simulation run. Simulation terminated if timeout time is exceeded.",
-    )
-
     run_number: int = Field(
         default=1,
         alias="RUN",
         validation_alias="run_number",
         description="The run_number is used as extension for all generated output files.",
     )
-
-    generator_id: str = Field(
-        default="YYYY-MM-DD-HH-MM-SS-UUUUUUUU",
-        description="Identifier of a particle distribution generated with the /generate endpoint of this API.",
-    )
-
-    @computed_field(
-        description="Name of the file containing the initial particle distribution to be used.",
-        repr=True,
-    )
-    @property
-    def Distribution(self) -> str:
-        # name initial particle distribution file in the same convention as the run output files
-        # see manual of ASTRA v3.2 (Mach 2017) chapter 2
-        return f"run.{0:04d}.{self.run_number:03d}"
-
     bunch_charge: float | None = Field(
         default=None,
         alias="Qbunch",
@@ -127,6 +109,21 @@ class SimulationRunSpecifications(IniExportableModel):
         validation_alias="auto_phase",
         description="If true, the RF phases will be set relative to the phase with maximum energy gain.",
     )
+
+    @computed_field(description="Run name for protocol", repr=True)
+    @property
+    def Head(self) -> str:
+        return f"Simulation run with initial particle distribution {self.generator_id}"
+
+    @computed_field(
+        description="Name of the file containing the initial particle distribution to be used.",
+        repr=True,
+    )
+    @property
+    def Distribution(self) -> str:
+        # name initial particle distribution file in the same convention as the run output files
+        # see manual of ASTRA v3.2 (Mach 2017) chapter 2
+        return f"run.{0:04d}.{self.run_number:03d}"
 
     def to_ini(self):
         return "&NEWRUN" + self._to_ini() + "/"

@@ -83,21 +83,35 @@ class SimulationOutputSpecification(IniExportableModel):
 
 class SimulationInput(IniExportableModel):
 
-    _sim_id: str
+    _id: str
 
+    # web exclusive fields:
     @property
-    def sim_id(self):
-        return self._sim_id
-
-    @property
-    def run_dir(self) -> str:
-        return self.sim_id
+    def id(self):
+        return self._id
 
     comment: str | None = Field(
         default=None,
         description="Optional comment for the simulation.",
     )
 
+    @property
+    def run_dir(self) -> str:
+        return self.id
+
+    @property
+    def field_file_names(self) -> set[str]:
+        """
+        Returns a set of all field file names used in the simulation.
+        """
+        return {c.field_file_name for c in self.cavities} | {
+            s.field_file_name for s in self.solenoids
+        }
+
+    def excluded_ini_fields(self) -> set[str]:
+        return {"id", "comment", "run_dir", "field_file_names"}
+
+    # ASTRA fields:
     run_specs: SimulationRunSpecifications = Field(
         default=SimulationRunSpecifications(),
         description="Specifications of operative run parameters such as thread numbers, run directories and more.",
@@ -126,12 +140,9 @@ class SimulationInput(IniExportableModel):
             element.id = idx
 
     def model_post_init(self, __context) -> None:
-        self._sim_id = get_uuid()
+        self._id = get_uuid()
         self._sort_and_set_ids("cavities")
         self._sort_and_set_ids("solenoids")
-
-    def excluded_ini_fields(self) -> set[str]:
-        return {"comment"}
 
     def to_ini(self) -> str:
         has_cavities = str(len(self.cavities) > 0).lower()
@@ -146,15 +157,6 @@ class SimulationInput(IniExportableModel):
             "\n\n".join([run_str, output_str, charge_str, cavity_str, solenoid_str])
             + "\n"
         )
-
-    @property
-    def field_file_names(self) -> set[str]:
-        """
-        Returns a set of all field file names used in the simulation.
-        """
-        return {c.field_file_name for c in self.cavities} | {
-            s.field_file_name for s in self.solenoids
-        }
 
 
 class SimulationDispatchOutput(BaseModel):
