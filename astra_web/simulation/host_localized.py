@@ -187,6 +187,9 @@ def _is_finished(sim_id: str, localizer: HostLocalizer) -> bool:
     """
     Checks if the simulation is finished.
     """
+    path = localizer.simulation_path(sim_id, "run.err")
+    if os.path.exists(path):
+        return False
     path = localizer.simulation_path(sim_id, "run.out")
     if os.path.exists(path):
         return "finished simulation" in read_txt(path)
