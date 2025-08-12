@@ -33,7 +33,7 @@ class SimulationOutputSpecification(IniExportableModel):
         alias="Zphase",
         validation_alias="distribution_checkpoint_num",
         description="The interval z_stop - z_start is divided into emittance_checkpoint_num sub-intervals. At the end of \
-                     each sub-interval a complete particle distribution is saved.",
+                     each sub-interval (rounded to nearest emittance_checkpoint_num interval) a complete particle distribution is saved. It is advised to set a whole fraction of distribution_checkpoint_num as value.",
     )
     high_resolution: bool = Field(
         default=False,
