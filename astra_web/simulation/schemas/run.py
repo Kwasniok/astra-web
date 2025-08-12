@@ -33,12 +33,15 @@ class SimulationRunSpecifications(IniExportableModel):
         validation_alias="z_min",
         description="Lower boundary for discarding particles.",
     )
-    run_number: int = Field(
-        default=1,
+
+    @computed_field(
         alias="RUN",
-        validation_alias="run_number",
         description="The run_number is used as extension for all generated output files.",
     )
+    @property
+    def run_number(self) -> int:
+        return 1
+
     bunch_charge: float | None = Field(
         default=None,
         alias="Qbunch",
