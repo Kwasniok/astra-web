@@ -1,12 +1,15 @@
 import os
+import re
 import glob
 from shutil import rmtree
 from typing import Type, TypeVar
+from datetime import datetime
 from astra_web.host_localizer import HostLocalizer
 from astra_web.generator.schemas.particles import Particles
 from .schemas.io import (
     SimulationInput,
     SimulationData,
+    SimulationMetaData,
     SimulationAllData,
     SimulationDispatchOutput,
 )
@@ -105,7 +108,10 @@ def load_simulation_data(
         "active": int(sum(particles[-1].active_particles)),
         "lost": int(sum(particles[-1].lost_particles)),
     }
-    emittance_x, emittance_y, emittance_z = _load_emittances(sim_id, localizer)
+    try:
+        emittance_x, emittance_y, emittance_z = _load_emittances(sim_id, localizer)
+    except FileNotFoundError:
+        emittance_x, emittance_y, emittance_z = None, None, None
 
     data = SimulationData(
         particles=particles,
@@ -117,29 +123,61 @@ def load_simulation_data(
 
     run_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
     run_output = read_txt(localizer.simulation_path(sim_id, "run.out"))
+    meta = _extract_run_output_meta_data(run_output)
 
     return SimulationAllData(
         web_input=web_input,
         data=data,
         run_input=run_input,
         run_output=run_output,
+        meta=meta,
     )
 
 
 def _load_emittances(
     sim_id: str, localizer: HostLocalizer
-) -> tuple[XYEmittanceTable, XYEmittanceTable, ZEmittanceTable]:
+) -> tuple[XYEmittanceTable | None, XYEmittanceTable | None, ZEmittanceTable | None]:
 
     T = TypeVar("T", bound=XYEmittanceTable | ZEmittanceTable)
 
-    def load(cls: Type[T], coordinate: str) -> T:
+    def load(cls: Type[T], coordinate: str) -> T | None:
         path = localizer.simulation_path(sim_id, f"run.{coordinate.upper()}emit.001")
-        return cls.read_from_csv(path)
+        try:
+            return cls.read_from_csv(path)
+        except FileNotFoundError:
+            return None
 
     return (
         load(XYEmittanceTable, "x"),
         load(XYEmittanceTable, "y"),
         load(ZEmittanceTable, "z"),
+    )
+
+
+def _extract_run_output_meta_data(
+    run_output: str,
+) -> SimulationMetaData:
+    finished_date = None
+    execution_time = None
+
+    for line in run_output.splitlines():
+        if "finished simulation" in line:
+            date_match = re.search(
+                r"(\d{1,2})\.\s*(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})", line
+            )
+            if date_match:
+                day, month, year, hour, minute = map(int, date_match.groups())
+                finished_date = datetime(year, month, day, hour, minute)
+        elif "execution time" in line:
+            time_match = re.search(r"(\d+)\s*min\s*([\d.]+)\s*sec", line)
+            if time_match:
+                minutes = int(time_match.group(1))
+                seconds = float(time_match.group(2))
+                execution_time = minutes * 60 + seconds
+
+    return SimulationMetaData(
+        finished_date=finished_date,
+        execution_time=execution_time,
     )
 
 

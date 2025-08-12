@@ -1,4 +1,5 @@
-from typing import Any, Optional
+from typing import Any
+from datetime import datetime
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 from astra_web.generator.schemas.particles import Particles
@@ -112,29 +113,35 @@ class SimulationDispatchOutput(BaseModel):
     dispatch_response: DispatchResponse
 
 
+class SimulationMetaData(BaseModel):
+    finished_date: datetime | None = Field(
+        default=None,
+        description="Time and date when ASTRA simulation finished as ISO 8601.",
+    )
+    execution_time: float | None = Field(
+        default=None, description="Duration of the ASTRA simulation."
+    )
+
+
 class SimulationData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    particles: Optional[list[Particles]] = Field(default=[Particles()])
+    particles: list[Particles] = Field()
     final_particle_counts: dict[str, int] = Field(
         description="Number of particles - active, inactive, total."
     )
-    emittance_x: Optional[XYEmittanceTable] = Field(
-        default=None,
-    )
-    emittance_y: Optional[XYEmittanceTable] = Field(
-        default=None,
-    )
-    emittance_z: Optional[ZEmittanceTable] = Field(default=None)
+    emittance_x: XYEmittanceTable | None = Field(default=None)
+    emittance_y: XYEmittanceTable | None = Field(default=None)
+    emittance_z: ZEmittanceTable | None = Field(default=None)
 
 
 class SimulationAllData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    web_input: SimulationInput
-    data: SimulationData | None = Field(
-        default=None,
+    web_input: SimulationInput = Field()
+    data: SimulationData = Field(
         description="Simulation data, if the simulation has finished successfully.",
     )
-    run_input: str
-    run_output: str
+    run_input: str | None = Field(default=None)
+    run_output: str | None = Field(default=None)
+    meta: SimulationMetaData | None = Field(default=None)

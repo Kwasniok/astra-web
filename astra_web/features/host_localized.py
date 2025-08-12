@@ -58,7 +58,7 @@ def get_all_features(
     """
 
     sim = load_simulation_data(sim_id, localizer)
-    if sim is None or sim.data is None:
+    if sim is None:
         raise ValueError(f"Simulation with ID {sim_id} not found or has no data.")
     gen_id = sim.web_input.run_specs.generator_id
 
@@ -71,6 +71,7 @@ def get_all_features(
         generator_input=gen.web_input,
         simulation_input=sim.web_input,
         simulation_output=sim.data,
+        simulation_meta=sim.meta,
     )
 
 

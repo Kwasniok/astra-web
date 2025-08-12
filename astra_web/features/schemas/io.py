@@ -5,6 +5,7 @@ from astra_web.generator.schemas.io import GeneratorInput
 from astra_web.simulation.schemas.io import (
     SimulationInput,
     SimulationData,
+    SimulationMetaData,
 )
 
 
@@ -13,6 +14,7 @@ class CompleteData(BaseModel):
     generator_input: GeneratorInput
     simulation_input: SimulationInput
     simulation_output: SimulationData
+    simulation_meta: SimulationMetaData | None = None
 
 
 FeatureTableInput = list[str]
