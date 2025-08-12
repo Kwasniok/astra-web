@@ -6,6 +6,7 @@ from astra_web.generator.schemas.particles import Particles
 from astra_web.host_localizer.schemas.dispatch import DispatchResponse
 from astra_web.uuid import get_uuid
 from astra_web.file import IniExportableModel
+from astra_web.status import DispatchStatus
 from .output import SimulationOutputSpecification
 from .run import SimulationRunSpecifications
 from .scan import SimulationScanSpecifications
@@ -114,6 +115,7 @@ class SimulationDispatchOutput(BaseModel):
 
 
 class SimulationMetaData(BaseModel):
+    status: DispatchStatus = Field(description="Current status of the simulation.")
     finished_date: datetime | None = Field(
         default=None,
         description="Time and date when ASTRA simulation finished as ISO 8601.",

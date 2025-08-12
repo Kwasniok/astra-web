@@ -14,7 +14,7 @@ class CompleteData(BaseModel):
     generator_input: GeneratorInput
     simulation_input: SimulationInput
     simulation_output: SimulationData
-    simulation_meta: SimulationMetaData | None = None
+    simulation_meta: SimulationMetaData
 
 
 FeatureTableInput = list[str]

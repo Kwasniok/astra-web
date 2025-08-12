@@ -15,7 +15,7 @@ from .schemas.io import (
 )
 from .schemas.emittance_table import XYEmittanceTable, ZEmittanceTable
 from astra_web.file import write_txt, read_txt, write_json, read_json
-from astra_web.choices import ListDispatchedCategory
+from astra_web.status import DispatchStatus
 
 
 def dispatch_simulation_run(
@@ -122,8 +122,7 @@ def load_simulation_data(
     )
 
     run_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
-    run_output = read_txt(localizer.simulation_path(sim_id, "run.out"))
-    meta = _extract_run_output_meta_data(run_output)
+    run_output, meta = _extract_output(sim_id, localizer)
 
     return SimulationAllData(
         web_input=web_input,
@@ -154,9 +153,16 @@ def _load_emittances(
     )
 
 
-def _extract_run_output_meta_data(
-    run_output: str,
-) -> SimulationMetaData:
+def _extract_output(
+    sim_id: str, localizer: HostLocalizer
+) -> tuple[str | None, SimulationMetaData]:
+
+    status = get_simulation_status(sim_id, localizer)
+
+    if not status == DispatchStatus.FINISHED:
+        return None, SimulationMetaData(status=DispatchStatus.PENDING)
+
+    run_output = read_txt(localizer.simulation_path(sim_id, "run.out"))
     finished_date = None
     execution_time = None
 
@@ -175,15 +181,19 @@ def _extract_run_output_meta_data(
                 seconds = float(time_match.group(2))
                 execution_time = minutes * 60 + seconds
 
-    return SimulationMetaData(
-        finished_date=finished_date,
-        execution_time=execution_time,
+    return (
+        run_output,
+        SimulationMetaData(
+            status=status,
+            finished_date=finished_date,
+            execution_time=execution_time,
+        ),
     )
 
 
 def list_simulation_ids(
     localizer: HostLocalizer,
-    filter: ListDispatchedCategory,
+    filter: DispatchStatus,
 ) -> list[str]:
     """
     Lists IDs of simulations.
@@ -192,16 +202,13 @@ def list_simulation_ids(
         lambda p: os.path.split(p)[-1],
         glob.glob(localizer.simulation_path("*")),
     )
-    ids_finished = (id for id in ids_all if _is_finished(id, localizer))
-    ids_pending = (id for id in ids_all if not _is_finished(id, localizer))
 
-    match filter:
-        case ListDispatchedCategory.ALL:
-            return sorted(ids_all)
-        case ListDispatchedCategory.FINISHED:
-            return sorted(ids_finished)
-        case ListDispatchedCategory.PENDING:
-            return sorted(ids_pending)
+    if filter == DispatchStatus.ANY:
+        return sorted(ids_all)
+    else:
+        return sorted(
+            id for id in ids_all if get_simulation_status(id, localizer) == filter
+        )
 
 
 def delete_simulation(sim_id: str, localizer: HostLocalizer) -> None:
@@ -221,14 +228,15 @@ def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
     )
 
 
-def _is_finished(sim_id: str, localizer: HostLocalizer) -> bool:
+def get_simulation_status(sim_id: str, localizer: HostLocalizer) -> DispatchStatus:
     """
-    Checks if the simulation is finished.
+    Returns status of the simulation.
     """
     path = localizer.simulation_path(sim_id, "run.err")
     if os.path.exists(path):
-        return False
+        return DispatchStatus.FAILED
     path = localizer.simulation_path(sim_id, "run.out")
     if os.path.exists(path):
-        return "finished simulation" in read_txt(path)
-    return False
+        if "finished simulation" in read_txt(path):
+            return DispatchStatus.FINISHED
+    return DispatchStatus.PENDING

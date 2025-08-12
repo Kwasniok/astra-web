@@ -49,7 +49,7 @@ from .features.host_localized import (
     get_all_features,
     get_all_varying_features,
 )
-from .choices import ListDispatchedCategory
+from .status import DispatchStatus
 
 
 tags_metadata = [
@@ -105,7 +105,7 @@ async def root():
     tags=["particles"],
 )
 def list_particle_distribution_ids(
-    filter: ListDispatchedCategory = Query(default=ListDispatchedCategory.FINISHED),
+    filter: DispatchStatus = Query(default=DispatchStatus.FINISHED),
 ) -> list[str]:
     """
     Returns a list of particle distribution IDs.
@@ -240,7 +240,7 @@ async def delete_field_table_(file_name: str) -> None:
     tags=["simulations"],
 )
 def list_simulation_ids_(
-    filter: ListDispatchedCategory = Query(default=ListDispatchedCategory.FINISHED),
+    filter: DispatchStatus = Query(default=DispatchStatus.FINISHED),
 ) -> list[str]:
     """
     Returns a list of  simulation IDs.

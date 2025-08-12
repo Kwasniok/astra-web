@@ -7,7 +7,7 @@ from astra_web.simulation.host_localized import (
     list_simulation_ids,
     load_simulation_data,
 )
-from astra_web.choices import ListDispatchedCategory
+from astra_web.status import DispatchStatus
 from astra_web.file.json import JSONType
 
 
@@ -35,7 +35,7 @@ def make_feature_table(
         for path, value in _traverse(data, feature_tree):
             feature_table[path].append(value)
 
-    for sim_id in list_simulation_ids(localizer, ListDispatchedCategory.FINISHED):
+    for sim_id in list_simulation_ids(localizer, DispatchStatus.FINISHED):
         if sim_ids is not None and sim_id not in sim_ids:
             # skip excluded simulations
             continue
@@ -59,7 +59,9 @@ def get_all_features(
 
     sim = load_simulation_data(sim_id, localizer)
     if sim is None:
-        raise ValueError(f"Simulation with ID {sim_id} not found or has no data.")
+        raise ValueError(
+            f"Simulation with ID {sim_id} not found or is not finished yet."
+        )
     gen_id = sim.web_input.run_specs.generator_id
 
     gen = load_generator_data(gen_id, localizer)
@@ -90,7 +92,7 @@ def get_all_varying_features(
 
     result: list[JSONType] = []
 
-    for sim_id in list_simulation_ids(localizer, ListDispatchedCategory.FINISHED):
+    for sim_id in list_simulation_ids(localizer, DispatchStatus.FINISHED):
         if sim_ids is not None and sim_id not in sim_ids:
             # skip excluded simulations
             continue

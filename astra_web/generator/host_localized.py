@@ -11,7 +11,7 @@ from .schemas.io import (
 from .schemas.particles import Particles
 from astra_web.uuid import get_uuid
 from astra_web.file import write_json, read_json, write_txt, read_txt, find_symlinks
-from astra_web.choices import ListDispatchedCategory
+from astra_web.status import DispatchStatus
 
 
 def dispatch_particle_distribution_generation(
@@ -86,32 +86,23 @@ def read_particle_file(gen_id: str, localizer: HostLocalizer) -> Particles:
 
 def list_generator_ids(
     localizer: HostLocalizer,
-    filter: ListDispatchedCategory,
+    filter: DispatchStatus,
 ) -> list[str]:
     """
     Lists IDs of particle distribution generations.
     """
 
-    all = lambda: set(
-        map(
-            lambda p: os.path.split(p)[-1],
-            glob.glob(localizer.generator_path("*")),
-        )
-    )
-    finished = lambda: set(
-        map(
-            lambda p: os.path.split(os.path.split(p)[-2])[-1],
-            glob.glob(localizer.generator_path("*", "distribution.ini")),
-        )
+    ids_all = map(
+        lambda p: os.path.split(p)[-1],
+        glob.glob(localizer.generator_path("*")),
     )
 
-    match filter:
-        case ListDispatchedCategory.ALL:
-            return sorted(all())
-        case ListDispatchedCategory.FINISHED:
-            return sorted(finished())
-        case ListDispatchedCategory.PENDING:
-            return sorted(all() - finished())
+    if filter == DispatchStatus.ANY:
+        return sorted(ids_all)
+    else:
+        return sorted(
+            id for id in ids_all if get_generation_status(id, localizer) == filter
+        )
 
 
 def delete_particle_distribution(
@@ -151,3 +142,17 @@ def write_particle_distribution(particles: Particles, localizer: HostLocalizer) 
     os.makedirs(os.path.dirname(path), exist_ok=True)
     particles.write_to_csv(path)
     return gen_id
+
+
+def get_generation_status(ge_id: str, localizer: HostLocalizer) -> DispatchStatus:
+    """
+    Returns status of the particle generation.
+    """
+    path = localizer.generator_path(ge_id, "generator.err")
+    if os.path.exists(path):
+        return DispatchStatus.FAILED
+    path = localizer.generator_path(ge_id, "generator.out")
+    if os.path.exists(path):
+        if "phase-space distribution saved to file" in read_txt(path):
+            return DispatchStatus.FINISHED
+    return DispatchStatus.PENDING
