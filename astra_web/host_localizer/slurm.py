@@ -124,7 +124,6 @@ class SLURMHostLocalizer(HostLocalizer):
         cwd: str,
         output_file_name_base: str,
         timeout: int | None = None,
-        confirm_finished_successfully=False,
     ) -> DispatchResponse:
         """
         Dispatches a command for the specified directory and captures the output.
@@ -138,8 +137,6 @@ class SLURMHostLocalizer(HostLocalizer):
 
 set -euo pipefail
 
-# cleanup
-rm -f FINISHED
 # setup
 {self._config.script_setup}
 # dispatched command
@@ -149,8 +146,6 @@ status=$?
 [ ! -s '{output_file_name_base}.out' ] && rm -f '{output_file_name_base}.out'
 [ ! -s '{output_file_name_base}.err' ] && rm -f '{output_file_name_base}.err'
 """
-        if confirm_finished_successfully:
-            script += "if [ $status -eq 0 ]; then touch FINISHED; fi\n"
 
         data = {
             "job": {

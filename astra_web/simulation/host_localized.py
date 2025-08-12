@@ -150,26 +150,20 @@ def list_simulation_ids(
     """
     Lists IDs of simulations.
     """
-    all = lambda: set(
-        map(
-            lambda p: os.path.split(p)[-1],
-            glob.glob(localizer.simulation_path("*")),
-        )
+    ids_all = map(
+        lambda p: os.path.split(p)[-1],
+        glob.glob(localizer.simulation_path("*")),
     )
-    finished = lambda: set(
-        map(
-            lambda p: os.path.split(os.path.split(p)[-2])[-1],
-            glob.glob(localizer.simulation_path("*", "FINISHED")),
-        )
-    )
+    ids_finished = (id for id in ids_all if _is_finished(id, localizer))
+    ids_pending = (id for id in ids_all if not _is_finished(id, localizer))
 
     match filter:
         case ListDispatchedCategory.ALL:
-            return sorted(all())
+            return sorted(ids_all)
         case ListDispatchedCategory.FINISHED:
-            return sorted(finished())
+            return sorted(ids_finished)
         case ListDispatchedCategory.PENDING:
-            return sorted(all() - finished())
+            return sorted(ids_pending)
 
 
 def delete_simulation(sim_id: str, localizer: HostLocalizer) -> None:
@@ -187,3 +181,13 @@ def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
         files,
         key=lambda s: s.split(".")[1],
     )
+
+
+def _is_finished(sim_id: str, localizer: HostLocalizer) -> bool:
+    """
+    Checks if the simulation is finished.
+    """
+    path = localizer.simulation_path(sim_id, "run.out")
+    if os.path.exists(path):
+        return "finished simulation" in read_txt(path)
+    return False

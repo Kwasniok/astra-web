@@ -3,7 +3,6 @@ import os
 from astra_web.generator.schemas.io import GeneratorInput
 from astra_web.simulation.schemas.io import SimulationInput
 from .schemas.dispatch import DispatchResponse
-from astra_web.file import write_txt
 
 
 class HostLocalizer(ABC):
@@ -104,7 +103,6 @@ class HostLocalizer(ABC):
             cwd=self.simulation_path(simulation_input.run_dir),
             output_file_name_base="run",
             timeout=simulation_input.run_specs.timeout,
-            confirm_finished_successfully=True,
         )
 
     @abstractmethod
@@ -115,7 +113,6 @@ class HostLocalizer(ABC):
         cwd: str,
         output_file_name_base: str,
         timeout: int | None = None,
-        confirm_finished_successfully=False,
     ) -> DispatchResponse:
         """
         Dispatches a command with the specified directory and output configuration.
@@ -124,7 +121,6 @@ class HostLocalizer(ABC):
         :param cwd: The working directory where the command should be executed.
         :param output_file_name_base: The base name for the output files to be written to the working directory. (will be extended by .out and .err)
         :param timeout: Optional timeout for the command execution.
-        :param confirm_finished_successfully: If True, will write a file named `FINISHED` in the working directory in case the command finished successfully.
 
         May create additional files with the captured stdout (.out) and stderr (.err) inside of `cwd` when non-empty.
         """
