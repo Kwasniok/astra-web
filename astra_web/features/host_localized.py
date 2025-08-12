@@ -1,4 +1,4 @@
-from typing import Any, Iterable, Callable
+from typing import Any, Iterable, Callable, cast
 from pydantic import BaseModel
 from astra_web.host_localizer import HostLocalizer
 from .schemas.io import FeatureTableInput, FeatureTable, CompleteData
@@ -193,9 +193,10 @@ def _deep_diff_dicts(
 
     # all lists
     elif all(isinstance(d, list) for d in dicts):
-        max_len = max(len(d) for d in dicts)
+        ds = cast(list[list[JSONType]], dicts)
+        max_len = max(len(d) for d in ds)
         for i in range(max_len):
-            new_values = [(d[i] if i < len(d) else None) for d in dicts]
+            new_values = [(d[i] if i < len(d) else None) for d in ds]
             if all(isinstance(v, dict) for v in new_values if v is not None):
                 differences.update(_deep_diff_dicts(new_values, f"{path}[{i}]"))
             elif all(isinstance(v, list) for v in new_values if v is not None):

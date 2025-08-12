@@ -1,3 +1,4 @@
+from typing import Any
 import pandas as pd
 import numpy as np
 from pmd_beamphysics import ParticleGroup
@@ -58,7 +59,7 @@ class Particles(BaseModel):
     def lost_particles(self):
         return np.array(self.status) < 0
 
-    def write_to_csv(self, path) -> None:
+    def write_to_csv(self, path: str) -> None:
         write_csv(self, path)
 
     @classmethod
@@ -66,35 +67,32 @@ class Particles(BaseModel):
         return read_csv(cls, path)
 
     def to_df(self):
-        return pd.DataFrame(self.dict())
+        return pd.DataFrame(self.model_dump())
 
-    def to_pmd(self, ref=None, only_active=False) -> ParticleGroup:
+    def to_pmd(
+        self, ref_particle: pd.Series | None = None, only_active: bool = False
+    ) -> ParticleGroup:
         """
-        Helper function to transform the particle output from ASTRA to a ParticleGroup object for analysis.
-
-        Parameters
-        ----------
-        :param particles: DataFrame
-            A pandas DataFrame holding information on a particle distribution formatted as defined by ASTRA. Refer
-            to the ASTRA manual for further information.
-        :return: ParticleGroup
+        Returns particles as ParticleGroup object for analysis.
         """
         data = self.to_df()
-        ref = ref if ref is not None else data.iloc[0]
+        ref_particle = ref_particle if ref_particle is not None else data.iloc[0]
 
         if only_active:
             data = data[self.active_particles]
 
         data["weight"] = np.abs(data.pop("macro_charge")) * 1e-9
-        data.loc[1:, "z"] = data.loc[1:, "z"] + ref["z"]
-        data.loc[1:, "pz"] = data.loc[1:, "pz"] + ref["pz"]
-        data.loc[1:, "t_clock"] = (data.loc[1:, "t_clock"] + ref["t_clock"]) * 1e-9
+        data.loc[1:, "z"] = data.loc[1:, "z"] + ref_particle["z"]
+        data.loc[1:, "pz"] = data.loc[1:, "pz"] + ref_particle["pz"]
+        data.loc[1:, "t_clock"] = (
+            data.loc[1:, "t_clock"] + ref_particle["t_clock"]
+        ) * 1e-9
         data.loc[data["status"] == 1, "status"] = 2
         data.loc[data["status"] == 5, "status"] = 1
 
         data_dict = data.to_dict("list")
         data_dict["n_particles"] = data.size
         data_dict["species"] = "electron"
-        data_dict["t"] = ref["t_clock"] * 1e-9
+        data_dict["t"] = ref_particle["t_clock"] * 1e-9
 
         return ParticleGroup(data=data_dict)

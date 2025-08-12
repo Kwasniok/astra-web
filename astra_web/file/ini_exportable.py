@@ -22,7 +22,7 @@ class IniExportableModel(BaseModel):
         """
         return set()
 
-    def _to_ini_dict(self) -> dict[str, Any]:
+    def to_ini_dict(self) -> dict[str, Any]:
         """
         Convert the model to a dictionary suitable for INI export.
         """
@@ -34,7 +34,7 @@ class IniExportableModel(BaseModel):
     def _to_ini(self, indent: int = 4) -> str:
 
         s = json.dumps(
-            self._to_ini_dict(),
+            self.to_ini_dict(),
             indent=indent,
             sort_keys=True,
             ensure_ascii=False,

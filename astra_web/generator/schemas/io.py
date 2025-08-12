@@ -1,3 +1,4 @@
+from typing import Any
 from pydantic import BaseModel, Field, ConfigDict, computed_field
 from astra_web.file import IniExportableModel
 from astra_web.host_localizer.schemas.dispatch import DispatchResponse
@@ -254,7 +255,7 @@ class GeneratorInput(IniExportableModel):
     def to_ini(self) -> str:
         return f"&INPUT{self._to_ini()}/"
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, context: Any, /) -> None:
         self._id = get_uuid()
 
 

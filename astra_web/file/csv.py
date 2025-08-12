@@ -1,4 +1,4 @@
-from typing import TypeVar, Type, get_origin, get_args
+from typing import Any, TypeVar, Type, Callable, get_origin, get_args
 import os
 from pydantic import BaseModel
 import pandas as pd
@@ -6,7 +6,9 @@ import pandas as pd
 
 T = TypeVar("T", bound=BaseModel)
 
-_is_list = lambda a, types: get_origin(a) is list and get_args(a)[0] in types
+_is_list: Callable[[Any, list[type]], bool] = (
+    lambda a, types: get_origin(a) is list and get_args(a)[0] in types
+)
 
 
 def write(

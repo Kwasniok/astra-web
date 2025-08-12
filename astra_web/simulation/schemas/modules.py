@@ -17,10 +17,10 @@ class Module(IniExportableModel):
             "comment",
         }
 
-    def _to_ini_dict(self) -> dict[str, Any]:
+    def to_ini_dict(self) -> dict[str, Any]:
         # non-excluded, non-none, aliased fields with enumeration suffixes
 
-        out_dict = super()._to_ini_dict()
+        out_dict = super().to_ini_dict()
         out_dict = {f"{k}({self.id})": v for k, v in out_dict.items()}
         return out_dict
 

@@ -139,7 +139,7 @@ async def dispatch_particle_distribution_generation_(
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-def upload_particle_distribution(data: Particles) -> dict:
+def upload_particle_distribution(data: Particles) -> dict[str, str]:
     localizer = LocalHostLocalizer.instance()
     gen_id = write_particle_distribution(data, localizer)
     return {"gen_id": gen_id}

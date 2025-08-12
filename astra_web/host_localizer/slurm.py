@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 import os
 from enum import Enum
 import requests
@@ -47,7 +47,9 @@ class SLURMHostLocalizer(HostLocalizer):
 
             # aquire environment variables only upon first use
             # avoids errors due to undefined env if SLURM is never used
-            split = lambda csv: csv.split(",") if csv else []
+            split: Callable[[str | None], list[str]] = lambda csv: (
+                csv.split(",") if csv else []
+            )
             cls._config = SLURMConfiguration(
                 astra_binary_path=os.environ["SLURM_ASTRA_BINARY_PATH"],
                 data_path=os.environ["SLURM_DATA_PATH"],
@@ -129,7 +131,7 @@ class SLURMHostLocalizer(HostLocalizer):
         Dispatches a command for the specified directory and captures the output.
         """
 
-        quote = lambda s: f'"{s}"' if " " in s else s
+        quote: Callable[[str], str] = lambda s: f'"{s}"' if " " in s else s
 
         cmd: str = " ".join(map(quote, command))
 
@@ -147,7 +149,7 @@ status=$?
 [ ! -s '{output_file_name_base}.err' ] && rm -f '{output_file_name_base}.err'
 """
 
-        data = {
+        data: dict[str, Any] = {
             "job": {
                 "name": name,
                 "partition": self._config.partition,
@@ -258,10 +260,11 @@ status=$?
         except RuntimeError as e:
             raise RuntimeError(f"Failed to list SLURM job IDs.") from e
         # manual filtering due to bug in SLURM REST API
-        jobs = response["jobs"]
+        jobs: list[dict[str, Any]] = response["jobs"]
         if state:
-            filter = lambda j: set(s.lower() for s in j["state"]["current"]) & set(
-                s.value for s in state
+            filter: Callable[[dict[str, Any]], bool] = lambda j: bool(
+                set(s.lower() for s in j["state"]["current"])
+                & set(s.value for s in state)
             )
             jobs = list(j for j in jobs if filter(j))
         return jobs

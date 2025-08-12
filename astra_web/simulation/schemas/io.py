@@ -1,5 +1,5 @@
+from typing import Any, Optional
 import numpy as np
-from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 from astra_web.generator.schemas.particles import Particles
 from astra_web.host_localizer.schemas.dispatch import DispatchResponse
@@ -75,7 +75,7 @@ class SimulationInput(IniExportableModel):
         for idx, element in enumerate(getattr(self, attribute_key), start=1):
             element.id = idx
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, context: Any, /) -> None:
         self._id = get_uuid()
         self._sort_and_set_ids("cavities")
         self._sort_and_set_ids("solenoids")
@@ -137,4 +137,4 @@ class SimulationAllData(BaseModel):
         description="Simulation data, if the simulation has finished successfully.",
     )
     run_input: str
-    run: str
+    run_output: str

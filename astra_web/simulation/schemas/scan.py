@@ -1,6 +1,6 @@
 from typing import Annotated, Any
 from pydantic import Field, conlist, field_validator
-from astra_web.file import IniExportableModel
+from astra_web.file import IniExportableModel, JSONType
 
 
 class SimulationScanQuantity(IniExportableModel):
@@ -20,10 +20,10 @@ class SimulationScanQuantity(IniExportableModel):
         validation_alias="name",
     )
 
-    def _to_ini_dict(self) -> dict[str, Any]:
+    def to_ini_dict(self) -> dict[str, Any]:
         # non-excluded, non-none, aliased fields with enumeration suffixes
 
-        out_dict = super()._to_ini_dict()
+        out_dict = super().to_ini_dict()
         out_dict = {f"{k}({self.id})": v for k, v in out_dict.items()}
         return out_dict
 
@@ -141,7 +141,7 @@ class SimulationScanSpecifications(IniExportableModel):
 
     @field_validator("scan_quantities", mode="before")
     @classmethod
-    def parse_scan_quantities(cls, values: Any) -> list[SimulationScanQuantity]:
+    def parse_scan_quantities(cls, values: JSONType) -> list[SimulationScanQuantity]:
         if not values:
             return []
 
@@ -150,7 +150,7 @@ class SimulationScanSpecifications(IniExportableModel):
                 f"Invalid value for `scan_quantities`. Must be a list. Received type `{type(values)}`."
             )
 
-        def parse_quantity(value: Any) -> SimulationScanQuantity:
+        def parse_quantity(value: JSONType) -> SimulationScanQuantity:
             if isinstance(value, SimulationScanQuantity):
                 return value
             elif isinstance(value, dict):
@@ -166,15 +166,15 @@ class SimulationScanSpecifications(IniExportableModel):
         for idx, element in enumerate(getattr(self, attribute_key), start=1):
             element.id = idx
 
-    def model_post_init(self, __context) -> None:
+    def model_post_init(self, context: Any, /) -> None:
         self._set_ids("scan_quantities")
 
     def excluded_ini_fields(self) -> set[str]:
         return super().excluded_ini_fields() | {"scan_quantities"}
 
-    def _to_ini_dict(self) -> dict[str, Any]:
+    def to_ini_dict(self) -> dict[str, Any]:
         # directly add (enumerated) scan quantities
-        out = super()._to_ini_dict()
+        out = super().to_ini_dict()
         for q in self.scan_quantities:
-            out |= q._to_ini_dict()
+            out |= q.to_ini_dict()
         return out
