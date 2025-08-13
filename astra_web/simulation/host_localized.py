@@ -165,6 +165,7 @@ def _extract_output(
     run_output = read_txt(localizer.simulation_path(sim_id, "run.out"))
     finished_date = None
     execution_time = None
+    warnings: list[str] = []
 
     for line in run_output.splitlines():
         if "finished simulation" in line:
@@ -180,6 +181,10 @@ def _extract_output(
                 minutes = int(time_match.group(1))
                 seconds = float(time_match.group(2))
                 execution_time = minutes * 60 + seconds
+        elif "WARNING" in line:
+            warning_match = re.search(r"WARNING:\s*(.*)", line)
+            if warning_match:
+                warnings.append(warning_match.group(1))
 
     return (
         run_output,
@@ -187,6 +192,7 @@ def _extract_output(
             status=status,
             finished_date=finished_date,
             execution_time=execution_time,
+            warnings=warnings,
         ),
     )
 

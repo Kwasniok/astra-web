@@ -123,6 +123,10 @@ class SimulationMetaData(BaseModel):
     execution_time: float | None = Field(
         default=None, description="Duration of the ASTRA simulation."
     )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="List of warnings generated during the simulation.",
+    )
 
 
 class SimulationData(BaseModel):
