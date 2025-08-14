@@ -1,5 +1,7 @@
-from typing import Any
-from pydantic import BaseModel, ConfigDict
+from typing import Any, TypeVar, Generic, Callable, cast
+from abc import ABC, abstractmethod
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
+from functools import reduce
 import json
 
 
@@ -31,12 +33,15 @@ class IniExportableModel(BaseModel):
             exclude_none=True, by_alias=True, exclude=self.excluded_ini_fields()
         )
 
-    def _to_ini(self, indent: int = 4) -> str:
+    def to_ini(self, indent: int = 4) -> str:
+        """
+        Convert the model to an INI formatted string to be used for ASTRA.
+        """
 
         s = json.dumps(
             self.to_ini_dict(),
             indent=indent,
-            sort_keys=True,
+            sort_keys=False,
             ensure_ascii=False,
         )
         return (
@@ -46,8 +51,79 @@ class IniExportableModel(BaseModel):
             .replace('"', "'")
         )[1:-1]
 
-    def to_ini(self) -> str:
-        """
-        Convert the model to an INI formatted string to be used for ASTRA.
-        """
-        return self._to_ini()
+
+IEM = TypeVar("IEM", bound="IniExportableModel")
+
+
+class IniExportableArrayModel(IniExportableModel, Generic[IEM]):
+    """
+    Array of models to be exported to INI format with automatic enumeration.
+    """
+
+    values: list[IEM] = Field(default_factory=list[IEM])
+
+    def excluded_ini_fields(self) -> set[str]:
+        return super().excluded_ini_fields() | {
+            "values",
+        }
+
+    def to_ini_dict(self) -> dict[str, Any]:
+        # non-excluded, non-none, aliased fields with enumeration suffixes
+
+        out_dicts = [
+            {f"{k}({n})": v for k, v in elem.to_ini_dict().items()}
+            for n, elem in enumerate(self.values, start=1)
+        ]
+        union: Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]] = (
+            lambda a, b: {**a, **b}
+        )
+        return reduce(union, out_dicts, {})
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from(cls, value: Any) -> Any:
+        if isinstance(value, dict):
+            return cast(dict[str, Any], value)
+        return dict(values=value)
+
+    @model_serializer(mode="plain")
+    def _to(self) -> list[IEM]:
+        return self.values
+
+
+T = TypeVar("T")
+
+
+class IniExportableValueArrayModel(ABC, IniExportableModel, Generic[T]):
+    """
+    Array of values to be exported to INI format with automatic enumeration.
+    """
+
+    values: list[T] = Field(default_factory=lambda: list[T]())
+
+    @classmethod
+    @abstractmethod
+    def alias(cls) -> str:
+        pass
+
+    def excluded_ini_fields(self) -> set[str]:
+        return super().excluded_ini_fields() | {
+            "values",
+        }
+
+    def to_ini_dict(self) -> dict[str, Any]:
+        return {
+            f"{self.__class__.alias()}({n})": v
+            for n, v in enumerate(self.values, start=1)
+        }
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from(cls, value: Any) -> Any:
+        if isinstance(value, dict):
+            return cast(dict[str, Any], value)
+        return dict(values=value)
+
+    @model_serializer(mode="plain")
+    def _to(self) -> list[T]:
+        return self.values

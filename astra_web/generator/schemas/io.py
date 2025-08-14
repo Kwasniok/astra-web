@@ -252,8 +252,8 @@ class GeneratorInput(IniExportableModel):
         json_schema_extra={"format": "Unit: [ns]"},
     )
 
-    def to_ini(self) -> str:
-        return f"&INPUT{self._to_ini()}/"
+    def to_ini(self, indent: int = 4) -> str:
+        return f"&INPUT{super().to_ini(indent=indent)}/"
 
     def model_post_init(self, context: Any, /) -> None:
         self._id = get_uuid()

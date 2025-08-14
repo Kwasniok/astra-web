@@ -4,4 +4,8 @@ from .txt import write as write_txt, read as read_txt
 
 from .symlink import find_symlinks
 
-from .ini_exportable import IniExportableModel
+from .ini_exportable import (
+    IniExportableModel,
+    IniExportableArrayModel,
+    IniExportableValueArrayModel,
+)

@@ -1,11 +1,10 @@
 from typing import Any
 from datetime import datetime
-import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
 from astra_web.generator.schemas.particles import Particles
 from astra_web.host_localizer.schemas.dispatch import DispatchResponse
 from astra_web.uuid import get_uuid
-from astra_web.file import IniExportableModel
+from astra_web.file import IniExportableModel, IniExportableArrayModel
 from astra_web.status import DispatchStatus
 from .output import SimulationOutputSpecification
 from .run import SimulationRunSpecifications
@@ -38,12 +37,22 @@ class SimulationInput(IniExportableModel):
         """
         Returns a set of all field file names used in the simulation.
         """
-        return {c.field_file_name for c in self.cavities} | {
-            s.field_file_name for s in self.solenoids
+        return {c.field_file_name for c in self.cavities.values} | {
+            s.field_file_name for s in self.solenoids.values
         }
 
     def excluded_ini_fields(self) -> set[str]:
-        return {"id", "comment", "run_dir", "field_file_names"}
+        return {
+            "id",
+            "comment",
+            "run_dir",
+            "field_file_names",
+            "run_specs",
+            "out_specs",
+            "cavities",
+            "solenoids",
+            "space_charge",
+        }
 
     # ASTRA fields:
     run_specs: SimulationRunSpecifications = Field(
@@ -58,39 +67,30 @@ class SimulationInput(IniExportableModel):
         default=SimulationScanSpecifications(),
         description="Specifications for the parameters scans and optimizations.",
     )
-    cavities: list[Cavity] = Field(
-        default=[],
+    cavities: IniExportableArrayModel[Cavity] = Field(
+        default_factory=IniExportableArrayModel[Cavity],
         description="Specifications of cavities existing in the simulation setup. If not specified differently, \
-            cavities will be ordered w.r.t. to the z_0 parameter values.",
+            cavities will be ordered w.r.t. to the z parameter values.",
     )
-    solenoids: list[Solenoid] = Field(
-        default=[],
+    solenoids: IniExportableArrayModel[Solenoid] = Field(
+        default_factory=IniExportableArrayModel[Solenoid],
         description="Specifications of solenoids existing in the simulation setup. If not specified differently, \
-            solenoids will be ordered w.r.t. to the z_0 parameter values.",
+            solenoids will be ordered w.r.t. to the z parameter values.",
     )
     space_charge: SpaceCharge = Field(default=SpaceCharge(), description="")
 
-    def _sort_and_set_ids(self, attribute_key: str) -> None:
-        attr = getattr(self, attribute_key)
-        if not np.any(list(map(lambda o: o.z_0 is None, attr))):
-            setattr(self, attribute_key, sorted(attr, key=lambda element: element.z_0))
-        for idx, element in enumerate(getattr(self, attribute_key), start=1):
-            element.id = idx
-
     def model_post_init(self, context: Any, /) -> None:
         self._id = get_uuid()
-        self._sort_and_set_ids("cavities")
-        self._sort_and_set_ids("solenoids")
 
-    def to_ini(self) -> str:
-        run_str = self.run_specs.to_ini()
-        output_str = self.output_specs.to_ini()
-        scan_str = f"&SCAN\n{self.scan_specs.to_ini()}/"
-        charge_str = self.space_charge.to_ini()
-        has_cavities = str(len(self.cavities) > 0).lower()
-        cavity_str = f"&CAVITY\n    LEfield = {has_cavities}\n{''.join([c.to_ini() for c in self.cavities])}/"
-        has_solenoids = str(len(self.solenoids) > 0).lower()
-        solenoid_str = f"&SOLENOID\n    LBfield = {has_solenoids}\n{''.join([s.to_ini() for s in self.solenoids])}/"
+    def to_ini(self, indent: int = 4) -> str:
+        run_str = self.run_specs.to_ini(indent=indent)
+        output_str = self.output_specs.to_ini(indent=indent)
+        scan_str = self.scan_specs.to_ini(indent=indent)
+        charge_str = self.space_charge.to_ini(indent=indent)
+        has_cavities = str(len(self.cavities.values) > 0).lower()
+        cavity_str = f"&CAVITY\n    LEfield = {has_cavities}\n{self.cavities.to_ini(indent=indent)}/"
+        has_solenoids = str(len(self.solenoids.values) > 0).lower()
+        solenoid_str = f"&SOLENOID\n    LBfield = {has_solenoids}\n{self.solenoids.to_ini(indent=indent)}/"
 
         return (
             "\n\n".join(

@@ -1,36 +1,26 @@
-from typing import Annotated, Any
-from pydantic import Field, conlist, field_validator
-from astra_web.file import IniExportableModel, JSONType
+from typing import Any
+from pydantic import Field
+from astra_web.file import IniExportableModel, IniExportableValueArrayModel
 
 
-class SimulationScanQuantity(IniExportableModel):
+class SimulationScanQuanties(IniExportableValueArrayModel[str]):
 
-    # web exclusive fields:
-    id: int = Field(default=-1, description="The ID of the module.")
-
-    def excluded_ini_fields(self) -> set[str]:
-        return super().excluded_ini_fields() | {
-            "id",
-        }
-
-    # ASTRA fields:
-    name: str = Field(
-        description="Name of the quantity to be scanned. See ASTRA documentation Sec. 6.3 for listing of all possible values.",
-        alias="FOM",
-        validation_alias="name",
-    )
-
-    def to_ini_dict(self) -> dict[str, Any]:
-        # non-excluded, non-none, aliased fields with enumeration suffixes
-
-        out_dict = super().to_ini_dict()
-        out_dict = {f"{k}({self.id})": v for k, v in out_dict.items()}
-        return out_dict
+    @classmethod
+    def alias(cls) -> str:
+        return "FOM"
 
 
 class SimulationScanSpecifications(IniExportableModel):
 
+    def excluded_ini_fields(self) -> set[str]:
+        return super().excluded_ini_fields() | {
+            "scan_quantities",
+        }
+
     # ASTRA fields:
+
+    # loop skipped
+
     perform_scan: bool = Field(
         default=False,
         alias="LScan",
@@ -98,6 +88,18 @@ class SimulationScanSpecifications(IniExportableModel):
         validation_alias="optimization_depth",
         description="The depth of the optimization. The total number of runs is about `scan_num`* `optimization_depth`.",
     )
+    store_scanned_quantities_for_minimum: bool = Field(
+        default=False,
+        alias="L_min",
+        validation_alias="store_scanned_quantities_for_minimum",
+        description="If true, store the scanned quantities for the minimum of `scan_quantities[0]` in between `optimization_z_min`and `optimization_z_max`.",
+    )
+    store_scanned_quantities_for_maximun: bool = Field(
+        default=False,
+        alias="L_max",
+        validation_alias="store_scanned_quantities_for_maximun",
+        description="If true, store the scanned quantities for the maximum of `scan_quantities[0]` in between `optimization_z_min`and `optimization_z_max`.",
+    )
     optimization_z_min: float | None = Field(
         default=None,
         alias="S_zmin",
@@ -116,65 +118,14 @@ class SimulationScanSpecifications(IniExportableModel):
         validation_alias="optimization_z_num",
         description="The number of intervals between `optimization_z_min` and `optimization_z_max`. At each end of the interval the quantities are calculated.",
     )
-    store_scanned_quantities_for_minimum: bool = Field(
-        default=False,
-        alias="L_min",
-        validation_alias="store_scanned_quantities_for_minimum",
-        description="If true, store the scanned quantities for the minimum of `scan_quantities[0]` in between `optimization_z_min`and `optimization_z_max`.",
-    )
-    store_scanned_quantities_for_maximun: bool = Field(
-        default=False,
-        alias="L_max",
-        validation_alias="store_scanned_quantities_for_maximun",
-        description="If true, store the scanned quantities for the maximum of `scan_quantities[0]` in between `optimization_z_min`and `optimization_z_max`.",
-    )
-
-    # converted fields:
     # note: ASTRA has an arbitrary limit of 10 items here.
-    scan_quantities: Annotated[
-        list[SimulationScanQuantity],
-        conlist(SimulationScanQuantity, max_length=10),
-    ] = Field(
-        default=[],
-        description="The quantity to be optimized.",
+    scan_quantities: SimulationScanQuanties = Field(
+        default_factory=SimulationScanQuanties,
+        description="The quantities to be scanned.",
     )
-
-    @field_validator("scan_quantities", mode="before")
-    @classmethod
-    def parse_scan_quantities(cls, values: JSONType) -> list[SimulationScanQuantity]:
-        if not values:
-            return []
-
-        if not isinstance(values, list):
-            raise TypeError(
-                f"Invalid value for `scan_quantities`. Must be a list. Received type `{type(values)}`."
-            )
-
-        def parse_quantity(value: JSONType) -> SimulationScanQuantity:
-            if isinstance(value, SimulationScanQuantity):
-                return value
-            elif isinstance(value, dict):
-                return SimulationScanQuantity.model_validate(value)
-            elif isinstance(value, str):
-                return SimulationScanQuantity.model_validate(dict(name=value))
-            else:
-                raise ValueError(f"Invalid scan quantity `{value}`.")
-
-        return list(map(parse_quantity, values))
-
-    def _set_ids(self, attribute_key: str) -> None:
-        for idx, element in enumerate(getattr(self, attribute_key), start=1):
-            element.id = idx
-
-    def model_post_init(self, context: Any, /) -> None:
-        self._set_ids("scan_quantities")
-
-    def excluded_ini_fields(self) -> set[str]:
-        return super().excluded_ini_fields() | {"scan_quantities"}
 
     def to_ini_dict(self) -> dict[str, Any]:
-        # directly add (enumerated) scan quantities
-        out = super().to_ini_dict()
-        for q in self.scan_quantities:
-            out |= q.to_ini_dict()
-        return out
+        return super().to_ini_dict() | self.scan_quantities.to_ini_dict()
+
+    def to_ini(self, indent: int = 4) -> str:
+        return f"&SCAN{super().to_ini(indent=indent)}/"

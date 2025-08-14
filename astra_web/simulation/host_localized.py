@@ -69,7 +69,7 @@ def _link_initial_particle_distribution(
     os.symlink(
         target,
         localizer.simulation_path(
-            simulation_input.run_dir, simulation_input.run_specs.Distribution
+            simulation_input.run_dir, simulation_input.run_specs.distribution_file_name
         ),
     )
 
