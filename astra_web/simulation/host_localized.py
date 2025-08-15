@@ -61,7 +61,7 @@ def _link_initial_particle_distribution(
 ):
     # make link relative to ensure compatibility across hosts
     target = localizer.generator_path(
-        simulation_input.run_specs.generator_id, "distribution.ini"
+        simulation_input.run.generator_id, "distribution.ini"
     )
     target = os.path.relpath(
         target, localizer.simulation_path(simulation_input.run_dir)
@@ -69,7 +69,7 @@ def _link_initial_particle_distribution(
     os.symlink(
         target,
         localizer.simulation_path(
-            simulation_input.run_dir, simulation_input.run_specs.distribution_file_name
+            simulation_input.run_dir, simulation_input.run.distribution_file_name
         ),
     )
 

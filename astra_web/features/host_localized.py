@@ -62,7 +62,7 @@ def get_all_features(
         raise ValueError(
             f"Simulation with ID {sim_id} not found or is not finished yet."
         )
-    gen_id = sim.web_input.run_specs.generator_id
+    gen_id = sim.web_input.run.generator_id
 
     gen = load_generator_data(gen_id, localizer)
     if gen is None:

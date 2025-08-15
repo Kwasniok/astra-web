@@ -102,7 +102,7 @@ class HostLocalizer(ABC):
             command=self._simulation_command(simulation_input),
             cwd=self.simulation_path(simulation_input.run_dir),
             output_file_name_base="run",
-            timeout=simulation_input.run_specs.timeout,
+            timeout=simulation_input.run.timeout,
         )
 
     @abstractmethod
@@ -135,8 +135,8 @@ class HostLocalizer(ABC):
     def _simulation_command(self, simulation_input: SimulationInput) -> list[str]:
         cmd = [self._astra_simulation_binary_path(simulation_input), "run.in"]
 
-        if simulation_input.run_specs.thread_num > 1:
-            cmd = ["mpirun", "-n", str(simulation_input.run_specs.thread_num)] + cmd
+        if simulation_input.run.thread_num > 1:
+            cmd = ["mpirun", "-n", str(simulation_input.run.thread_num)] + cmd
         return cmd
 
     def _astra_simulation_binary_path(
@@ -144,7 +144,7 @@ class HostLocalizer(ABC):
         simulation_input: SimulationInput,
     ) -> str:
         binary = "astra"
-        if simulation_input.run_specs.thread_num > 1:
+        if simulation_input.run.thread_num > 1:
             binary = "parallel_" + binary
 
         return self.astra_binary_path(binary)

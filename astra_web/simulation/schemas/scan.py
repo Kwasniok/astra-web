@@ -1,5 +1,5 @@
 from typing import Any
-from pydantic import Field
+from pydantic import Field, computed_field
 from astra_web.file import IniExportableModel, IniExportableValueArrayModel
 
 
@@ -20,24 +20,25 @@ class SimulationScanSpecifications(IniExportableModel):
     # ASTRA fields:
 
     # loop skipped
-
-    perform_scan: bool = Field(
-        default=False,
+    @computed_field(
         alias="LScan",
-        validation_alias="perform_scan",
-        description="If true, ASTRA will perform a scan.",
+        description="If true, a scan will be performed. Automatically enabled when `scan_parameter` is specified.",
     )
+    @property
+    def scan_enable(self) -> bool:
+        return self.scan_parameter is not None
+
     extend_scan_files: bool = Field(
         default=False,
         alias="LExtend",
         validation_alias="extend_scan_files",
         description="If true, ASTRA will extend (append) the scan files rather than overwriting them.",
     )
-    scan_parameter: str = Field(
-        default="",
+    scan_parameter: str | None = Field(
+        default=None,
         alias="Scan_para",
         validation_alias="scan_parameter",
-        description="The parameter to be scanned",
+        description="The parameter to be scanned. If a parameter is specified, scans are performed.",
     )
     scan_min: float | None = Field(
         default=None,
