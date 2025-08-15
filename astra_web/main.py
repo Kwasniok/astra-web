@@ -439,7 +439,7 @@ async def diagnose_slurm() -> dict[str, Any]:
     tags=["slurm"],
 )
 async def list_slurm_jobs(
-    state: set[SLURMJobState] = Query(default=set()),
+    states: set[SLURMJobState] = Query(default=set(), alias="state"),
 ) -> list[dict[str, Any]]:
     """
     Lists jobs currently managed by SLURM.
@@ -447,7 +447,7 @@ async def list_slurm_jobs(
     see: https://slurm.schedmd.com/rest_api.html#slurmdbV0043GetJobs
     """
     slurm_localizer = SLURMHostLocalizer.instance()
-    return slurm_localizer.list_jobs(state=state)
+    return slurm_localizer.list_jobs(states=states)
 
 
 @app.get(

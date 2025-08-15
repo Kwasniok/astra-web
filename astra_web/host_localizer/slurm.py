@@ -238,7 +238,7 @@ status=$?
             raise RuntimeError(f"Failed to diagnose connection to SLURM.") from e
         return response
 
-    def list_jobs(self, state: set[SLURMJobState]) -> list[dict[str, Any]]:
+    def list_jobs(self, states: set[SLURMJobState]) -> list[dict[str, Any]]:
         """
         Lists all jobs currently managed by SLURM.
         """
@@ -261,10 +261,10 @@ status=$?
             raise RuntimeError(f"Failed to list SLURM job IDs.") from e
         # manual filtering due to bug in SLURM REST API
         jobs: list[dict[str, Any]] = response["jobs"]
-        if state:
+        if states:
             filter: Callable[[dict[str, Any]], bool] = lambda j: bool(
                 set(s.lower() for s in j["state"]["current"])
-                & set(s.value for s in state)
+                & set(s.value for s in states)
             )
             jobs = list(j for j in jobs if filter(j))
         return jobs
