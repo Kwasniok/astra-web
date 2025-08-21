@@ -3,7 +3,6 @@ from subprocess import run
 import threading
 from .base import HostLocalizer
 from .schemas.dispatch import DispatchResponse
-from astra_web.file import write_txt
 
 
 class LocalHostLocalizer(HostLocalizer):
@@ -44,17 +43,19 @@ class LocalHostLocalizer(HostLocalizer):
 
         os.makedirs(cwd, exist_ok=True)
 
-        kwargs = dict(
-            command=command,
-            cwd=cwd,
-            output_file_name_base=output_file_name_base,
-            timeout=timeout,
-            env=os.environ,
-        )
-        thread = threading.Thread(target=_dispatch_command, kwargs=kwargs, name=name)
-        thread.start()
+        stdout_path = os.path.join(cwd, output_file_name_base + ".out")
+        stderr_path = os.path.join(cwd, output_file_name_base + ".err")
 
-        self._dispatched_threads.append(thread)
+        with open(stdout_path, "w") as stdout_file, open(
+            stderr_path, "w"
+        ) as stderr_file:
+            run(
+                command,
+                cwd=cwd,
+                stdout=stdout_file,
+                stderr=stderr_file,
+                timeout=timeout,
+            )
 
         return DispatchResponse(dispatch_type="local")
 
@@ -65,33 +66,3 @@ class LocalHostLocalizer(HostLocalizer):
         for thread in self._dispatched_threads:
             thread.join()
         self._dispatched_threads.clear()
-
-
-def _dispatch_command(
-    command: list[str],
-    cwd: str,
-    output_file_name_base: str,
-    timeout: int | None = None,
-    env: dict[str, str] | None = None,
-):
-    """
-    internal only: Command dispatch as global function for threading.Thread.
-    """
-
-    process = run(
-        command,
-        cwd=cwd,
-        capture_output=True,
-        timeout=timeout,
-        env=env,
-    )
-
-    # write stdout/stderr
-    stdout = process.stdout.decode()
-    if stdout:
-        stdout_path = os.path.join(cwd, output_file_name_base + ".out")
-        write_txt(stdout, stdout_path)
-    stderr = process.stderr.decode()
-    if stderr:
-        stderr_path = os.path.join(cwd, output_file_name_base + ".err")
-        write_txt(stderr, stderr_path)
