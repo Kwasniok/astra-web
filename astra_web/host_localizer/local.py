@@ -1,5 +1,6 @@
 import os
 from subprocess import run
+import threading
 from .base import HostLocalizer
 from .schemas.dispatch import DispatchResponse
 from astra_web.file import write_txt
@@ -11,6 +12,8 @@ class LocalHostLocalizer(HostLocalizer):
     _DATA_PATH = os.environ["ASTRA_DATA_PATH"]
 
     _instance = None
+
+    _dispatched_threads: list[threading.Thread] = []
 
     @classmethod
     def instance(cls) -> "LocalHostLocalizer":
@@ -41,21 +44,54 @@ class LocalHostLocalizer(HostLocalizer):
 
         os.makedirs(cwd, exist_ok=True)
 
-        process = run(
-            command,
+        kwargs = dict(
+            command=command,
             cwd=cwd,
-            capture_output=True,
+            output_file_name_base=output_file_name_base,
             timeout=timeout,
+            env=os.environ,
         )
+        thread = threading.Thread(target=_dispatch_command, kwargs=kwargs, name=name)
+        thread.start()
 
-        # write stdout/stderr
-        stdout = process.stdout.decode()
-        if stdout:
-            stdout_path = os.path.join(cwd, output_file_name_base + ".out")
-            write_txt(stdout, stdout_path)
-        stderr = process.stderr.decode()
-        if stderr:
-            stderr_path = os.path.join(cwd, output_file_name_base + ".err")
-            write_txt(stderr, stderr_path)
+        self._dispatched_threads.append(thread)
 
         return DispatchResponse(dispatch_type="local")
+
+    def join_all_dispatched_threads(self):
+        """
+        Join all dispatched threads and forget them.
+        """
+        for thread in self._dispatched_threads:
+            thread.join()
+        self._dispatched_threads.clear()
+
+
+def _dispatch_command(
+    command: list[str],
+    cwd: str,
+    output_file_name_base: str,
+    timeout: int | None = None,
+    env: dict[str, str] | None = None,
+):
+    """
+    internal only: Command dispatch as global function for threading.Thread.
+    """
+
+    process = run(
+        command,
+        cwd=cwd,
+        capture_output=True,
+        timeout=timeout,
+        env=env,
+    )
+
+    # write stdout/stderr
+    stdout = process.stdout.decode()
+    if stdout:
+        stdout_path = os.path.join(cwd, output_file_name_base + ".out")
+        write_txt(stdout, stdout_path)
+    stderr = process.stderr.decode()
+    if stderr:
+        stderr_path = os.path.join(cwd, output_file_name_base + ".err")
+        write_txt(stderr, stderr_path)
