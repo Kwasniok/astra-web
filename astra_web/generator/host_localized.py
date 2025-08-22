@@ -149,10 +149,10 @@ def get_generation_status(ge_id: str, localizer: HostLocalizer) -> DispatchStatu
     Returns status of the particle generation.
     """
     path = localizer.generator_path(ge_id, "generator.err")
-    if os.path.exists(path):
+    if os.path.isfile(path) and os.path.getsize(path) > 0:
         return DispatchStatus.FAILED
     path = localizer.generator_path(ge_id, "generator.out")
-    if os.path.exists(path):
+    if os.path.isfile(path):
         if "phase-space distribution saved to file" in read_txt(path):
             return DispatchStatus.FINISHED
     return DispatchStatus.PENDING

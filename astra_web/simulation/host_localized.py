@@ -239,10 +239,10 @@ def get_simulation_status(sim_id: str, localizer: HostLocalizer) -> DispatchStat
     Returns status of the simulation.
     """
     path = localizer.simulation_path(sim_id, "run.err")
-    if os.path.exists(path):
+    if os.path.isfile(path) and os.path.getsize(path) > 0:
         return DispatchStatus.FAILED
     path = localizer.simulation_path(sim_id, "run.out")
-    if os.path.exists(path):
+    if os.path.isfile(path):
         if "finished simulation" in read_txt(path):
             return DispatchStatus.FINISHED
     return DispatchStatus.PENDING
