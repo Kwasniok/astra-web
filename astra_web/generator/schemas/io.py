@@ -286,7 +286,7 @@ class GeneratorInput(IniExportableModel):
     dist_x_bunch_width_rise: float | None = Field(
         default=None,  # ASTRA default: 0.0
         alias="rx",
-        validation_alias="dist_x_bunch_width",
+        validation_alias="dist_x_bunch_width_rise",
         description="Plateau distributions only: Rising of the bunch width.",
         json_schema_extra={"format": "Unit: [mm]"},
     )
@@ -313,7 +313,7 @@ class GeneratorInput(IniExportableModel):
     dist_px_normalized_transversal_emittance: float | None = Field(
         default=None,  # ASTRA default: 0.0
         alias="Nemit_x",
-        validation_alias="dist_px",
+        validation_alias="dist_px_normalized_transversal_emittance",
         description="Normalized transverse emittance in the horizontal direction. Can be specified instead of a transverse momentum spread. If a momentum spread and an emittance is specified the emittance has priority. Also the normalized vertical emittance if `dist_px = radial`.",
         json_schema_extra={"format": "Unit: [π mrad mm]"},
     )
@@ -407,14 +407,14 @@ class GeneratorInput(IniExportableModel):
     dist_py_normalized_transversal_emittance: float | None = Field(
         default=None,  # ASTRA default: 0.0
         alias="Nemit_y",
-        validation_alias="dist_py",
+        validation_alias="dist_py_normalized_transversal_emittance",
         description="Normalized transverse emittance in the vertical direction. Can be specified instead of a transverse momentum spread. If a momentum spread and an emittance is specified the emittance has priority. Also the normalized vertical emittance if `dist_py = radial`.",
         json_schema_extra={"format": "Unit: [π mrad mm]"},
     )
     dist_py_rms: float | None = Field(
         default=None,  # ASTRA default: 0.0
-        alias="sig_px",
-        validation_alias="dist_px_rms",
+        alias="sig_py",
+        validation_alias="dist_py_rms",
         description="RMS value of the horizontal momentum distribution.",
         json_schema_extra={"format": "Unit: [eV/c]"},
     )
