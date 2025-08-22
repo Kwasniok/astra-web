@@ -176,7 +176,7 @@ def _extract_output(
                 day, month, year, hour, minute = map(int, date_match.groups())
                 finished_date = datetime(year, month, day, hour, minute)
         elif "execution time" in line:
-            time_match = re.search(r"(\d+)\s*min\s*([\d.]+)\s*sec", line)
+            time_match = re.search(r"(\d+)\s*min\s*([\d.]+)\s*se[c|k]", line)
             if time_match:
                 minutes = int(time_match.group(1))
                 seconds = float(time_match.group(2))
