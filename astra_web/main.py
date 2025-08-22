@@ -84,7 +84,7 @@ app = FastAPI(
     description="This is an API wrapper for the ASTRA simulation code developed \
                  by K. Floettmann at DESY Hamburg. For more information, refer to the official \
                  [website](https://www.desy.de/~mpyflo/).",
-    version="2.0.0",
+    version="3.0.0",
     contact={
         "name": "Jens Kwasniok",
         "email": "jens.kwasniok@desy.de",
