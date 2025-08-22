@@ -329,9 +329,15 @@ status=$?
                         json=json,
                         proxies=proxies,
                     )
+        except requests.exceptions.HTTPError as e:
+            raise RuntimeError(
+                f"Failed to send {request.name} request to SLURM '{url}'.\n\t{headers=}\n\t{json=}\n\t{proxies=}"
+            ) from e
+
+        try:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as e:
             raise RuntimeError(
-                f"Failed to send {request.name} request to SLURM '{url}' (user_name='{self._config.user_name}', user_token='{self._config.user_token[:4]}****{self._config.user_token[-4:]}', proxies={proxies})."
+                f"Failed {request.name} request for SLURM '{url}'.\n\t{headers=}\n\t{json=}\n\t{proxies=}\n\tresponse=\n{response.text}\n"
             ) from e
