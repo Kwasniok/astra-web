@@ -20,19 +20,32 @@ set +a
 if [ ! -d "$ASTRA_BINARY_PATH" ]; then
     mkdir -p "$ASTRA_BINARY_PATH"
 fi
-binary_names=(
-    "generator@https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/generator"
-    "astra@https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/Astra"
-    "parallel_astra@https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux/Astra"
+# checksums for v4.0 (2025.09.19)
+binaries=(
+    "generator@https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/generator@cb21b391e1122803aee7eebecfabe495"
+    "astra@https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/Astra@82417dc3faf6fddbb3f01d7292b0491e"
+    "parallel_astra@https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux/Astra@c12881078456070c3a52f2a0f0a01ce9"
 )
-for pair in "${binary_names[@]}"; do
-    name="${pair%@*}"
-    source="${pair#*@}"
+for binary in "${binaries[@]}"; do
+    IFS="@" read -r name source hash <<< "$binary"
+
+    # download
     if [ ! -f "$ASTRA_BINARY_PATH/$name" ]; then
-        echo "Downloading $name..."
-        wget $source -O $name
-        chmod 754 $name
-        mv $name "$ASTRA_BINARY_PATH/$name"
+        echo "Downloading $name ..."
+        wget -q "$source" -O "$name"
+        chmod 754 "$name"
+        mv "$name" "$ASTRA_BINARY_PATH/$name"
+    fi
+
+    # check hash
+    computed_hash=$(md5sum "$ASTRA_BINARY_PATH/$name" | awk '{print $1}')
+    if [ "$computed_hash" != "$hash" ]; then
+        echo "ERROR: checksum mismatch for $name!"
+        echo "Expected: $hash"
+        echo "Got:      $computed_hash"
+        echo "Corrupted file or unexpected version."
+        rm -f "$ASTRA_BINARY_PATH/$name"
+        exit 1
     fi
 done
 
