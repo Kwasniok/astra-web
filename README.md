@@ -2,112 +2,61 @@
 
 # ASTRA Web API
 This repository is based on [astra-web](https://github.com/AlexanderKlemps/astra-web) by A. Klemps (Hamburg University of Technology, TUHH) and contains an API wrapper for the well-known [ASTRA simulation code](https://www.desy.de/~mpyflo/) by
-K. Floettmann (DESY Hamburg) based on the Python FastAPI package and Docker.
+K. Floettmann (DESY Hamburg) based on the Python FastAPI package.
 
-This fork includes modification for improved interoperability with a SLURM environment.
+This fork includes modification for improved interoperability with a SLURM environment (more specifically the Maxwell cluster at DESY Hamburg).
 
 # Requirements
-- Linux (kernel v6.12+)
-- docker compose (v2.38+)
-- python (v3.13+)
-- SLURM (v0.0.40+, optional)
-
 Older versions may work, but are not tested.
 
-# Running Modes
-
-The web server can be run in two modes:
-- [docker](#docker) (recommended)
-- [bare](#bare)
-
-Startup and configuration of the environment variables differ slightly as explained in the following sections.
-
-In addition, each mode can be combined with remote dispatch of some computations to a [SLURM cluster](https://slurm.schedmd.com/) for asynchronous execution. This is recommended for larger simulations. Details are explained in [SLURM](#slurm).
-
-## Docker
-Use this mode for containerized execution of the API. This is the recommended way to run the API as it ensures all dependencies are met and its kept isolated.
-
-### Configuration
-Configure the [environment](#environment) in `./docker/.env` and select your desired `COMPOSE_FILE` in `.env`.
-
-### Build and Start
-Build the image and start container by execution of the following command
-
-    docker compose stop && docker compose up -d --build
-
-The container will be started in detached mode. If you want to see the logs, you can run
-
-    docker compose logs -f
-
-To stop the container, run
-
-    docker compose stop
-
-note: Until explicitly stopped, the container is automatically restarted if it crashes or when the host is restarted.
-
-### Deployment
-In case you would like to deploy the API in a productive environment, say on a remote server, it is recommended to do
-this via [Docker contexts](https://docs.docker.com/engine/context/working-with-contexts/).
-
-Uncomment the `COMPOSE_FILE` environment variable in the .env file contained within this project an run
-
-    docker context use [YOUR_REMOTE_CONTEXT]
-    docker compose stop && docker compose up -d --build
-
-## Bare
-Use this mode for running the API directly on the host machine without Docker. This is useful in case docker is not available but requires manual setup of some dependencies.
-
-### Requirements
-Ensure the following dependencies are installed on your system:
+## local
+- Linux (kernel v6.12+)
 - python (v3.13+)
+- openmpi (v5.0.3+, optional for multi-threaded simulations, ensure `libmpi_usempi.so.40` is available)
+## remote
+- SLURM (v0.0.40+, optional for remote execution on cluster)
 
-In case you want to run ASTRA in multi-threaded mode on the local host [1] also install (see [Parallel Astra Readme](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux/AAA_Readme.txt)):
-- gcc fortran (v4.8.5)
-- openmpi (v4.0.3)
 
-[1]: When using [SLURM](#slurm), the SLURM server may take care of the parallel execution in that case no additional dependencies are required.
+# Setup
+## Install openmpi (optional, for local multi-treaded simulations)
+In case you want to run ASTRA in multi-threaded mode on the local host also install openmpi (see [Parallel Astra Readme](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux/AAA_Readme.txt)).
 
-### Configuration
-Configure the [environment](#environment) in `bare/.env`.
+When using [SLURM](#slurm), the SLURM server may take care of the parallel execution in that case openmpi is not required.
 
-### Start
-Start the API by executing the following command in the root directory of this project:
+⚠️ Ensure that the `libmpi_usempi.so.40` is available via the `LD_LIBRARY_PATH` environment variable. E.g. create a symlink to `.../openmpi/5.0.3/lib/libmpi_usempi_ignore_tkr.so.40` in `./lib` and append `.lib` to `LD_LIBRARY_PATH`.
+
+## Environment
+Create `bare/.env` and set the environment variables according to:
+
+| Variable            | Required | Description                                                                  |
+|---------------------|----------|------------------------------------------------------------------------------|
+| `ASTRA_WEB_API_KEY` | yes      | The API key to access the ASTRA web API. This is required for authorization. |
+| `ASTRA_DATA_PATH`   | yes      | The path to a local data directory where all results are stored.             |
+| `ASTRA_BINARY_PATH` | yes      | The path to the folder with ASTRA binaries. Binaries must be called `generator`, `astra` and `parallel_astra` respectively. |
+
+See [SLURM](#slurm) for additional environment variables required to connect to a SLURM server for remote execution.
+
+## Start
+Start the server locally by executing the following command in the root directory of this project:
 
     ./start_bare.sh
 
 # API Documentation
 
-Once the server is running you will find the interactive API documentation under
+Once the server is [set up](#setup) you will find the interactive API documentation under
 
     http://<host>:8000/docs
 
-where `<host>` is the URL of the host where the server is running. If you are running it locally (docker or bare), this will be `localhost` otherwise it is the adress of the remote server.
+where `<host>` is the URL of the host where the server is running. E.g. `localhost` when accessed locally.
 
 ⚠️ All communication with the host is done via HTTP which provides **no encryption**! Allways route your trafic through a secure connection like a VPN or SSH tunnel to ensure your data (e.g. tokens) is protected!
 
-# Environment
-
-Ensure the following environment variables are set:
-
-| Variable          | Required | Description                                                                  |
-|-------------------|----------|------------------------------------------------------------------------------|
-| `ASTRA_WEB_API_KEY`   | yes      | The API key to access the ASTRA web API. This is required for authorization. |
-| `ASTRA_DATA_PATH` | optional | The path to a local data directory where all results are stored. If not specified an internal storage volume will be used.|
-| `ASTRA_BINARY_PATH` | yes[1] | The path to the folder with ASTRA binaries. Binaries must be called `generator`, `astra` and `parallel_astra` respectively. |
-
-- [1]: Ignored when using docker. The docker image uses its own internal binaries.
-
-See [SLURM](#slurm) for additional environment variables required to connect to a SLURM server for remote execution.
-
-
 # SLURM
 If you want to dispatch some computations to a [SLURM cluster](https://slurm.schedmd.com) carefully follow the instructions below. Otherwise you can skip this section.
-Using SLURM is recommended for larger simulations only.
-Successful execution on the cluster and correct execution order may not be checked.
+Using SLURM is recommended for resource intensive simulations only.
+Fig. 1 shows a schematic for when ASTRA web is set up with SLURM.
 
-Some operations may be simple enough to be executed locally and it is recommended to **mix local and remote execution**.
-
-> ⚠️ Connecting to SLURM requires some advanced knowledge! Check the log files of the container if you recive internal errors.
+> ⚠️ Using SLURM may lead to unexpected problems! Check the server log if any are encountered. 
 
 ```mermaid
 flowchart LR
@@ -121,8 +70,8 @@ flowchart LR
 
     you--https-->astra_web
     astra_web--https-->SLURM
-    astra_web--bind-->server_data
-    server_data--sshfs-->cluster_data
+    astra_web-->server_data
+    server_data--mount or is-->cluster_data
     SLURM--mount-->cluster_data
 
     style you fill:#fff,stroke:#333,color:#000
@@ -140,18 +89,16 @@ flowchart LR
     end
     style legend fill:transparent,stroke:transparent,color:transparent
 ```
-Fig. 1: Schematic overview of the ASTRA Web with SLURM support. ASTRA Web is accessed via a REST API over the https protocol. Some actions may be dispatched to a SLURM cluster for asynchronous execution via its REST API. All data is stored persistently in the cluster. Any access to the data from the server is relayed via SSHFS to the storage.
+Fig. 1: Schematic overview of the ASTRA Web with SLURM support. The ASTRA Web server is accessed via a REST API over the https protocol. Some actions may be dispatched to a SLURM cluster for asynchronous execution via its own REST API. All data is stored persistently in the cluster. In case the server has no direct access to the persistent storage, it has to be mounted manually (see [Mount Data Directory](#mount-data-directory)).
 
-## Setup
-1. Ensure `docker-compose.slurm.yml` is included in your docker compose setup. (e.g. in `.env` under `COMPOSE_FILE`)
-
-2. Set the following environment variables (e.g. in `./docker/.env`):
+## SLURM Environment
+In addition to the [basic environment](#environment), set the following environment variables (e.g. in `./docker/.env`):
 
 | Variable                      | Required | Description                                                                        | Example                                               |
 |-------------------------------|----------|------------------------------------------------------------------------------------|-------------------------------------------------------|
 | `SLURM_BASE_URL`                   | yes      | The URL of the [SLURM REST API](https://slurm.schedmd.com/rest_api.html).          | `https://slurm-rest.example.com/sapi`   |
 | `SLURM_API_VERSION` [0]       | yes      | The version of the SLURM REST API to use.                                          | `v0.0.40`                                            |
-| `SLURM_PROXY` [1]             | optional | The URL of a SOCKS5 proxy to connect to the SLURM REST API.                        | `socks5h://host.docker.internal:1081`                 |
+| `SLURM_PROXY` [1]             | optional | The URL of a SOCKS5 proxy to connect to the SLURM REST API.                        | `socks5h://host.docker.internal:1080`                 |
 | `SLURM_USER_NAME`             | yes      | The SLURM user name.                                                               | `<user>`                                              |
 | `SLURM_USER_TOKEN` [2]          | yes      | The [JWT token](https://slurm.schedmd.com/jwt.html) to authenticate the SLURM user.|                                                 |
 | `SLURM_PARTITION`             | yes      | The SLURM partition to use for the job.                                            | `short`                                              |
@@ -159,7 +106,7 @@ Fig. 1: Schematic overview of the ASTRA Web with SLURM support. ASTRA Web is acc
 | `SLURM_ENVIRONMENT` [3]       | yes      | The environment variables to set for the SLURM job.                                |`"PATH=/bin:/usr/bin/:/usr/local/bin/","MORE="values"` |
 | `SLURM_ASTRA_BINARY_PATH` [4] | yes      | The path to the ASTRA binary **as seen by the SLURM cluster!**                     | `/home/<user>/astra/bin`                              |
 | `SLURM_DATA_PATH` [5]         | yes      | The path to the data directory **as seen by the SLURM cluster!**                   | `/home/<user>/astra/data`                             |
-| `SLURM_OUTPUT_PATH` [6]       | optional | The path to a directory where the slurm output should be written to (relative to the cwd or absolute). | `/home/<user>/slurm` or `../slurm`|
+| `SLURM_OUTPUT_PATH` [6]       | optional | The path to a directory where the slurm output should be written to.               | `/home/<user>/slurm` or `./slurm`|
 | `SLURM_SCRIPT_SETUP` | optional | A BASH script fragment to be executed inside the job script before each dispatched command. | `module purge\nmodule load openmpi` |
 
 - [0]: A complete example URL of an endpoint is `https://slurm-rest.example.com/sapi/slurm/v0.0.40/jobs`.
@@ -179,39 +126,12 @@ Mount the remote data directory as following:
 sshfs -o idmap=user -o allow_other <user>@<bastion_host>:<SLURM_DATA_PATH> <ASTRA_DATA_PATH>
 ```
 
-> ⚠️ Mount your data folder directly under `ASTRA_DATA_PATH` as shown above. **Do not mount a parent folder** as docker then cannot access the files for technical reasons.
-
 ## Using a Proxy
-Consider using a VPN if you can to avoid this step.
-
-If you need to connect to the SLURM server which has to be accessed via an SSH tunnel, you can use the `SLURM_PROXY` environment variable to specify the SOCKS5 proxy.
+When the server is positioned outside of the network of the SLURM cluster and using a VPN is not an option one can use an ssh tunnel to access SLURM.
 
 Setup the tunnel via SSH as in
 ```bash
 ssh -D 1080 -N <user>@<bastion_host>
 ```
 
-Forward the port to the container via 
-```bash
-socat TCP-LISTEN:1081,fork TCP:127.0.0.1:1080 
-```
-
-# Troubleshooting
-
-### Problem: Rootless containers on the remote host quit once the user terminates the ssh session.
-    
-This is not an issue of Docker. Linux stops processes started by a normal user if loginctl is configured to not use 
-lingering, to prevent normal users to keep long-running processes executing in the system.
-In order to fix the problem, one can enable lingering by executing 
-
-    loginctl enable-linger $UID
-
-on the remote host.
-Source: [Stackoverflow](https://stackoverflow.com/a/73312070)
-
-# Original Project
-
-The original project his is based on can be found at:
-
-- https://doi.org/10.5281/zenodo.12606498
-- https://github.com/AlexanderKlemps/astra-web
+And set the `SLURM_PROXY` [environment](#slurm-environment) variable to specify the SOCKS5 proxy.
