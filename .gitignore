@@ -186,9 +186,3 @@ fabric.properties
 
 # VS Code
 .vscode/
-
-# project specific
-/data
-/bin
-docker.env
-start_bare.env

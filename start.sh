@@ -13,7 +13,7 @@ pip install -r requirements/requirements.txt
 
 # load and export environment
 set -a
-source bare/.env
+source config/.env
 set +a
 
 # ensure ASTRA binaries are installed

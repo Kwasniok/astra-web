@@ -1,5 +1,0 @@
-services:
-  api:
-    extra_hosts:
-      # required for forwarding the SSH tunnel from the localhost to the container
-      - "host.docker.internal:host-gateway"
