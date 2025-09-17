@@ -1,21 +1,23 @@
+import glob
 import os
 import re
-import glob
+from datetime import datetime
 from shutil import rmtree
 from typing import Type, TypeVar
-from datetime import datetime
-from astra_web.host_localizer import HostLocalizer
+
+from astra_web.file import read_json, read_txt, write_json, write_txt
 from astra_web.generator.schemas.particles import Particles
-from .schemas.io import (
-    SimulationInput,
-    SimulationData,
-    SimulationMetaData,
-    SimulationAllData,
-    SimulationDispatchOutput,
-)
-from .schemas.emittance_table import XYEmittanceTable, ZEmittanceTable
-from astra_web.file import write_txt, read_txt, write_json, read_json
+from astra_web.host_localizer import HostLocalizer
 from astra_web.status import DispatchStatus
+
+from .schemas.emittance_table import XYEmittanceTable, ZEmittanceTable
+from .schemas.io import (
+    SimulationAllData,
+    SimulationData,
+    SimulationDispatchOutput,
+    SimulationInput,
+    SimulationMetaData,
+)
 
 
 def dispatch_simulation_run(
@@ -176,11 +178,13 @@ def _extract_output(
                 day, month, year, hour, minute = map(int, date_match.groups())
                 finished_date = datetime(year, month, day, hour, minute)
         elif "execution time" in line:
-            time_match = re.search(r"(\d+)\s*min\s*([\d.]+)\s*se[c|k]", line)
-            if time_match:
-                minutes = int(time_match.group(1))
-                seconds = float(time_match.group(2))
-                execution_time = minutes * 60 + seconds
+            hour_match = re.search(r"(\d+)\sh", line)
+            minute_match = re.search(r"(\d+)\s*min", line)
+            second_match = re.search(r"([\d.]+)\s*se[c|k]", line)
+            hours = int(hour_match.group(1)) if hour_match else 0
+            minutes = int(minute_match.group(1)) if minute_match else 0
+            seconds = float(second_match.group(1)) if second_match else 0.0
+            execution_time = hours * 3600 + minutes * 60 + seconds
         elif "WARNING" in line:
             warning_match = re.search(r"WARNING:\s*(.*)", line)
             if warning_match:
