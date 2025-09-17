@@ -1,4 +1,5 @@
-from typing import Any
+from typing import Any, Type
+from pydantic import BaseModel
 import os
 from fastapi import FastAPI, Depends, Query, Body, HTTPException, status
 from fastapi.responses import RedirectResponse, ORJSONResponse
@@ -93,6 +94,34 @@ app = FastAPI(
     openapi_tags=tags_metadata,
     default_response_class=ORJSONResponse,
 )
+
+
+def _all_models(cls: Type[BaseModel] = BaseModel) -> set[Type[BaseModel]]:
+    """Return a set of all subclasses of a class (default=BaseModel), recursively."""
+    subs: set[Type[BaseModel]] = set(cls.__subclasses__())
+    for sub in cls.__subclasses__():
+        subs.update(_all_models(sub))
+    return subs
+
+
+def _save_alias_table(path: str) -> None:
+    """Save a table of all models and their fields with aliases."""
+    table: dict[str, dict[str, str | None]] = {}
+    for model in _all_models():
+        aliases: dict[str, str | None] = {
+            f: i.alias for f, i in model.model_fields.items() if i.alias is not None
+        }
+        if aliases:
+            table[model.__name__] = aliases
+
+    with open(path, "w") as f:
+        for model_name, fields in table.items():
+            f.write(f"{model_name}:\n")
+            for field_name, alias in fields.items():
+                f.write(f" - {field_name}: {alias}\n")
+
+
+_save_alias_table(path="alias_table.txt")
 
 
 @app.get("/", include_in_schema=False)

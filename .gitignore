@@ -190,3 +190,4 @@ fabric.properties
 # Specific to this project
 lib/
 bin/
+alias_table.txt
