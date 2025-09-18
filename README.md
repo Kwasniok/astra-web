@@ -41,6 +41,9 @@ Start the server locally by executing the following command in the root director
 
     ./start.sh
 
+⚠️ All communication with the host is done via HTTP which provides **no encryption**! Allways route your trafic through a secure connection like a VPN or SSH tunnel to ensure your data (e.g. tokens) is protected!
+
+
 # API Documentation
 
 Once the server is [set up](#setup) you will find the interactive API documentation under
@@ -49,7 +52,30 @@ Once the server is [set up](#setup) you will find the interactive API documentat
 
 where `<host>` is the URL of the host where the server is running. E.g. `localhost` when accessed locally.
 
-⚠️ All communication with the host is done via HTTP which provides **no encryption**! Allways route your trafic through a secure connection like a VPN or SSH tunnel to ensure your data (e.g. tokens) is protected!
+## How to Use the Documentation
+The documentation lists all requests by name and type.
+Each request is annotated as seen in the example below.
+Furthermore the schema of the input is presented with annotations for each field - including a description, a data type, a **default value**, a unit and a list of choices if applicable.
+
+![API Docs](./doc/web-doc-example-for-input.png)
+
+Requesting the example above may translate to the following code:
+```python
+await request(
+    "particles?host=local&timeout=600",
+    RequestType.POST,
+    {
+        "comment": "example",
+        "particle_count": 1000,
+        "particle_type": "electrons",
+        # ...
+    },
+)
+```
+
+note: Unspecified parameters will be set to their default value if available. This simplifies the input but can also lead to unexpected results. All default values are identical to those given in the ASTRA manual v3.2. Even if no default value is given ASTRA might select a default value automatically.
+
+Below all requests is a drop down list showing all available schemas.
 
 # SLURM
 If you want to dispatch some computations to a [SLURM cluster](https://slurm.schedmd.com) carefully follow the instructions below. Otherwise you can skip this section.

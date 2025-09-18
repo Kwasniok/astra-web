@@ -342,6 +342,7 @@ async def download_features_table(
         ...,
         examples=[
             [
+                "sim_id",
                 "generator.input.particle_count",
                 "simulation.output.emittance_z",
             ]
@@ -351,10 +352,10 @@ async def download_features_table(
     """
     Returns a table of requested features.
 
-    The `sim_ids` parameter is a list of (finished) simulation IDs for which the features should be computed.
-    If none are provided, the features will be computed for all simulations in the database.
+    The `sim_ids` parameter is an optional list of (finished) simulation IDs for which the features should be computed.
+    If none are provided, the features will be computed for all finished simulations in the database.
 
-    See `CompleteData` for a list of available features.
+    See schema `Features` for a list of all available features.
     """
     localizer = LocalHostLocalizer.instance()
     try:
