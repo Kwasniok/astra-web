@@ -11,7 +11,7 @@ from .run import SimulationRunSpecifications
 from .scan import SimulationScanSpecifications
 from .modules import Solenoid, Cavity
 from .space_charge import SpaceCharge
-from .emittance_table import XYEmittanceTable, ZEmittanceTable
+from .emittance_table import XEmittanceTable, ZEmittanceTable
 
 
 class SimulationInput(IniExportableModel):
@@ -137,8 +137,8 @@ class SimulationData(BaseModel):
     final_particle_counts: dict[str, int] = Field(
         description="Number of particles - active, inactive, total."
     )
-    emittance_x: XYEmittanceTable | None = Field(default=None)
-    emittance_y: XYEmittanceTable | None = Field(default=None)
+    emittance_x: XEmittanceTable | None = Field(default=None)
+    emittance_y: XEmittanceTable | None = Field(default=None)
     emittance_z: ZEmittanceTable | None = Field(default=None)
 
 

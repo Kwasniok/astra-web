@@ -10,7 +10,7 @@ from astra_web.generator.schemas.particles import Particles
 from astra_web.host_localizer import HostLocalizer
 from astra_web.status import DispatchStatus
 
-from .schemas.emittance_table import XYEmittanceTable, ZEmittanceTable
+from .schemas.emittance_table import XEmittanceTable, ZEmittanceTable
 from .schemas.io import (
     SimulationDataWithMeta,
     SimulationData,
@@ -137,9 +137,9 @@ def load_simulation_data(
 
 def _load_emittances(
     sim_id: str, localizer: HostLocalizer
-) -> tuple[XYEmittanceTable | None, XYEmittanceTable | None, ZEmittanceTable | None]:
+) -> tuple[XEmittanceTable | None, XEmittanceTable | None, ZEmittanceTable | None]:
 
-    T = TypeVar("T", bound=XYEmittanceTable | ZEmittanceTable)
+    T = TypeVar("T", bound=XEmittanceTable | ZEmittanceTable)
 
     def load(cls: Type[T], coordinate: str) -> T | None:
         path = localizer.simulation_path(sim_id, f"run.{coordinate.upper()}emit.001")
@@ -149,8 +149,8 @@ def _load_emittances(
             return None
 
     return (
-        load(XYEmittanceTable, "x"),
-        load(XYEmittanceTable, "y"),
+        load(XEmittanceTable, "x"),
+        load(XEmittanceTable, "y"),
         load(ZEmittanceTable, "z"),
     )
 

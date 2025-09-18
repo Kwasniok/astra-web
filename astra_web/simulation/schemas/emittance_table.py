@@ -2,7 +2,7 @@ from astra_web.schemas.table import Table
 from pydantic import ConfigDict, Field
 
 
-class XYEmittanceTable(Table):
+class XEmittanceTable(Table):
     model_config = ConfigDict(extra="forbid")
 
     z: list[float] = Field(
