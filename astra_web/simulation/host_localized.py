@@ -8,6 +8,7 @@ from typing import Type, TypeVar
 from astra_web.file import read_json, read_txt, write_json, write_txt
 from astra_web.generator.schemas.particles import Particles
 from astra_web.host_localizer import HostLocalizer
+from astra_web.simulation.schemas.auto_phase import CavityAutoPhaseTable
 from astra_web.status import DispatchStatus
 
 from .schemas.emittance_table import (
@@ -191,8 +192,11 @@ def _extract_output(
     finished_date = None
     execution_time = None
     warnings: list[str] = []
+    cavity_auto_phase: CavityAutoPhaseTable | None = None
+    # helper:
+    section_auto_phase_line: int | None = None
 
-    for line in run_output.splitlines():
+    for n, line in enumerate(run_output.splitlines()):
         if "finished simulation" in line:
             date_match = re.search(
                 r"(\d{1,2})\.\s*(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})", line
@@ -212,6 +216,13 @@ def _extract_output(
             warning_match = re.search(r"WARNING:\s*(.*)", line)
             if warning_match:
                 warnings.append(warning_match.group(1))
+        elif "Cavity phasing completed" in line:
+            section_auto_phase_line = n
+            # do the parsing later
+
+    # deferred parsing:
+    if section_auto_phase_line is not None:
+        cavity_auto_phase = _read_auto_phase_table(run_output, section_auto_phase_line)
 
     return (
         run_output,
@@ -220,7 +231,51 @@ def _extract_output(
             finished_date=finished_date,
             execution_time=execution_time,
             warnings=warnings,
+            cavity_auto_phasing=cavity_auto_phase,
         ),
+    )
+
+
+def _read_auto_phase_table(run_output: str, start_line: int) -> CavityAutoPhaseTable:
+    lines = run_output.splitlines()
+
+    energy_gain: list[float] = []
+    phase: list[float] = []
+    for n, line in enumerate(lines[start_line + 1 :]):
+
+        if n == 0:
+            # verify table header and units
+            header = re.search(
+                r"Cavity number\s+Energy gain\s+\[MeV\]\s+at\s+Phase \[deg\]", line
+            )
+            if not header:
+                raise RuntimeError(
+                    f"Failed to parse cavity auto phase table: Invalid header line (`{line}`)."
+                )
+        else:
+            row = re.search(r"(\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)", line)
+            end = re.search(r"^\s*(-)+\s*$", line)
+            if row:
+                num, eg, phi = row.groups()
+
+                if num != str(n):
+                    raise RuntimeError(
+                        f"Failed to parse cavity auto phase table: Unexpected cavity number in line (`{line}`)."
+                    )
+
+                energy_gain.append(float(eg))
+                phase.append(float(phi))
+            elif end:
+                break  # end of table
+            else:
+                # unexpected line
+                raise RuntimeError(
+                    f"Failed to parse cavity auto phase table: Unexpected line (`{line}`)."
+                )
+
+    return CavityAutoPhaseTable(
+        energy_gain=energy_gain,
+        absolute_phase=phase,
     )
 
 

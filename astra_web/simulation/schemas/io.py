@@ -16,6 +16,7 @@ from .emittance_table import (
     LongitudinalNormalizedEmittanceTable,
     TraceSpaceEmittanceTable,
 )
+from .auto_phase import CavityAutoPhaseTable
 
 
 class SimulationInput(IniExportableModel):
@@ -131,6 +132,10 @@ class SimulationMetaData(BaseModel):
     warnings: list[str] = Field(
         default_factory=list,
         description="List of warnings generated during the simulation.",
+    )
+    cavity_auto_phasing: CavityAutoPhaseTable | None = Field(
+        default=None,
+        description="Table of automatically determined cavity phases.",
     )
 
 
