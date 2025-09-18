@@ -452,19 +452,25 @@ class GeneratorDispatchOutput(BaseModel):
     dispatch_response: DispatchResponse
 
 
-class GeneratorData(BaseModel):
+class GeneratorOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     particles: Particles
 
 
-class GeneratorDataWithMeta(BaseModel):
+class GeneratorData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    web_input: GeneratorInput
-    data: GeneratorData | None = Field(
-        default=None,
-        description="Generator data, if the generation has finished successfully.",
+    input: GeneratorInput = Field(
+        description="Generator input as provided by the user."
     )
-    generator_input: str
-    generator_output: str
+    output: GeneratorOutput | None = Field(
+        default=None,
+        description="Generator output, if the generation has finished successfully.",
+    )
+    generator_input: str | None = Field(
+        default=None, description="Raw input file for ASTRA generator."
+    )
+    generator_output: str | None = Field(
+        description="Raw output file from ASTRA generator."
+    )

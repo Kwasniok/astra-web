@@ -17,7 +17,7 @@ from .generator.schemas.particles import Particles
 from .generator.schemas.io import (
     GeneratorInput,
     GeneratorDispatchOutput,
-    GeneratorDataWithMeta,
+    GeneratorData,
 )
 from .field.schemas.field_table import FieldTable
 from .simulation.schemas.io import (
@@ -25,7 +25,11 @@ from .simulation.schemas.io import (
     SimulationDataWithMeta,
     SimulationDispatchOutput,
 )
-from .features.schemas.io import FeatureTableInput, FeatureTable, CompleteData
+from .features.schemas.io import (
+    FeatureTableInput,
+    FeatureTable,
+    Features,
+)
 from .generator.host_localized import (
     dispatch_particle_distribution_generation,
     load_generator_data,
@@ -180,7 +184,7 @@ def upload_particle_distribution(data: Particles) -> dict[str, str]:
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-def download_generator_results(gen_id: str) -> GeneratorDataWithMeta:
+def download_generator_results(gen_id: str) -> GeneratorData:
     localizer = LocalHostLocalizer.instance()
     output = load_generator_data(gen_id, localizer)
     if output is None:
@@ -338,8 +342,8 @@ async def download_features_table(
         ...,
         examples=[
             [
-                "generator_input.particle_count",
-                "simulation_output.emittance_z",
+                "generator.input.particle_count",
+                "simulation.output.emittance_z",
             ]
         ],
     ),
@@ -392,9 +396,10 @@ async def download_varying_features(
 )
 async def download_all_features_for_simulation(
     sim_id: str,
-) -> CompleteData:
+) -> Features:
     """
-    Returns all features for a specific simulation.
+    Returns all features for a specific simulation run.
+    note: May include raw and meta data as well.
     """
     localizer = LocalHostLocalizer.instance()
     try:

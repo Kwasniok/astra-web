@@ -134,7 +134,7 @@ class SimulationMetaData(BaseModel):
     )
 
 
-class SimulationData(BaseModel):
+class SimulationOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     particles: list[Particles] = Field()
@@ -156,10 +156,18 @@ class SimulationData(BaseModel):
 class SimulationDataWithMeta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    web_input: SimulationInput = Field()
-    data: SimulationData = Field(
-        description="Simulation data, if the simulation has finished successfully.",
+    input: SimulationInput = Field(
+        description="Simulation input as provided by the user."
     )
-    run_input: str | None = Field(default=None)
-    run_output: str | None = Field(default=None)
-    meta: SimulationMetaData | None = Field(default=None)
+    output: SimulationOutput = Field(
+        description="Simulation output, if the simulation has finished successfully.",
+    )
+    input_astra: str | None = Field(
+        default=None, description="Raw input file for ASTRA."
+    )
+    output_astra: str | None = Field(
+        default=None, description="Raw output file from ASTRA."
+    )
+    meta: SimulationMetaData | None = Field(
+        default=None, description="Meta information about the simulation run."
+    )

@@ -17,7 +17,7 @@ from .schemas.emittance_table import (
 )
 from .schemas.io import (
     SimulationDataWithMeta,
-    SimulationData,
+    SimulationOutput,
     SimulationDispatchOutput,
     SimulationInput,
     SimulationMetaData,
@@ -121,7 +121,7 @@ def load_simulation_data(
 
     tr_sp_emittance = _load_trace_space_emittance(sim_id, localizer)
 
-    data = SimulationData(
+    data = SimulationOutput(
         particles=particles,
         final_particle_counts=final_particle_counts,
         norm_emittance_table_x=norm_emittance_x,
@@ -134,10 +134,10 @@ def load_simulation_data(
     run_output, meta = _extract_output(sim_id, localizer)
 
     return SimulationDataWithMeta(
-        web_input=web_input,
-        data=data,
-        run_input=run_input,
-        run_output=run_output,
+        input=web_input,
+        output=data,
+        input_astra=run_input,
+        output_astra=run_output,
         meta=meta,
     )
 

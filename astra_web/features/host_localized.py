@@ -1,7 +1,7 @@
 from typing import Any, Iterable, Callable, cast
 from pydantic import BaseModel
 from astra_web.host_localizer import HostLocalizer
-from .schemas.io import FeatureTableInput, FeatureTable, CompleteData
+from .schemas.io import FeatureTableInput, FeatureTable, Features
 from astra_web.generator.host_localized import load_generator_data
 from astra_web.simulation.host_localized import (
     list_simulation_ids,
@@ -31,7 +31,7 @@ def make_feature_table(
     feature_table: dict[str, list[Any]] = {col: [] for col in features}
     feature_tree = _build_tree(features)
 
-    def append_row(data: CompleteData) -> None:
+    def append_row(data: Features) -> None:
         for path, value in _traverse(data, feature_tree):
             feature_table[path].append(value)
 
@@ -47,7 +47,7 @@ def make_feature_table(
 def get_all_features(
     sim_id: str,
     localizer: HostLocalizer,
-) -> CompleteData:
+) -> Features:
     """
     Returns all features of a simulation.
 
@@ -62,18 +62,16 @@ def get_all_features(
         raise ValueError(
             f"Simulation with ID {sim_id} not found or is not finished yet."
         )
-    gen_id = sim.web_input.run.generator_id
+    gen_id = sim.input.run.generator_id
 
     gen = load_generator_data(gen_id, localizer)
     if gen is None:
         raise ValueError(f"Generator with ID {gen_id} not found.")
 
-    return CompleteData(
+    return Features(
         sim_id=sim_id,
-        generator_input=gen.web_input,
-        simulation_input=sim.web_input,
-        simulation_output=sim.data,
-        simulation_meta=sim.meta,
+        generator=gen,
+        simulation=sim,
     )
 
 
