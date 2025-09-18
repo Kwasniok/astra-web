@@ -17,12 +17,12 @@ from .generator.schemas.particles import Particles
 from .generator.schemas.io import (
     GeneratorInput,
     GeneratorDispatchOutput,
-    GeneratorCompleteData,
+    GeneratorDataWithMeta,
 )
 from .field.schemas.field_table import FieldTable
 from .simulation.schemas.io import (
     SimulationInput,
-    SimulationAllData,
+    SimulationDataWithMeta,
     SimulationDispatchOutput,
 )
 from .features.schemas.io import FeatureTableInput, FeatureTable, CompleteData
@@ -180,7 +180,7 @@ def upload_particle_distribution(data: Particles) -> dict[str, str]:
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-def download_generator_results(gen_id: str) -> GeneratorCompleteData:
+def download_generator_results(gen_id: str) -> GeneratorDataWithMeta:
     localizer = LocalHostLocalizer.instance()
     output = load_generator_data(gen_id, localizer)
     if output is None:
@@ -299,7 +299,7 @@ async def dispatch_simulation(
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-def download_simulation_data(sim_id: str) -> SimulationAllData:
+def download_simulation_data(sim_id: str) -> SimulationDataWithMeta:
     """
     Returns the output of a specific ASTRA simulation on the requested server depending
     on the given ID.

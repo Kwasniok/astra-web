@@ -142,7 +142,7 @@ class SimulationData(BaseModel):
     emittance_z: ZEmittanceTable | None = Field(default=None)
 
 
-class SimulationAllData(BaseModel):
+class SimulationDataWithMeta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     web_input: SimulationInput = Field()

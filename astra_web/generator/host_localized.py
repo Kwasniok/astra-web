@@ -4,7 +4,7 @@ from shutil import rmtree
 from astra_web.host_localizer import HostLocalizer
 from .schemas.io import (
     GeneratorInput,
-    GeneratorCompleteData,
+    GeneratorDataWithMeta,
     GeneratorData,
     GeneratorDispatchOutput,
 )
@@ -49,7 +49,7 @@ def _write_generator_files(
 
 def load_generator_data(
     gen_id: str, localizer: HostLocalizer
-) -> GeneratorCompleteData | None:
+) -> GeneratorDataWithMeta | None:
     """
     Loads the generator output for a given generator ID.
     Returns None if the particle distribution does not exist.
@@ -68,7 +68,7 @@ def load_generator_data(
     generator_input = read_txt(localizer.generator_path(gen_id, "generator.in"))
     generator_output = read_txt(localizer.generator_path(gen_id, "generator.out"))
 
-    return GeneratorCompleteData(
+    return GeneratorDataWithMeta(
         web_input=web_input,
         data=data,
         generator_input=generator_input,

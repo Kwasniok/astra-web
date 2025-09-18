@@ -465,7 +465,7 @@ class GeneratorData(BaseModel):
     particles: Particles
 
 
-class GeneratorCompleteData(BaseModel):
+class GeneratorDataWithMeta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     web_input: GeneratorInput

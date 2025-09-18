@@ -12,7 +12,7 @@ from astra_web.status import DispatchStatus
 
 from .schemas.emittance_table import XYEmittanceTable, ZEmittanceTable
 from .schemas.io import (
-    SimulationAllData,
+    SimulationDataWithMeta,
     SimulationData,
     SimulationDispatchOutput,
     SimulationInput,
@@ -90,7 +90,7 @@ def _link_field_file(file_name: str, run_dir: str, localizer: HostLocalizer):
 
 def load_simulation_data(
     sim_id: str, localizer: HostLocalizer
-) -> SimulationAllData | None:
+) -> SimulationDataWithMeta | None:
     """
     Loads the entire simulation data for a given simulation ID.
     Returns None if the simulation does not exist.
@@ -126,7 +126,7 @@ def load_simulation_data(
     run_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
     run_output, meta = _extract_output(sim_id, localizer)
 
-    return SimulationAllData(
+    return SimulationDataWithMeta(
         web_input=web_input,
         data=data,
         run_input=run_input,
