@@ -204,13 +204,6 @@ class GeneratorInput(IniExportableModel):
         json_schema_extra={"format": "Unit: [keV]"},
     )
     dist_pz_energy_spread_gaussian_cutoff: float | None = Field(
-        default=None,  # ASTRA default: 0.0
-        alias="C_sig_Ekin",
-        validation_alias="dist_pz_energy_spread_gaussian_cutoff",
-        description="RMS value of the energy spread.",
-        json_schema_extra={"format": "Unit: [keV]"},
-    )
-    dist_pz_energy_spread_gaussian_cutoff: float | None = Field(
         default=None,  # ASTRA default: 100.0
         alias="C_sig_Ekin",
         validation_alias="dist_pz_energy_spread_gaussian_cutoff",
@@ -231,10 +224,10 @@ class GeneratorInput(IniExportableModel):
         description="Rising of the energy distribution.",
         json_schema_extra={"format": "Unit: [keV]"},
     )
-    dist_pz_energy_rise: float | None = Field(
+    dist_pz_emittance: float | None = Field(
         default=None,  # ASTRA default: 0.0
         alias="emit_z",
-        validation_alias="dist_pz_energy_rise",
+        validation_alias="dist_pz_emittance",
         description="Longitudinal particle emittance. Can be specified instead of the energy spread. If an energy spread and an emittance is specified the energy spread has priority.",
         json_schema_extra={"format": "Unit: [π keV mm]"},
     )
