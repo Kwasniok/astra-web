@@ -10,7 +10,11 @@ from astra_web.generator.schemas.particles import Particles
 from astra_web.host_localizer import HostLocalizer
 from astra_web.status import DispatchStatus
 
-from .schemas.emittance_table import XEmittanceTable, ZEmittanceTable
+from .schemas.emittance_table import (
+    Transversal1DNormalizedEmittanceTable,
+    LongitudinalNormalizedEmittanceTable,
+    TraceSpaceEmittanceTable,
+)
 from .schemas.io import (
     SimulationDataWithMeta,
     SimulationData,
@@ -110,17 +114,20 @@ def load_simulation_data(
         "active": int(sum(particles[-1].active_particles)),
         "lost": int(sum(particles[-1].lost_particles)),
     }
-    try:
-        emittance_x, emittance_y, emittance_z = _load_emittances(sim_id, localizer)
-    except FileNotFoundError:
-        emittance_x, emittance_y, emittance_z = None, None, None
+
+    norm_emittance_x, norm_emittance_y, norm_emittance_z = _load_normalized_emittance(
+        sim_id, localizer
+    )
+
+    tr_sp_emittance = _load_trace_space_emittance(sim_id, localizer)
 
     data = SimulationData(
         particles=particles,
         final_particle_counts=final_particle_counts,
-        emittance_x=emittance_x,
-        emittance_y=emittance_y,
-        emittance_z=emittance_z,
+        norm_emittance_table_x=norm_emittance_x,
+        norm_emittance_table_y=norm_emittance_y,
+        norm_emittance_table_z=norm_emittance_z,
+        trace_space_emittance_table=tr_sp_emittance,
     )
 
     run_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
@@ -135,11 +142,17 @@ def load_simulation_data(
     )
 
 
-def _load_emittances(
-    sim_id: str, localizer: HostLocalizer
-) -> tuple[XEmittanceTable | None, XEmittanceTable | None, ZEmittanceTable | None]:
+def _load_normalized_emittance(sim_id: str, localizer: HostLocalizer) -> tuple[
+    Transversal1DNormalizedEmittanceTable | None,
+    Transversal1DNormalizedEmittanceTable | None,
+    LongitudinalNormalizedEmittanceTable | None,
+]:
 
-    T = TypeVar("T", bound=XEmittanceTable | ZEmittanceTable)
+    T = TypeVar(
+        "T",
+        bound=Transversal1DNormalizedEmittanceTable
+        | LongitudinalNormalizedEmittanceTable,
+    )
 
     def load(cls: Type[T], coordinate: str) -> T | None:
         path = localizer.simulation_path(sim_id, f"run.{coordinate.upper()}emit.001")
@@ -149,10 +162,20 @@ def _load_emittances(
             return None
 
     return (
-        load(XEmittanceTable, "x"),
-        load(XEmittanceTable, "y"),
-        load(ZEmittanceTable, "z"),
+        load(Transversal1DNormalizedEmittanceTable, "x"),
+        load(Transversal1DNormalizedEmittanceTable, "y"),
+        load(LongitudinalNormalizedEmittanceTable, "z"),
     )
+
+
+def _load_trace_space_emittance(
+    sim_id: str, localizer: HostLocalizer
+) -> TraceSpaceEmittanceTable | None:
+    path = localizer.simulation_path(sim_id, "run.TREmit.001")
+    try:
+        return TraceSpaceEmittanceTable.read_from_csv(path)
+    except FileNotFoundError:
+        return None
 
 
 def _extract_output(
