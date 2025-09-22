@@ -36,6 +36,7 @@ class LocalHostLocalizer(HostLocalizer):
         cwd: str,
         output_file_name_base: str,
         timeout: int | None = None,
+        threads: int | None = None,
     ) -> DispatchResponse:
         """
         Runs a command in the specified directory and captures the output.

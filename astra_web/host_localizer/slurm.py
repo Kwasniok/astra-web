@@ -126,6 +126,7 @@ class SLURMHostLocalizer(HostLocalizer):
         cwd: str,
         output_file_name_base: str,
         timeout: int | None = None,
+        threads: int | None = None,
     ) -> DispatchResponse:
         """
         Dispatches a command for the specified directory and captures the output.
@@ -164,6 +165,7 @@ status=$?
                     "set": timeout is not None,
                     "number": timeout or 0,
                 },
+                **({"tasks_per_node": threads} if threads is not None else {}),
                 "current_working_directory": cwd,
                 "environment": [
                     "PATH=/bin:/usr/bin/:/usr/local/bin/",

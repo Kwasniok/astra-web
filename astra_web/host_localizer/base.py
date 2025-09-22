@@ -103,6 +103,7 @@ class HostLocalizer(ABC):
             cwd=self.simulation_path(simulation_input.run_dir),
             output_file_name_base="run",
             timeout=simulation_input.run.timeout,
+            threads=simulation_input.run.thread_num,
         )
 
     @abstractmethod
@@ -113,6 +114,7 @@ class HostLocalizer(ABC):
         cwd: str,
         output_file_name_base: str,
         timeout: int | None = None,
+        threads: int | None = None,
     ) -> DispatchResponse:
         """
         Dispatches a command with the specified directory and output configuration.
