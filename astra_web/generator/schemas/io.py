@@ -176,18 +176,24 @@ class GeneratorInput(IniExportableModel):
         description="RMS rms value of the emission time, i.e. the bunch length if generated from a cathode.",
         json_schema_extra={"format": "Unit: [ns]"},
     )
+    dist_t_emission_time_cutoff: float | None = Field(
+        default=None,  # ASTRA default: 0.0
+        alias="C_sig_clock",
+        validation_alias="dist_t_emission_time_cutoff",
+        description="Gaussian cutoff relative to dist_t_emission_time_rms.",
+    )
     dist_t_emission_time: float | None = Field(
         default=None,  # ASTRA default: 0.0
         alias="Lt",
         validation_alias="dist_t_emission_time",
-        description="Plateau distributions only: Duration of the bunch.",
+        description="Plateau distributions only: Duration of the bunch emission.",
         json_schema_extra={"format": "Unit: [ns]"},
     )
     dist_t_emission_time_rise: float | None = Field(
         default=None,  # ASTRA default: 0.0
         alias="rt",
-        validation_alias="flattop_rise_time",
-        description="Plateau distributions only: Rise time of the bunch.",
+        validation_alias="dist_t_emission_time_rise",
+        description="Plateau distributions only: Rise time of the bunch emission.",
         json_schema_extra={"format": "Unit: [ns]"},
     )
     dist_pz: Distribution | None = Field(
