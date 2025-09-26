@@ -5,6 +5,7 @@ from datetime import datetime
 from shutil import rmtree
 from typing import Type, TypeVar
 
+from astra_web._aux import filter_include, should_include
 from astra_web.file import read_json, read_txt, write_json, write_txt
 from astra_web.generator.schemas.particles import Particles
 from astra_web.host_localizer import HostLocalizer
@@ -94,53 +95,110 @@ def _link_field_file(file_name: str, run_dir: str, localizer: HostLocalizer):
 
 
 def load_simulation_data(
-    sim_id: str, localizer: HostLocalizer
+    sim_id: str,
+    localizer: HostLocalizer,
+    include: list[str] | None = None,
 ) -> SimulationDataWithMeta | None:
     """
     Loads the entire simulation data for a given simulation ID.
     Returns None if the simulation does not exist.
+
+    Parameters:
+        include: Optional list of feature paths to include. If `None`, all features are included.
+            Example: `["input.run", "output"]`
     """
 
     if not os.path.exists(localizer.simulation_path(sim_id)):
         return None
 
-    web_input = read_json(
-        SimulationInput, localizer.simulation_path(sim_id, "input.json")
-    )
+    # input
+    if should_include(include, "input"):
+        input = read_json(
+            SimulationInput, localizer.simulation_path(sim_id, "input.json")
+        )
+    else:
+        input = None
 
-    particle_paths = _particle_paths(sim_id, localizer)
-    particles = [Particles.read_from_csv(path) for path in particle_paths]
-    final_particle_counts = {
-        "total": len(particles[-1].x),
-        "active": int(sum(particles[-1].active_particles)),
-        "lost": int(sum(particles[-1].lost_particles)),
-    }
+    # output
+    if should_include(include, "output"):
+        include_out = filter_include(include, "output")
 
-    norm_emittance_x, norm_emittance_y, norm_emittance_z = _load_normalized_emittance(
-        sim_id, localizer
-    )
+        # particles, final_particle_counts
+        if should_include(include_out, "particles") or should_include(
+            include_out, "final_particle_counts"
+        ):
+            particle_paths = _particle_paths(sim_id, localizer)
+            particles = [Particles.read_from_csv(path) for path in particle_paths]
+            final_particle_counts = {
+                "total": len(particles[-1].x),
+                "active": int(sum(particles[-1].active_particles)),
+                "lost": int(sum(particles[-1].lost_particles)),
+            }
+        else:
+            particles = None
+            final_particle_counts = None
 
-    tr_sp_emittance = _load_trace_space_emittance(sim_id, localizer)
+        # norm_emittance_table
+        if (
+            should_include(include_out, "norm_emittance_table_x")
+            or should_include(include_out, "norm_emittance_table_y")
+            or should_include(include_out, "norm_emittance_table_z")
+        ):
+            norm_emittance_x, norm_emittance_y, norm_emittance_z = (
+                _load_normalized_emittance(sim_id, localizer)
+            )
+        else:
+            norm_emittance_x, norm_emittance_y, norm_emittance_z = None, None, None
 
-    data = SimulationOutput(
-        particles=particles,
-        final_particle_counts=final_particle_counts,
-        norm_emittance_table_x=norm_emittance_x,
-        norm_emittance_table_y=norm_emittance_y,
-        norm_emittance_table_z=norm_emittance_z,
-        trace_space_emittance_table=tr_sp_emittance,
-    )
+        # trace_space_emittance_table
+        if should_include(include_out, "trace_space_emittance_table"):
+            tr_sp_emittance = _load_trace_space_emittance(sim_id, localizer)
+        else:
+            tr_sp_emittance = None
 
-    run_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
-    run_output, meta = _extract_output(sim_id, localizer)
+        output = SimulationOutput(
+            particles=particles,
+            final_particle_counts=final_particle_counts,
+            norm_emittance_table_x=norm_emittance_x,
+            norm_emittance_table_y=norm_emittance_y,
+            norm_emittance_table_z=norm_emittance_z,
+            trace_space_emittance_table=tr_sp_emittance,
+        )
+    else:
+        output = None
+
+    # astra_input
+    if should_include(include, "astra_input"):
+        astra_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
+    else:
+        astra_input = None
+
+    # astra_output or meta
+    if should_include(include, "astra_output") or should_include(include, "meta"):
+        astra_output, meta = _extract_output(sim_id, localizer)
+    else:
+        astra_output, meta = None, None
 
     return SimulationDataWithMeta(
-        input=web_input,
-        output=data,
-        input_astra=run_input,
-        output_astra=run_output,
+        input=input,
+        output=output,
+        input_astra=astra_input,
+        output_astra=astra_output,
         meta=meta,
     )
+
+
+def get_generator_id(sim_id: str, localizer: HostLocalizer) -> str:
+    if not os.path.exists(localizer.simulation_path(sim_id)):
+        raise ValueError(f"Simulation with ID {sim_id} not found.")
+
+    try:
+        input = read_json(
+            SimulationInput, localizer.simulation_path(sim_id, "input.json")
+        )
+        return input.run.generator_id
+    except FileNotFoundError:
+        raise ValueError(f"Input for simulation with ID {sim_id} not found.")
 
 
 def _load_normalized_emittance(sim_id: str, localizer: HostLocalizer) -> tuple[

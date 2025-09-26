@@ -1,11 +1,13 @@
 from typing import Any, Iterable, Callable, cast
 from pydantic import BaseModel
+from astra_web._aux import filter_include
 from astra_web.host_localizer import HostLocalizer
 from .schemas.io import FeatureTableInput, FeatureTable, Features
 from astra_web.generator.host_localized import load_generator_data
 from astra_web.simulation.host_localized import (
     list_simulation_ids,
     load_simulation_data,
+    get_generator_id,
 )
 from astra_web.status import DispatchStatus
 from astra_web.file.json import JSONType
@@ -39,34 +41,51 @@ def make_feature_table(
         if sim_ids is not None and sim_id not in sim_ids:
             # skip excluded simulations
             continue
-        append_row(get_all_features(sim_id, localizer))
+        append_row(get_features(sim_id, localizer))
 
     return feature_table
 
 
-def get_all_features(
+def get_features(
     sim_id: str,
     localizer: HostLocalizer,
+    include: list[str] | None = None,
 ) -> Features:
     """
     Returns all features of a simulation.
 
     note: Finished simulations only!
 
+    Parameters:
+        include: Optional list of feature paths to include. If `None`, all features are included.
+        Used for optimization: Do not load features that are not requested anyway.
+            Example: `["simulation.input.cavities", "generator.output"]`
+
     Raises:
         ValueError: If simulation is not found or incomplete.
     """
 
-    sim = load_simulation_data(sim_id, localizer)
-    if sim is None:
-        raise ValueError(
-            f"Simulation with ID {sim_id} not found or is not finished yet."
-        )
-    gen_id = sim.input.run.generator_id
+    # for loading optimization: filter includes by category
+    include_sim = filter_include(include, "simulation")
+    include_gen = filter_include(include, "generator")
 
-    gen = load_generator_data(gen_id, localizer)
-    if gen is None:
-        raise ValueError(f"Generator with ID {gen_id} not found.")
+    if include_sim == []:
+        sim = None
+        gen_id = get_generator_id(sim_id, localizer)  # raises ValueError
+    else:
+        sim = load_simulation_data(sim_id, localizer, include_sim)
+        if sim is None:
+            raise ValueError(
+                f"Simulation with ID {sim_id} not found or is not finished yet."
+            )
+        gen_id = sim.input.run.generator_id
+
+    if include_gen == []:
+        gen = None
+    else:
+        gen = load_generator_data(gen_id, localizer, include_gen)
+        if gen is None:
+            raise ValueError(f"Generator with ID {gen_id} not found.")
 
     return Features(
         sim_id=sim_id,
@@ -94,7 +113,7 @@ def get_all_varying_features(
         if sim_ids is not None and sim_id not in sim_ids:
             # skip excluded simulations
             continue
-        result.append(get_all_features(sim_id, localizer).model_dump(mode="json"))
+        result.append(get_features(sim_id, localizer).model_dump(mode="json"))
 
     return _deep_diff_dicts(result)
 

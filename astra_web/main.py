@@ -51,7 +51,7 @@ from .simulation.host_localized import (
 )
 from .features.host_localized import (
     make_feature_table,
-    get_all_features,
+    get_features,
     get_all_varying_features,
 )
 from .status import DispatchStatus
@@ -404,7 +404,7 @@ async def download_all_features_for_simulation(
     """
     localizer = LocalHostLocalizer.instance()
     try:
-        return get_all_features(sim_id, localizer)
+        return get_features(sim_id, localizer)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -1,6 +1,7 @@
 import os
 import glob
 from shutil import rmtree
+from astra_web._aux import should_include
 from astra_web.host_localizer import HostLocalizer
 from .schemas.io import (
     GeneratorInput,
@@ -47,30 +48,56 @@ def _write_generator_files(
     )
 
 
-def load_generator_data(gen_id: str, localizer: HostLocalizer) -> GeneratorData | None:
+def load_generator_data(
+    gen_id: str,
+    localizer: HostLocalizer,
+    include: list[str] | None = None,
+) -> GeneratorData | None:
     """
     Loads the generator output for a given generator ID.
     Returns None if the particle distribution does not exist.
+
+
+    Parameters:
+        include: Optional list of feature paths to include. If `None`, all features are included.
+            Example: `["input.run", "output"]`
+
     """
     if not os.path.exists(localizer.generator_path(gen_id, "distribution.ini")):
         return None
 
-    web_input = read_json(
-        GeneratorInput, localizer.generator_path(gen_id, "input.json")
-    )
+    # input
+    if should_include(include, "input"):
+        input = read_json(
+            GeneratorInput, localizer.generator_path(gen_id, "input.json")
+        )
+    else:
+        input = None
 
-    particles = read_particle_file(gen_id, localizer)
+    # output
+    if should_include(include, "output"):
+        particles = read_particle_file(gen_id, localizer)
+        output = GeneratorOutput(particles=particles)
+    else:
+        output = None
 
-    data = GeneratorOutput(particles=particles)
+    # generator_input
+    if should_include(include, "astra_input"):
+        astra_input = read_txt(localizer.generator_path(gen_id, "generator.in"))
+    else:
+        astra_input = None
 
-    generator_input = read_txt(localizer.generator_path(gen_id, "generator.in"))
-    generator_output = read_txt(localizer.generator_path(gen_id, "generator.out"))
+    # generator_output
+    if should_include(include, "astra_output"):
+        astra_output = read_txt(localizer.generator_path(gen_id, "generator.out"))
+    else:
+        astra_output = None
 
     return GeneratorData(
-        input=web_input,
-        output=data,
-        generator_input=generator_input,
-        generator_output=generator_output,
+        input=input,
+        output=output,
+        astra_input=astra_input,
+        astra_output=astra_output,
     )
 
 

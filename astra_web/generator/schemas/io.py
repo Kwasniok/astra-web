@@ -467,16 +467,16 @@ class GeneratorOutput(BaseModel):
 class GeneratorData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    input: GeneratorInput = Field(
+    input: GeneratorInput | None = Field(
         description="Generator input as provided by the user."
     )
     output: GeneratorOutput | None = Field(
         default=None,
         description="Generator output, if the generation has finished successfully.",
     )
-    generator_input: str | None = Field(
+    astra_input: str | None = Field(
         default=None, description="Raw input file for ASTRA generator."
     )
-    generator_output: str | None = Field(
+    astra_output: str | None = Field(
         description="Raw output file from ASTRA generator."
     )

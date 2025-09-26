@@ -142,8 +142,10 @@ class SimulationMetaData(BaseModel):
 class SimulationOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    particles: list[Particles] = Field()
-    final_particle_counts: dict[str, int] = Field(
+    particles: list[Particles] | None = Field(
+        description="List of particle distributions at output positions."
+    )
+    final_particle_counts: dict[str, int] | None = Field(
         description="Number of particles - active, inactive, total."
     )
     norm_emittance_table_x: Transversal1DNormalizedEmittanceTable | None = Field(
@@ -161,10 +163,10 @@ class SimulationOutput(BaseModel):
 class SimulationDataWithMeta(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    input: SimulationInput = Field(
+    input: SimulationInput | None = Field(
         description="Simulation input as provided by the user."
     )
-    output: SimulationOutput = Field(
+    output: SimulationOutput | None = Field(
         description="Simulation output, if the simulation has finished successfully.",
     )
     input_astra: str | None = Field(
