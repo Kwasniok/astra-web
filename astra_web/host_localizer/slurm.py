@@ -163,7 +163,8 @@ status=$?
                 ),
                 "time_limit": {
                     "set": timeout is not None,
-                    "number": timeout or 0,
+                    # convert seconds -> minutes
+                    "number": (timeout // 60 if timeout is not None else 0),
                 },
                 **({"tasks_per_node": threads} if threads is not None else {}),
                 "current_working_directory": cwd,

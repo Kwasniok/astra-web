@@ -122,7 +122,7 @@ class HostLocalizer(ABC):
         :param command: The command to be executed on the host.
         :param cwd: The working directory where the command should be executed.
         :param output_file_name_base: The base name for the output files to be written to the working directory. (will be extended by .out and .err)
-        :param timeout: Optional timeout for the command execution.
+        :param timeout: Optional timeout for the command execution in seconds
 
         May create additional files with the captured stdout (.out) and stderr (.err) inside of `cwd` when non-empty.
         """

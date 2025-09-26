@@ -20,6 +20,7 @@ class SimulationRunSpecifications(IniExportableModel):
     timeout: int = Field(
         default=600,
         description="The timeout for the simulation run. Simulation terminated if timeout time is exceeded.",
+        json_schema_extra={"format": "Unit: [s]"},
     )
 
     def excluded_ini_fields(self) -> set[str]:
