@@ -70,83 +70,86 @@ class SimulationRunSpecifications(IniExportableModel):
         validation_alias="bunch_reduction_num",
         description="Use every `bunch_reduction_num`-th particle in the simulation only.",
     )
-    bunch_initial_shift_x: float | None = Field(
-        default=0.0,
-        alias="Xoff",
-        validation_alias="bunch_initial_shift_x",
-        description="Horizontal offset of the input particle distribution.",
-        json_schema_extra={"format": "Unit: [mm]"},
-    )
-    bunch_initial_shift_y: float | None = Field(
-        default=0.0,
-        alias="Yoff",
-        validation_alias="bunch_initial_shift_y",
-        description="Vertical offset of the input particle distribution.",
-        json_schema_extra={"format": "Unit: [mm]"},
-    )
-    bunch_initial_rotation_x: float | None = Field(
-        default=0.0,
-        alias="xp",
-        validation_alias="bunch_initial_rotation_x",
-        description="Horizontal rotation of the input particle distribution.",
-        json_schema_extra={"format": "Unit: [rad]"},
-    )
-    bunch_initial_rotation_y: float | None = Field(
-        default=0.0,
-        alias="yp",
-        validation_alias="bunch_initial_rotation_y",
-        description="Vertical rotation of the input particle distribution.",
-        json_schema_extra={"format": "Unit: [rad]"},
-    )
-    bunch_initial_shift_z: float | None = Field(
-        default=0.0,
-        alias="Zoff",
-        validation_alias="bunch_initial_shift_z",
-        description="Longitudinal offset of the input particle distribution.",
-        json_schema_extra={"format": "Unit: [m]"},
-    )
-    bunch_initial_shift_t: float | None = Field(
-        default=0.0,
-        alias="Toff",
-        validation_alias="bunch_initial_shift_t",
-        description="Temporal offset of the input particle distribution.",
-        json_schema_extra={"format": "Unit: [ns]"},
-    )
-    bunch_initial_x_rms: float | None = Field(
-        default=None,
-        alias="Xrms",
-        validation_alias="bunch_initial_x_rms",
-        description="Horizontal RMS beam size of the input particle distribution. Scaling is active for positive values.",
-        json_schema_extra={"format": "Unit: [mm]"},
-    )
-    bunch_initial_y_rms: float | None = Field(
-        default=None,
-        alias="Yrms",
-        validation_alias="bunch_initial_y_rms",
-        description="Vertical RMS beam size of the input particle distribution. Scaling is active for positive values.",
-        json_schema_extra={"format": "Unit: [mm]"},
-    )
-    bunch_initial_xy_rms: float | None = Field(
-        default=None,
-        alias="XYrms",
-        validation_alias="bunch_initial_xy_rms",
-        description="Horizontal and vertical RMS beam size of the input particle distribution. Scaling is active for positive values. This takes *priority* over `bunch_initial_x_rms` and `bunch_initial_y_rms`.",
-        json_schema_extra={"format": "Unit: [mm]"},
-    )
-    bunch_initial_z_rms: float | None = Field(
-        default=None,
-        alias="Zrms",
-        validation_alias="bunch_initial_z_rms",
-        description="Longitudinal RMS beam size/bunch length of the input particle distribution. Scaling is active for positive values.",
-        json_schema_extra={"format": "Unit: [mm]"},
-    )
-    bunch_initial_t_rms: float | None = Field(
-        default=None,
-        alias="Trms",
-        validation_alias="bunch_initial_t_rms",
-        description="Temporal RMS beam size/emission time of the input particle distribution. Scaling is active for positive values.",
-        json_schema_extra={"format": "Unit: [ns]"},
-    )
+    # note: The following parameters are temporarily removed to avoid confusion with the generator settings.
+    #       This avoids that the user accidentally overwrites the generator settings here.
+    #
+    # bunch_initial_shift_x: float | None = Field(
+    #     default=0.0,
+    #     alias="Xoff",
+    #     validation_alias="bunch_initial_shift_x",
+    #     description="Horizontal offset of the input particle distribution.",
+    #     json_schema_extra={"format": "Unit: [mm]"},
+    # )
+    # bunch_initial_shift_y: float | None = Field(
+    #     default=0.0,
+    #     alias="Yoff",
+    #     validation_alias="bunch_initial_shift_y",
+    #     description="Vertical offset of the input particle distribution.",
+    #     json_schema_extra={"format": "Unit: [mm]"},
+    # )
+    # bunch_initial_rotation_x: float | None = Field(
+    #     default=0.0,
+    #     alias="xp",
+    #     validation_alias="bunch_initial_rotation_x",
+    #     description="Horizontal rotation of the input particle distribution.",
+    #     json_schema_extra={"format": "Unit: [rad]"},
+    # )
+    # bunch_initial_rotation_y: float | None = Field(
+    #     default=0.0,
+    #     alias="yp",
+    #     validation_alias="bunch_initial_rotation_y",
+    #     description="Vertical rotation of the input particle distribution.",
+    #     json_schema_extra={"format": "Unit: [rad]"},
+    # )
+    # bunch_initial_shift_z: float | None = Field(
+    #     default=0.0,
+    #     alias="Zoff",
+    #     validation_alias="bunch_initial_shift_z",
+    #     description="Longitudinal offset of the input particle distribution.",
+    #     json_schema_extra={"format": "Unit: [m]"},
+    # )
+    # bunch_initial_shift_t: float | None = Field(
+    #     default=0.0,
+    #     alias="Toff",
+    #     validation_alias="bunch_initial_shift_t",
+    #     description="Temporal offset of the input particle distribution.",
+    #     json_schema_extra={"format": "Unit: [ns]"},
+    # )
+    # bunch_initial_x_rms: float | None = Field(
+    #     default=None,
+    #     alias="Xrms",
+    #     validation_alias="bunch_initial_x_rms",
+    #     description="Horizontal RMS beam size of the input particle distribution. Scaling is active for positive values.",
+    #     json_schema_extra={"format": "Unit: [mm]"},
+    # )
+    # bunch_initial_y_rms: float | None = Field(
+    #     default=None,
+    #     alias="Yrms",
+    #     validation_alias="bunch_initial_y_rms",
+    #     description="Vertical RMS beam size of the input particle distribution. Scaling is active for positive values.",
+    #     json_schema_extra={"format": "Unit: [mm]"},
+    # )
+    # bunch_initial_xy_rms: float | None = Field(
+    #     default=None,
+    #     alias="XYrms",
+    #     validation_alias="bunch_initial_xy_rms",
+    #     description="Horizontal and vertical RMS beam size of the input particle distribution. Scaling is active for positive values. This takes *priority* over `bunch_initial_x_rms` and `bunch_initial_y_rms`.",
+    #     json_schema_extra={"format": "Unit: [mm]"},
+    # )
+    # bunch_initial_z_rms: float | None = Field(
+    #     default=None,
+    #     alias="Zrms",
+    #     validation_alias="bunch_initial_z_rms",
+    #     description="Longitudinal RMS beam size/bunch length of the input particle distribution. Scaling is active for positive values.",
+    #     json_schema_extra={"format": "Unit: [mm]"},
+    # )
+    # bunch_initial_t_rms: float | None = Field(
+    #     default=None,
+    #     alias="Trms",
+    #     validation_alias="bunch_initial_t_rms",
+    #     description="Temporal RMS beam size/emission time of the input particle distribution. Scaling is active for positive values.",
+    #     json_schema_extra={"format": "Unit: [ns]"},
+    # )
     emission_delay_time_tau: float | None = Field(
         default=None,
         alias="Tau",
