@@ -1,16 +1,20 @@
-from typing import Any, Iterable, Callable, cast
+from typing import Any, Callable, Iterable, cast
+
 from pydantic import BaseModel
+
 from astra_web._aux import filter_include
-from astra_web.host_localizer import HostLocalizer
-from .schemas.io import FeatureTableInput, FeatureTable, Features
+from astra_web.file.json import JSONType
 from astra_web.generator.host_localized import load_generator_data
+from astra_web.host_localizer import HostLocalizer
 from astra_web.simulation.host_localized import (
+    get_generator_id,
+    get_simulation_status,
     list_simulation_ids,
     load_simulation_data,
-    get_generator_id,
 )
 from astra_web.status import DispatchStatus
-from astra_web.file.json import JSONType
+
+from .schemas.io import Features, FeatureTable, FeatureTableInput
 
 
 def make_feature_table(
@@ -30,6 +34,9 @@ def make_feature_table(
         ValueError: If a feature is not found.
     """
 
+    if sim_ids is None:
+        sim_ids = list_simulation_ids(localizer, DispatchStatus.ANY)
+
     feature_table: dict[str, list[Any]] = {col: [] for col in features}
     feature_tree = _build_tree(features)
 
@@ -37,9 +44,9 @@ def make_feature_table(
         for path, value in _traverse(data, feature_tree):
             feature_table[path].append(value)
 
-    for sim_id in list_simulation_ids(localizer, DispatchStatus.FINISHED):
-        if sim_ids is not None and sim_id not in sim_ids:
-            # skip excluded simulations
+    for sim_id in sim_ids:
+        if get_simulation_status(sim_id, localizer) != DispatchStatus.FINISHED:
+            # skip unfinished simulations
             continue
         append_row(get_features(sim_id, localizer))
 
