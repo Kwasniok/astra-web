@@ -5,7 +5,7 @@ from datetime import datetime
 from shutil import rmtree
 from typing import Type, TypeVar
 
-from astra_web._aux import filter_include, should_include
+from astra_web._aux import filter_has_prefix, get_filter_subtree
 from astra_web.file import read_json, read_txt, write_json, write_txt
 from astra_web.generator.schemas.particles import Particles
 from astra_web.host_localizer import HostLocalizer
@@ -13,16 +13,16 @@ from astra_web.simulation.schemas.auto_phase import CavityAutoPhaseTable
 from astra_web.status import DispatchStatus
 
 from .schemas.emittance_table import (
-    Transversal1DNormalizedEmittanceTable,
     LongitudinalNormalizedEmittanceTable,
     TraceSpaceEmittanceTable,
+    Transversal1DNormalizedEmittanceTable,
 )
 from .schemas.io import (
     SimulationDataWithMeta,
-    SimulationOutput,
     SimulationDispatchOutput,
     SimulationInput,
     SimulationMetaData,
+    SimulationOutput,
 )
 
 
@@ -97,14 +97,14 @@ def _link_field_file(file_name: str, run_dir: str, localizer: HostLocalizer):
 def load_simulation_data(
     sim_id: str,
     localizer: HostLocalizer,
-    include: list[str] | None = None,
+    filter: list[str] | None = None,
 ) -> SimulationDataWithMeta | None:
     """
     Loads the entire simulation data for a given simulation ID.
     Returns None if the simulation does not exist.
 
     Parameters:
-        include: Optional list of feature paths to include. If `None`, all features are included.
+        filter: Optional list of feature paths to include. All others are excluded. If `None`, all features are included.
             Example: `["input.run", "output"]`
     """
 
@@ -112,7 +112,7 @@ def load_simulation_data(
         return None
 
     # input
-    if should_include(include, "input"):
+    if filter_has_prefix(filter, "input"):
         input = read_json(
             SimulationInput, localizer.simulation_path(sim_id, "input.json")
         )
@@ -120,12 +120,12 @@ def load_simulation_data(
         input = None
 
     # output
-    if should_include(include, "output"):
-        include_out = filter_include(include, "output")
+    if filter_has_prefix(filter, "output"):
+        filter_out = get_filter_subtree(filter, "output")
 
         # particles, final_particle_counts
-        if should_include(include_out, "particles") or should_include(
-            include_out, "final_particle_counts"
+        if filter_has_prefix(filter_out, "particles") or filter_has_prefix(
+            filter_out, "final_particle_counts"
         ):
             particle_paths = _particle_paths(sim_id, localizer)
             particles = [Particles.read_from_csv(path) for path in particle_paths]
@@ -140,9 +140,9 @@ def load_simulation_data(
 
         # norm_emittance_table
         if (
-            should_include(include_out, "norm_emittance_table_x")
-            or should_include(include_out, "norm_emittance_table_y")
-            or should_include(include_out, "norm_emittance_table_z")
+            filter_has_prefix(filter_out, "norm_emittance_table_x")
+            or filter_has_prefix(filter_out, "norm_emittance_table_y")
+            or filter_has_prefix(filter_out, "norm_emittance_table_z")
         ):
             norm_emittance_x, norm_emittance_y, norm_emittance_z = (
                 _load_normalized_emittance(sim_id, localizer)
@@ -151,7 +151,7 @@ def load_simulation_data(
             norm_emittance_x, norm_emittance_y, norm_emittance_z = None, None, None
 
         # trace_space_emittance_table
-        if should_include(include_out, "trace_space_emittance_table"):
+        if filter_has_prefix(filter_out, "trace_space_emittance_table"):
             tr_sp_emittance = _load_trace_space_emittance(sim_id, localizer)
         else:
             tr_sp_emittance = None
@@ -168,13 +168,13 @@ def load_simulation_data(
         output = None
 
     # astra_input
-    if should_include(include, "astra_input"):
+    if filter_has_prefix(filter, "astra_input"):
         astra_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
     else:
         astra_input = None
 
     # astra_output or meta
-    if should_include(include, "astra_output") or should_include(include, "meta"):
+    if filter_has_prefix(filter, "astra_output") or filter_has_prefix(filter, "meta"):
         astra_output, meta = _extract_output(sim_id, localizer)
     else:
         astra_output, meta = None, None

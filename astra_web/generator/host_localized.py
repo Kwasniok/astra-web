@@ -1,18 +1,20 @@
-import os
 import glob
+import os
 from shutil import rmtree
-from astra_web._aux import should_include
+
+from astra_web._aux import filter_has_prefix
+from astra_web.file import find_symlinks, read_json, read_txt, write_json, write_txt
 from astra_web.host_localizer import HostLocalizer
+from astra_web.status import DispatchStatus
+from astra_web.uuid import get_uuid
+
 from .schemas.io import (
-    GeneratorInput,
     GeneratorData,
-    GeneratorOutput,
     GeneratorDispatchOutput,
+    GeneratorInput,
+    GeneratorOutput,
 )
 from .schemas.particles import Particles
-from astra_web.uuid import get_uuid
-from astra_web.file import write_json, read_json, write_txt, read_txt, find_symlinks
-from astra_web.status import DispatchStatus
 
 
 def dispatch_particle_distribution_generation(
@@ -51,7 +53,7 @@ def _write_generator_files(
 def load_generator_data(
     gen_id: str,
     localizer: HostLocalizer,
-    include: list[str] | None = None,
+    filter: list[str] | None = None,
 ) -> GeneratorData | None:
     """
     Loads the generator output for a given generator ID.
@@ -59,7 +61,7 @@ def load_generator_data(
 
 
     Parameters:
-        include: Optional list of feature paths to include. If `None`, all features are included.
+        filter: Optional list of feature paths to include. All others are excluded. If `None`, all features are included.
             Example: `["input.run", "output"]`
 
     """
@@ -67,7 +69,7 @@ def load_generator_data(
         return None
 
     # input
-    if should_include(include, "input"):
+    if filter_has_prefix(filter, "input"):
         input = read_json(
             GeneratorInput, localizer.generator_path(gen_id, "input.json")
         )
@@ -75,20 +77,20 @@ def load_generator_data(
         input = None
 
     # output
-    if should_include(include, "output"):
+    if filter_has_prefix(filter, "output"):
         particles = read_particle_file(gen_id, localizer)
         output = GeneratorOutput(particles=particles)
     else:
         output = None
 
     # generator_input
-    if should_include(include, "astra_input"):
+    if filter_has_prefix(filter, "astra_input"):
         astra_input = read_txt(localizer.generator_path(gen_id, "generator.in"))
     else:
         astra_input = None
 
     # generator_output
-    if should_include(include, "astra_output"):
+    if filter_has_prefix(filter, "astra_output"):
         astra_output = read_txt(localizer.generator_path(gen_id, "generator.out"))
     else:
         astra_output = None
