@@ -226,4 +226,9 @@ class SimulationOutputSpecification(IniExportableModel):
     )
 
     def to_ini(self, indent: int = 4) -> str:
-        return f"&OUTPUT{super().to_ini(indent=indent)}/"
+        s = "&OUTPUT"
+        s += super().to_ini(indent=indent)
+        if self.screens.values:
+            s += self.screens.to_ini(indent=indent)
+        s += "/"
+        return s
