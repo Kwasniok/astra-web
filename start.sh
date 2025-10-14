@@ -42,11 +42,10 @@ for binary in "${binaries[@]}"; do
     if [ "$ASTRA_BINARY_CHECK_HASH" == true ]; then
         computed_hash=$(md5sum "$ASTRA_BINARY_PATH/$name" | awk '{print $1}')
         if [ "$computed_hash" != "$hash" ]; then
-            echo "ERROR: checksum mismatch for $name!"
-            echo "Expected: $hash"
-            echo "Got:      $computed_hash"
+            echo "ERROR: checksum mismatch for binary $name!"
+            echo "Expected HASH: $hash"
+            echo "Got HASH:      $computed_hash"
             echo "Corrupted file or unexpected version."
-            rm -f "$ASTRA_BINARY_PATH/$name"
             exit 1
         fi
     fi
