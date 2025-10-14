@@ -33,6 +33,7 @@ Create `config/.env` and set the environment variables according to:
 | `ASTRA_WEB_API_KEY` | yes      | The API key to access the ASTRA web API. This is required for authorization. |
 | `ASTRA_DATA_PATH`   | yes      | The path to a local data directory where all results are stored.             |
 | `ASTRA_BINARY_PATH` | yes      | The path to the folder with ASTRA binaries. Binaries must be called `generator`, `astra` and `parallel_astra` respectively. |
+| `ASTRA_BINARY_CHECK_HASH` | optional | Whether to check the MD5 checksum of the ASTRA binaries on startup. Default is `true`. |
 
 See [SLURM](#slurm) for additional environment variables required to connect to a SLURM server for remote execution.
 

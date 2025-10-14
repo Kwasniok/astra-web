@@ -15,12 +15,13 @@ pip install -r requirements/requirements.txt
 set -a
 source config/.env
 set +a
+: "${ASTRA_BINARY_CHECK_HASH:=true}"
 
 # ensure ASTRA binaries are installed
 if [ ! -d "$ASTRA_BINARY_PATH" ]; then
     mkdir -p "$ASTRA_BINARY_PATH"
 fi
-# checksums for v4.0 (2025.09.19)
+# name, source, checksum for v4.0 (2025.09.19)
 binaries=(
     "generator@https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/generator@cb21b391e1122803aee7eebecfabe495"
     "astra@https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/Astra@82417dc3faf6fddbb3f01d7292b0491e"
@@ -29,7 +30,7 @@ binaries=(
 for binary in "${binaries[@]}"; do
     IFS="@" read -r name source hash <<< "$binary"
 
-    # download
+    # download (if absent)
     if [ ! -f "$ASTRA_BINARY_PATH/$name" ]; then
         echo "Downloading $name ..."
         wget -q "$source" -O "$name"
@@ -38,14 +39,16 @@ for binary in "${binaries[@]}"; do
     fi
 
     # check hash
-    computed_hash=$(md5sum "$ASTRA_BINARY_PATH/$name" | awk '{print $1}')
-    if [ "$computed_hash" != "$hash" ]; then
-        echo "ERROR: checksum mismatch for $name!"
-        echo "Expected: $hash"
-        echo "Got:      $computed_hash"
-        echo "Corrupted file or unexpected version."
-        rm -f "$ASTRA_BINARY_PATH/$name"
-        exit 1
+    if [ "$ASTRA_BINARY_CHECK_HASH" == true ]; then
+        computed_hash=$(md5sum "$ASTRA_BINARY_PATH/$name" | awk '{print $1}')
+        if [ "$computed_hash" != "$hash" ]; then
+            echo "ERROR: checksum mismatch for $name!"
+            echo "Expected: $hash"
+            echo "Got:      $computed_hash"
+            echo "Corrupted file or unexpected version."
+            rm -f "$ASTRA_BINARY_PATH/$name"
+            exit 1
+        fi
     fi
 done
 
