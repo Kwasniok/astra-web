@@ -1,61 +1,54 @@
-from typing import Any, Type
-from pydantic import BaseModel
 import os
-from fastapi import FastAPI, Depends, Query, Body, HTTPException, status
-from fastapi.responses import RedirectResponse, ORJSONResponse
+from typing import Any, Type
+
+from fastapi import Body, Depends, FastAPI, HTTPException, Query, status
+from fastapi.responses import ORJSONResponse, RedirectResponse
+from pydantic import BaseModel
+
+from .auth.auth_schemes import api_key_auth
+from .features.host_localized import (
+    get_all_varying_features,
+    get_features,
+    make_feature_table,
+)
+from .features.schemas.io import Features, FeatureTable, FeatureTableInput
+from .field.host_localized import (
+    delete_field_table,
+    list_field_table_file_names,
+    read_field_table,
+    write_field_table,
+)
+from .field.schemas.field_table import FieldTable
+from .generator.host_localized import (
+    delete_particle_distribution,
+    dispatch_particle_distribution_generation,
+    list_generator_ids,
+    load_generator_data,
+    write_particle_distribution,
+)
+from .generator.schemas.io import GeneratorData, GeneratorDispatchOutput, GeneratorInput
+from .generator.schemas.particles import Particles
 from .host_localizer import (
-    Hosts,
     HostLocalizerTypes,
+    Hosts,
     LocalHostLocalizer,
     SLURMHostLocalizer,
     SLURMJobState,
 )
 from .host_localizer.schemas.config import SLURMConfiguration
 from .host_localizer.schemas.io import JobIdsOutput
-from .auth.auth_schemes import api_key_auth
-from .generator.schemas.particles import Particles
-from .generator.schemas.io import (
-    GeneratorInput,
-    GeneratorDispatchOutput,
-    GeneratorData,
+from .simulation.host_localized import (
+    delete_simulation,
+    dispatch_simulation_run,
+    list_simulation_ids,
+    load_simulation_data,
 )
-from .field.schemas.field_table import FieldTable
 from .simulation.schemas.io import (
-    SimulationInput,
     SimulationDataWithMeta,
     SimulationDispatchOutput,
-)
-from .features.schemas.io import (
-    FeatureTableInput,
-    FeatureTable,
-    Features,
-)
-from .generator.host_localized import (
-    dispatch_particle_distribution_generation,
-    load_generator_data,
-    list_generator_ids,
-    delete_particle_distribution,
-    write_particle_distribution,
-)
-from .field.host_localized import (
-    write_field_table,
-    read_field_table,
-    delete_field_table,
-    list_field_table_file_names,
-)
-from .simulation.host_localized import (
-    dispatch_simulation_run,
-    load_simulation_data,
-    list_simulation_ids,
-    delete_simulation,
-)
-from .features.host_localized import (
-    make_feature_table,
-    get_features,
-    get_all_varying_features,
+    SimulationInput,
 )
 from .status import DispatchStatus
-
 
 tags_metadata = [
     {
@@ -348,6 +341,11 @@ async def download_features_table(
             ]
         ],
     ),
+    filter_by_comment: str | None = Body(
+        default=None,
+        examples=["experiment v.*"],
+        help="Optional regex to filter simulations by their comment.",
+    ),
 ) -> FeatureTable:
     """
     Returns a table of requested features.
@@ -359,7 +357,12 @@ async def download_features_table(
     """
     localizer = LocalHostLocalizer.instance()
     try:
-        return make_feature_table(sim_ids, features, localizer)
+        return make_feature_table(
+            sim_ids,
+            features,
+            localizer,
+            filter_by_comment=filter_by_comment,
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

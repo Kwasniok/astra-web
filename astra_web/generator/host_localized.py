@@ -53,7 +53,7 @@ def _write_generator_files(
 def load_generator_data(
     gen_id: str,
     localizer: HostLocalizer,
-    filter: list[str] | None = None,
+    include: list[str] | None = None,
 ) -> GeneratorData | None:
     """
     Loads the generator output for a given generator ID.
@@ -61,7 +61,7 @@ def load_generator_data(
 
 
     Parameters:
-        filter: Optional list of feature paths to include. All others are excluded. If `None`, all features are included.
+        include: Optional list of feature paths to include. All others are excluded. If `None`, all features are included.
             Example: `["input.run", "output"]`
 
     """
@@ -69,7 +69,7 @@ def load_generator_data(
         return None
 
     # input
-    if filter_has_prefix(filter, "input"):
+    if filter_has_prefix(include, "input"):
         input = read_json(
             GeneratorInput, localizer.generator_path(gen_id, "input.json")
         )
@@ -77,20 +77,20 @@ def load_generator_data(
         input = None
 
     # output
-    if filter_has_prefix(filter, "output"):
+    if filter_has_prefix(include, "output"):
         particles = read_particle_file(gen_id, localizer)
         output = GeneratorOutput(particles=particles)
     else:
         output = None
 
     # generator_input
-    if filter_has_prefix(filter, "astra_input"):
+    if filter_has_prefix(include, "astra_input"):
         astra_input = read_txt(localizer.generator_path(gen_id, "generator.in"))
     else:
         astra_input = None
 
     # generator_output
-    if filter_has_prefix(filter, "astra_output"):
+    if filter_has_prefix(include, "astra_output"):
         astra_output = read_txt(localizer.generator_path(gen_id, "generator.out"))
     else:
         astra_output = None

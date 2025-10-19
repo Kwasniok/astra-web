@@ -1,3 +1,4 @@
+import re
 from typing import Any, Callable, Iterable, cast
 
 from pydantic import BaseModel
@@ -8,6 +9,7 @@ from astra_web.generator.host_localized import load_generator_data
 from astra_web.host_localizer import HostLocalizer
 from astra_web.simulation.host_localized import (
     get_generator_id,
+    get_simulation_comment,
     get_simulation_status,
     list_simulation_ids,
     load_simulation_data,
@@ -21,6 +23,8 @@ def make_feature_table(
     sim_ids: list[str] | None,
     features: FeatureTableInput,
     localizer: HostLocalizer,
+    *,
+    filter_by_comment: str | None = None,
 ) -> FeatureTable:
     """
     Returns a table according to the selected features.
@@ -29,6 +33,7 @@ def make_feature_table(
 
     :param features: List of features to include in the table. See `CompleteData` for available features.
     :param sim_ids: Optional list of simulation IDs to restrict the query to. If `None`, all finished simulations are included.
+    :param filter_by_comment: Optional substring to filter simulations by their comment field. Only simulations matching the regex are included. Syntax: Python regex.
 
     Raises:
         ValueError: If a feature is not found.
@@ -39,6 +44,7 @@ def make_feature_table(
 
     feature_table: dict[str, list[Any]] = {col: [] for col in features}
     feature_tree = _build_tree(features)
+    comment_re = re.compile(filter_by_comment) if filter_by_comment else None
 
     def append_row(data: Features) -> None:
         for path, value in _traverse(data, feature_tree):
@@ -48,11 +54,16 @@ def make_feature_table(
         if get_simulation_status(sim_id, localizer) != DispatchStatus.FINISHED:
             # skip unfinished simulations
             continue
+        if comment_re and not comment_re.search(
+            get_simulation_comment(sim_id, localizer)
+        ):
+            # skip non-matching comments
+            continue
         append_row(
             get_features(
                 sim_id,
                 localizer,
-                filter=features,
+                include=features,
             )
         )
 
@@ -62,7 +73,7 @@ def make_feature_table(
 def get_features(
     sim_id: str,
     localizer: HostLocalizer,
-    filter: list[str] | None = None,
+    include: list[str] | None = None,
 ) -> Features:
     """
     Returns all features of a simulation.
@@ -70,7 +81,7 @@ def get_features(
     note: Finished simulations only!
 
     Parameters:
-        filter: Optional list of feature paths to include - all others are excluded. If `None`, all features are included.
+        include: Optional list of feature paths to include - all others are excluded. If `None`, all features are included.
         Used for optimization: Do not load features that are not requested anyway.
             Example: `["simulation.input.cavities", "generator.output"]`
 
@@ -79,26 +90,26 @@ def get_features(
     """
 
     # for loading optimization: filter includes by category
-    filter_sim = get_filter_subtree(filter, "simulation")
-    filter_gen = get_filter_subtree(filter, "generator")
+    include_sim = get_filter_subtree(include, "simulation")
+    include_gen = get_filter_subtree(include, "generator")
 
-    if filter_sim == []:
+    if include_sim == []:
         # explicitly nothing to include -> skip loading any simulation data
         sim = None
         gen_id = get_generator_id(sim_id, localizer)  # raises ValueError
     else:
-        sim = load_simulation_data(sim_id, localizer, filter_sim)
+        sim = load_simulation_data(sim_id, localizer, include_sim)
         if sim is None:
             raise ValueError(
                 f"Simulation with ID {sim_id} not found or is not finished yet."
             )
         gen_id = sim.input.run.generator_id
 
-    if filter_gen == []:
+    if include_gen == []:
         # explicitly nothing to include -> skip loading any generator data
         gen = None
     else:
-        gen = load_generator_data(gen_id, localizer, filter_gen)
+        gen = load_generator_data(gen_id, localizer, include_gen)
         if gen is None:
             raise ValueError(f"Generator with ID {gen_id} not found.")
 

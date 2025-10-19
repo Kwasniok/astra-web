@@ -97,14 +97,14 @@ def _link_field_file(file_name: str, run_dir: str, localizer: HostLocalizer):
 def load_simulation_data(
     sim_id: str,
     localizer: HostLocalizer,
-    filter: list[str] | None = None,
+    include: list[str] | None = None,
 ) -> SimulationDataWithMeta | None:
     """
     Loads the entire simulation data for a given simulation ID.
     Returns None if the simulation does not exist.
 
     Parameters:
-        filter: Optional list of feature paths to include. All others are excluded. If `None`, all features are included.
+        include: Optional list of feature paths to include. All others are excluded. If `None`, all features are included.
             Example: `["input.run", "output"]`
     """
 
@@ -112,7 +112,7 @@ def load_simulation_data(
         return None
 
     # input
-    if filter_has_prefix(filter, "input"):
+    if filter_has_prefix(include, "input"):
         input = read_json(
             SimulationInput, localizer.simulation_path(sim_id, "input.json")
         )
@@ -120,8 +120,8 @@ def load_simulation_data(
         input = None
 
     # output
-    if filter_has_prefix(filter, "output"):
-        filter_out = get_filter_subtree(filter, "output")
+    if filter_has_prefix(include, "output"):
+        filter_out = get_filter_subtree(include, "output")
 
         # particles, final_particle_counts
         if filter_has_prefix(filter_out, "particles") or filter_has_prefix(
@@ -168,13 +168,13 @@ def load_simulation_data(
         output = None
 
     # astra_input
-    if filter_has_prefix(filter, "astra_input"):
+    if filter_has_prefix(include, "astra_input"):
         astra_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
     else:
         astra_input = None
 
     # astra_output or meta
-    if filter_has_prefix(filter, "astra_output") or filter_has_prefix(filter, "meta"):
+    if filter_has_prefix(include, "astra_output") or filter_has_prefix(include, "meta"):
         astra_output, meta = _extract_output(sim_id, localizer)
     else:
         astra_output, meta = None, None
@@ -386,3 +386,11 @@ def get_simulation_status(sim_id: str, localizer: HostLocalizer) -> DispatchStat
         if "finished simulation" in read_txt(path):
             return DispatchStatus.FINISHED
     return DispatchStatus.PENDING
+
+
+def get_simulation_comment(sim_id: str, localizer: HostLocalizer) -> str:
+    """
+    Returns the comment of the simulation if available.
+    """
+    input = read_json(SimulationInput, localizer.simulation_path(sim_id, "input.json"))
+    return input.run.comment
