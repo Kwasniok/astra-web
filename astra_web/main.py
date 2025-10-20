@@ -353,6 +353,11 @@ async def download_features_table(
     The `sim_ids` parameter is an optional list of (finished) simulation IDs for which the features should be computed.
     If none are provided, the features will be computed for all finished simulations in the database.
 
+    The `filter_by_comment` parameter is an optional regex string to filter simulations by their comment field.
+    If none is provided, no filtering by comment is applied.
+
+    Both filter options can be combined.
+
     See schema `Features` for a list of all available features.
     """
     localizer = LocalHostLocalizer.instance()
