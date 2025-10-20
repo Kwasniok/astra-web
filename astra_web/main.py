@@ -132,13 +132,13 @@ async def root():
     tags=["particles"],
 )
 def list_particle_distribution_ids(
-    filter: DispatchStatus = Query(default=DispatchStatus.FINISHED),
+    state: DispatchStatus = Query(default=DispatchStatus.FINISHED),
 ) -> list[str]:
     """
     Returns a list of particle distribution IDs.
     """
     localizer = LocalHostLocalizer.instance()
-    return list_generator_ids(localizer, filter=filter)
+    return list_generator_ids(localizer, state=state)
 
 
 @app.post(
@@ -267,13 +267,13 @@ async def delete_field_table_(file_name: str) -> None:
     tags=["simulations"],
 )
 def list_simulation_ids_(
-    filter: DispatchStatus = Query(default=DispatchStatus.FINISHED),
+    state: DispatchStatus = Query(default=DispatchStatus.FINISHED),
 ) -> list[str]:
     """
     Returns a list of  simulation IDs.
     """
     localizer = LocalHostLocalizer.instance()
-    return list_simulation_ids(localizer, filter=filter)
+    return list_simulation_ids(localizer, state=state)
 
 
 @app.post(

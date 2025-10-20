@@ -339,7 +339,7 @@ def _read_auto_phase_table(run_output: str, start_line: int) -> CavityAutoPhaseT
 
 def list_simulation_ids(
     localizer: HostLocalizer,
-    filter: DispatchStatus,
+    state: DispatchStatus,
 ) -> list[str]:
     """
     Lists IDs of simulations.
@@ -349,11 +349,11 @@ def list_simulation_ids(
         glob.glob(localizer.simulation_path("*")),
     )
 
-    if filter == DispatchStatus.ANY:
+    if state == DispatchStatus.ANY:
         return sorted(ids_all)
     else:
         return sorted(
-            id for id in ids_all if get_simulation_status(id, localizer) == filter
+            id for id in ids_all if get_simulation_status(id, localizer) == state
         )
 
 

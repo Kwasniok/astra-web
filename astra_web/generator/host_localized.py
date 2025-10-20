@@ -113,7 +113,7 @@ def read_particle_file(gen_id: str, localizer: HostLocalizer) -> Particles:
 
 def list_generator_ids(
     localizer: HostLocalizer,
-    filter: DispatchStatus,
+    state: DispatchStatus,
 ) -> list[str]:
     """
     Lists IDs of particle distribution generations.
@@ -124,11 +124,11 @@ def list_generator_ids(
         glob.glob(localizer.generator_path("*")),
     )
 
-    if filter == DispatchStatus.ANY:
+    if state == DispatchStatus.ANY:
         return sorted(ids_all)
     else:
         return sorted(
-            id for id in ids_all if get_generation_status(id, localizer) == filter
+            id for id in ids_all if get_generation_status(id, localizer) == state
         )
 
 
