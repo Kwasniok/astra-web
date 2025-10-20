@@ -388,9 +388,9 @@ def get_simulation_status(sim_id: str, localizer: HostLocalizer) -> DispatchStat
     return DispatchStatus.PENDING
 
 
-def get_simulation_comment(sim_id: str, localizer: HostLocalizer) -> str:
+def get_simulation_input_comment(sim_id: str, localizer: HostLocalizer) -> str | None:
     """
     Returns the comment of the simulation if available.
     """
     input = read_json(SimulationInput, localizer.simulation_path(sim_id, "input.json"))
-    return input.run.comment
+    return input.comment

@@ -9,7 +9,7 @@ from astra_web.generator.host_localized import load_generator_data
 from astra_web.host_localizer import HostLocalizer
 from astra_web.simulation.host_localized import (
     get_generator_id,
-    get_simulation_comment,
+    get_simulation_input_comment,
     get_simulation_status,
     list_simulation_ids,
     load_simulation_data,
@@ -54,11 +54,11 @@ def make_feature_table(
         if get_simulation_status(sim_id, localizer) != DispatchStatus.FINISHED:
             # skip unfinished simulations
             continue
-        if comment_re and not comment_re.search(
-            get_simulation_comment(sim_id, localizer)
-        ):
-            # skip non-matching comments
-            continue
+        if comment_re:
+            comment = get_simulation_input_comment(sim_id, localizer) or ""
+            if not comment_re.search(comment):
+                # skip non-matching comments
+                continue
         append_row(
             get_features(
                 sim_id,
