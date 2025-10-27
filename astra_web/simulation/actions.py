@@ -26,7 +26,7 @@ from .schemas.io import (
 )
 
 
-def dispatch_simulation_run(
+async def dispatch_simulation_run(
     simulation_input: SimulationInput,
     local_localizer: HostLocalizer,
     host_localizer: HostLocalizer,
@@ -37,7 +37,7 @@ def dispatch_simulation_run(
     # local
     write_simulation_files(simulation_input, local_localizer)
     # 'remote'
-    response = host_localizer.dispatch_simulation(simulation_input)
+    response = await host_localizer.dispatch_simulation(simulation_input)
     return SimulationDispatchOutput(
         sim_id=simulation_input.run_dir,
         dispatch_response=response,

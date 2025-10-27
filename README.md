@@ -125,7 +125,7 @@ In addition to the [basic environment](#environment), set the following environm
 |-------------------------------|----------|------------------------------------------------------------------------------------|-------------------------------------------------------|
 | `SLURM_BASE_URL`                   | yes      | The URL of the [SLURM REST API](https://slurm.schedmd.com/rest_api.html).          | `https://slurm-rest.example.com/sapi`   |
 | `SLURM_API_VERSION` [0]       | yes      | The version of the SLURM REST API to use.                                          | `v0.0.40`                                            |
-| `SLURM_PROXY` [1]             | optional | The URL of a SOCKS5 proxy to connect to the SLURM REST API.                        | `socks5h://host.docker.internal:1080`                 |
+| `SLURM_PROXY_URL` [1]             | optional | The URL of a SOCKS5 proxy to connect to the SLURM REST API.                        | `socks5://localhost:8080`                 |
 | `SLURM_USER_NAME`             | yes      | The SLURM user name.                                                               | `<user>`                                              |
 | `SLURM_USER_TOKEN` [2]          | yes      | The [JWT token](https://slurm.schedmd.com/jwt.html) to authenticate the SLURM user.|                                                 |
 | `SLURM_PARTITION`             | yes      | The SLURM partition to use for the job.                                            | `short`                                              |

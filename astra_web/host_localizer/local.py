@@ -29,7 +29,7 @@ class LocalHostLocalizer(HostLocalizer):
         """
         return os.path.join(self._ASTRA_BINARY_PATH, binary)
 
-    def _dispatch_command(
+    async def _dispatch_command(
         self,
         name: str,
         command: list[str],

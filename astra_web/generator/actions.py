@@ -17,7 +17,7 @@ from .schemas.io import (
 from .schemas.particles import Particles
 
 
-def dispatch_particle_distribution_generation(
+async def dispatch_particle_distribution_generation(
     generator_input: GeneratorInput,
     local_localizer: HostLocalizer,
     host_localizer: HostLocalizer,
@@ -29,7 +29,9 @@ def dispatch_particle_distribution_generation(
     # local
     _write_generator_files(generator_input, local_localizer)
     # 'remote'
-    response = host_localizer.dispatch_generation(generator_input, timeout=timeout)
+    response = await host_localizer.dispatch_generation(
+        generator_input, timeout=timeout
+    )
     return GeneratorDispatchOutput(
         gen_id=generator_input.id,
         dispatch_response=response,

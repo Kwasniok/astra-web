@@ -1,39 +1,13 @@
 from typing import Any, Callable
 import os
 from enum import Enum
-import requests
+import slurm_requests as slurm
+from slurm_requests import RequestMethod, SLURMJobState, JSON
+import asyncio
 from .base import HostLocalizer
 from .schemas.config import SLURMConfiguration
 from .schemas.dispatch import DispatchResponse
 from .schemas.io import JobIdsOutput
-
-
-class _RequestType(Enum):
-
-    GET = "get"
-    POST = "post"
-    PUT = "put"
-
-
-class SLURMJobState(str, Enum):
-    """
-    Enum representing the possible states of a SLURM job.
-
-    see https://slurm.schedmd.com/job_state_codes.html
-    """
-
-    BOOT_FAIL = "boot_fail"
-    CANCELLED = "cancelled"
-    COMPLETED = "completed"
-    DEADLINE = "deadline"
-    FAILED = "failed"
-    NODE_FAIL = "node_fail"
-    OUT_OF_MEMORY = "out_of_memory"
-    PENDING = "pending"
-    PREEMPTED = "preempted"
-    RUNNING = "running"
-    SUSPENDED = "suspended"
-    TIMEOUT = "timeout"
 
 
 class SLURMHostLocalizer(HostLocalizer):
@@ -45,7 +19,7 @@ class SLURMHostLocalizer(HostLocalizer):
         if cls._instance is None:
             cls._instance = SLURMHostLocalizer(do_not_init_manually_use_instance=None)
 
-            # aquire environment variables only upon first use
+            # acquire environment variables only upon first use
             # avoids errors due to undefined env if SLURM is never used
             split: Callable[[str | None], list[str]] = lambda csv: (
                 csv.split(",") if csv else []
@@ -56,7 +30,7 @@ class SLURMHostLocalizer(HostLocalizer):
                 output_path=os.environ.get("SLURM_OUTPUT_PATH", "."),
                 base_url=os.environ["SLURM_BASE_URL"],
                 api_version=os.environ["SLURM_API_VERSION"],
-                proxy=os.environ.get("SLURM_PROXY", None),
+                proxy_url=os.environ.get("SLURM_PROXY_URL", None),
                 user_name=os.environ["SLURM_USER_NAME"],
                 user_token=os.environ["SLURM_USER_TOKEN"],
                 partition=os.environ["SLURM_PARTITION"],
@@ -87,20 +61,6 @@ class SLURMHostLocalizer(HostLocalizer):
         return self._config
 
     @property
-    def _proxies(self) -> dict[str, str] | None:
-        """
-        Returns the proxies used for SLURM requests.
-        """
-        return (
-            {
-                "http": self._config.proxy,
-                "https": self._config.proxy,
-            }
-            if self._config.proxy
-            else None
-        )
-
-    @property
     def _header_credentials(self) -> dict[str, str]:
         """
         Returns the headers used for SLURM requests.
@@ -119,7 +79,7 @@ class SLURMHostLocalizer(HostLocalizer):
         """
         return os.path.join(self._config.astra_binary_path, binary)
 
-    def _dispatch_command(
+    async def _dispatch_command(
         self,
         name: str,
         command: list[str],
@@ -168,10 +128,7 @@ status=$?
                 },
                 **({"tasks_per_node": threads} if threads is not None else {}),
                 "current_working_directory": cwd,
-                "environment": [
-                    "PATH=/bin:/usr/bin/:/usr/local/bin/",
-                    "LD_LIBRARY_PATH=/lib/:/lib64/:/usr/local/lib",
-                ],
+                "environment": self._config.environment,
                 # separate SLURM output if desired
                 "standard_output": f"{self._config.output_path}/{output_file_name_base}-slurm-%j.out",
                 "standard_error": f"{self._config.output_path}/{output_file_name_base}-slurm-%j.err",
@@ -180,15 +137,11 @@ status=$?
         }
 
         try:
-            response = self._request(
-                request=_RequestType.POST,
-                url=f"{self._config.base_url}/slurm/{self._config.api_version}/job/submit",
-                headers={
-                    "Content-Type": "application/json",
-                    **self._header_credentials,
-                },
-                json=data,
-                proxies=self._proxies,
+            response = await self._request(
+                method=RequestMethod.POST,
+                midpoint="slurm",
+                endpoint="job/submit",
+                body=data,
             )
         except RuntimeError as e:
             raise RuntimeError(
@@ -201,146 +154,111 @@ status=$?
             slurm_response=response,
         )
 
-    def ping(self) -> dict[str, Any]:
+    async def ping(self) -> JSON:
         """
         Pings the SLURM server to check if it is reachable.
 
         Returns slurm ping response data.
         """
         try:
-            response = self._request(
-                request=_RequestType.GET,
-                url=f"{self._config.base_url}/slurm/{self._config.api_version}/ping",
-                headers={
-                    "Content-Type": "application/json",
-                    **self._header_credentials,
-                },
-                proxies=self._proxies,
+            response = await self._request(
+                method=RequestMethod.GET,
+                midpoint="slurm",
+                endpoint="ping",
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to ping SLURM.") from e
         return response
 
-    def diagnose(self) -> dict[str, Any]:
+    async def diagnose(self) -> JSON:
         """
         Diagnoses the connection to SLURM.
 
         Returns slurm diagnose response data.
         """
         try:
-            response = self._request(
-                request=_RequestType.GET,
-                url=f"{self._config.base_url}/slurm/{self._config.api_version}/diag",
-                headers={
-                    "Content-Type": "application/json",
-                    **self._header_credentials,
-                },
-                proxies=self._proxies,
+            response = await self._request(
+                method=RequestMethod.GET,
+                midpoint="slurm",
+                endpoint="diag",
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to diagnose connection to SLURM.") from e
         return response
 
-    def list_jobs(self, states: set[SLURMJobState]) -> list[dict[str, Any]]:
+    async def list_jobs(self, states: set[SLURMJobState]) -> list[JSON]:
         """
         Lists all jobs currently managed by SLURM.
         """
-        data = {
+        data: JSON = {
             "users": self._config.user_name,
             # state: does not work due to bug in SLURM REST API
         }
         try:
-            response = self._request(
-                request=_RequestType.GET,
-                url=f"{self._config.base_url}/slurmdb/{self._config.api_version}/jobs",
-                headers={
-                    "Content-Type": "application/json",
-                    **self._header_credentials,
-                },
-                json=data,
-                proxies=self._proxies,
+            response = await self._request(
+                method=RequestMethod.GET,
+                midpoint="slurmdb",
+                endpoint="jobs",
+                body=data,
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to list SLURM job IDs.") from e
         # manual filtering due to bug in SLURM REST API
-        jobs: list[dict[str, Any]] = response["jobs"]
+        jobs: list[JSON] = response["jobs"]  # type: ignore
         if states:
-            filter: Callable[[dict[str, Any]], bool] = lambda j: bool(
-                set(s.lower() for s in j["state"]["current"])
+            filter: Callable[[JSON], bool] = lambda j: bool(
+                set(s.lower() for s in j["state"]["current"])  # type: ignore
                 & set(s.value for s in states)
             )
             jobs = list(j for j in jobs if filter(j))
         return jobs
 
-    def list_job_ids(
+    async def list_job_names(
         self, state: set[SLURMJobState], local_localizer: HostLocalizer
     ) -> JobIdsOutput:
         """
         Lists all IDs for jobs currently managed by SLURM.
         """
-        job_ids = [j["name"] for j in self.list_jobs(state)]
+        job_names: list[str] = [j["name"] for j in await self.list_jobs(state)]  # type: ignore
 
         response = JobIdsOutput(
             particles=[
                 j.removeprefix(self.GENERATE_DISPATCH_NAME_PREFIX)
-                for j in job_ids
+                for j in job_names
                 if j.startswith(self.GENERATE_DISPATCH_NAME_PREFIX)
             ],
             simulations=[
                 j.removeprefix(self.SIMULATE_DISPATCH_NAME_PREFIX)
-                for j in job_ids
+                for j in job_names
                 if j.startswith(self.SIMULATE_DISPATCH_NAME_PREFIX)
             ],
         )
 
         # filter for managed ids
-        gen_ids = local_localizer.generator_ids
-        sim_ids = local_localizer.simulation_ids
-        response.particles = [id for id in response.particles if id in gen_ids]
-        response.simulations = [id for id in response.simulations if id in sim_ids]
+        gen_ns = local_localizer.generator_ids
+        sim_ns = local_localizer.simulation_ids
+        response.particles = [n for n in response.particles if n in gen_ns]
+        response.simulations = [n for n in response.simulations if n in sim_ns]
 
         return response
 
-    def _request(
+    async def _request(
         self,
-        request: _RequestType,
-        url: str,
-        headers: dict[str, str],
-        json: dict[str, Any] | None = None,
-        proxies: dict[str, str] | None = None,
-    ) -> dict[str, Any]:
-        try:
-            match request:
-                case _RequestType.GET:
-                    response = requests.get(
-                        url=url,
-                        headers=headers,
-                        json=json,
-                        proxies=proxies,
-                    )
-                case _RequestType.POST:
-                    response = requests.post(
-                        url=url,
-                        headers=headers,
-                        json=json,
-                        proxies=proxies,
-                    )
-                case _RequestType.PUT:
-                    response = requests.put(
-                        url=url,
-                        headers=headers,
-                        json=json,
-                        proxies=proxies,
-                    )
-        except requests.exceptions.HTTPError as e:
-            raise RuntimeError(
-                f"Failed to send {request.name} request to SLURM '{url}'.\n\t{headers=}\n\t{json=}\n\t{proxies=}"
-            ) from e
+        method: RequestMethod,
+        midpoint: str,
+        endpoint: str,
+        body: JSON | None = None,
+    ) -> JSON:
 
-        try:
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.HTTPError as e:
-            raise RuntimeError(
-                f"Failed {request.name} request for SLURM '{url}'.\n\t{headers=}\n\t{json=}\n\t{proxies=}\n\tresponse=\n{response.text}\n"
-            ) from e
+        return await slurm.request(
+            method=method,
+            midpoint=midpoint,
+            endpoint=endpoint,
+            body=body or {},
+            url=self._config.base_url,
+            api_version=self._config.api_version,
+            headers=self._header_credentials,
+            proxy_url=self._config.proxy_url,
+            user_name=self._config.user_name,
+            user_token=self._config.user_token,
+        )  # type: ignore

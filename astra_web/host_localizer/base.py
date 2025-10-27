@@ -75,7 +75,7 @@ class HostLocalizer(ABC):
         """
         pass
 
-    def dispatch_generation(
+    async def dispatch_generation(
         self,
         generator_input: GeneratorInput,
         timeout: int,
@@ -83,7 +83,7 @@ class HostLocalizer(ABC):
         """
         Dispatches the generation process by running the ASTRA generator binary with the appropriate input file.
         """
-        return self._dispatch_command(
+        return await self._dispatch_command(
             name=f"{self.GENERATE_DISPATCH_NAME_PREFIX}{generator_input.id}",
             command=self._generator_command(generator_input),
             cwd=self.generator_path(generator_input.id),
@@ -91,13 +91,13 @@ class HostLocalizer(ABC):
             timeout=timeout,
         )
 
-    def dispatch_simulation(
+    async def dispatch_simulation(
         self, simulation_input: SimulationInput
     ) -> DispatchResponse:
         """
         Dispatches a simulation to the host system.
         """
-        return self._dispatch_command(
+        return await self._dispatch_command(
             name=f"{self.SIMULATE_DISPATCH_NAME_PREFIX}{simulation_input.id}",
             command=self._simulation_command(simulation_input),
             cwd=self.simulation_path(simulation_input.run_dir),
@@ -107,7 +107,7 @@ class HostLocalizer(ABC):
         )
 
     @abstractmethod
-    def _dispatch_command(
+    async def _dispatch_command(
         self,
         name: str,
         command: list[str],

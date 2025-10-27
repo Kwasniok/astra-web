@@ -13,3 +13,4 @@ h5py
 scipy
 matplotlib
 openpmd-beamphysics
+slurm-requests==0.0.3

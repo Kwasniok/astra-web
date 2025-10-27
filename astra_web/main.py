@@ -153,7 +153,7 @@ async def dispatch_particle_distribution_generation_(
 ) -> GeneratorDispatchOutput:
     local_localizer = LocalHostLocalizer.instance()
     host_localizer = HostLocalizerTypes.get_localizer(host)
-    return dispatch_particle_distribution_generation(
+    return await dispatch_particle_distribution_generation(
         generator_input,
         local_localizer,
         host_localizer,
@@ -288,7 +288,9 @@ async def dispatch_simulation(
     # local
     local_localizer = LocalHostLocalizer.instance()
     host_localizer = HostLocalizerTypes.get_localizer(host)
-    return dispatch_simulation_run(simulation_input, local_localizer, host_localizer)
+    return await dispatch_simulation_run(
+        simulation_input, local_localizer, host_localizer
+    )
 
 
 @app.get(
@@ -464,7 +466,7 @@ async def update_slurm_user_token(
 )
 async def ping_slurm() -> dict[str, Any]:
     slurm_localizer = SLURMHostLocalizer.instance()
-    return slurm_localizer.ping()
+    return await slurm_localizer.ping()  # type: ignore
 
 
 @app.get(
@@ -474,7 +476,7 @@ async def ping_slurm() -> dict[str, Any]:
 )
 async def diagnose_slurm() -> dict[str, Any]:
     slurm_localizer = SLURMHostLocalizer.instance()
-    return slurm_localizer.diagnose()
+    return await slurm_localizer.diagnose()  # type: ignore
 
 
 @app.get(
@@ -491,7 +493,7 @@ async def list_slurm_jobs(
     see: https://slurm.schedmd.com/rest_api.html#slurmdbV0043GetJobs
     """
     slurm_localizer = SLURMHostLocalizer.instance()
-    return slurm_localizer.list_jobs(states=states)
+    return await slurm_localizer.list_jobs(states=states)  # type: ignore
 
 
 @app.get(
@@ -508,7 +510,7 @@ async def list_slurm_managed_ids(
     note: This means that jobs which have been deleted or are too old are not included in the list.
     """
     slurm_localizer = SLURMHostLocalizer.instance()
-    return slurm_localizer.list_job_ids(
+    return await slurm_localizer.list_job_names(
         state=state,
         local_localizer=LocalHostLocalizer.instance(),
     )

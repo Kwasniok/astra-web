@@ -9,10 +9,10 @@ class SLURMConfiguration(BaseModel):
 
     astra_binary_path: str
     data_path: str
-    output_path: str = "."
+    output_path: str
     base_url: str
     api_version: str
-    proxy: str | None = None
+    proxy_url: str | None = None
     user_name: str
     user_token: str
     partition: str
