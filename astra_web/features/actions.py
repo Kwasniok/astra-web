@@ -5,9 +5,9 @@ from pydantic import BaseModel
 
 from astra_web._aux import get_filter_subtree
 from astra_web.file.json import JSONType
-from astra_web.generator.host_localized import load_generator_data
+from astra_web.generator.actions import load_generator_data
 from astra_web.host_localizer import HostLocalizer
-from astra_web.simulation.host_localized import (
+from astra_web.simulation.actions import (
     get_generator_id,
     get_simulation_input_comment,
     get_simulation_status,
@@ -19,7 +19,7 @@ from astra_web.status import DispatchStatus
 from .schemas.io import Features, FeatureTable, FeatureTableInput
 
 
-def make_feature_table(
+def make_simulation_feature_table(
     sim_ids: list[str] | None,
     features: FeatureTableInput,
     localizer: HostLocalizer,

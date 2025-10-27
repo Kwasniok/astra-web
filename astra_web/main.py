@@ -6,20 +6,20 @@ from fastapi.responses import ORJSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 from .auth.auth_schemes import api_key_auth
-from .features.host_localized import (
+from .features.actions import (
     get_all_varying_features,
     get_features,
-    make_feature_table,
+    make_simulation_feature_table,
 )
 from .features.schemas.io import Features, FeatureTable, FeatureTableInput
-from .field.host_localized import (
+from .field.actions import (
     delete_field_table,
     list_field_table_file_names,
     read_field_table,
     write_field_table,
 )
 from .field.schemas.field_table import FieldTable
-from .generator.host_localized import (
+from .generator.actions import (
     delete_particle_distribution,
     dispatch_particle_distribution_generation,
     list_generator_ids,
@@ -37,7 +37,7 @@ from .host_localizer import (
 )
 from .host_localizer.schemas.config import SLURMConfiguration
 from .host_localizer.schemas.io import JobIdsOutput
-from .simulation.host_localized import (
+from .simulation.actions import (
     delete_simulation,
     dispatch_simulation_run,
     list_simulation_ids,
@@ -362,7 +362,7 @@ async def download_features_table(
     """
     localizer = LocalHostLocalizer.instance()
     try:
-        return make_feature_table(
+        return make_simulation_feature_table(
             sim_ids,
             features,
             localizer,
