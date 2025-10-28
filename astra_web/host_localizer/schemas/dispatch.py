@@ -1,6 +1,5 @@
 from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
-from slurm_requests import JSON
 
 
 class DispatchResponse(BaseModel):
@@ -10,11 +9,11 @@ class DispatchResponse(BaseModel):
         description="Type of the dispatch system used, e.g., 'local' or 'slurm'."
     )
 
-    slurm_submission: JSON | None = Field(
+    slurm_submission: dict[str, Any] | None = Field(
         default=None,
         description="Submitted job data to SLURM, if applicable.",
     )
-    slurm_response: JSON | None = Field(
+    slurm_response: dict[str, Any] | None = Field(
         default=None,
         description="Response from the SLURM job submission, if applicable.",
     )
