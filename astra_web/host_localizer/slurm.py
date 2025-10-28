@@ -1,9 +1,7 @@
 from typing import Any, Callable
 import os
-from enum import Enum
 import slurm_requests as slurm
 from slurm_requests import RequestMethod, SLURMJobState, JSON
-import asyncio
 from .base import HostLocalizer
 from .schemas.config import SLURMConfiguration
 from .schemas.dispatch import DispatchResponse
