@@ -73,9 +73,11 @@ def load_generator_data(
 
     # input
     if filter_has_prefix(include, "input"):
-        input = read_json(
-            GeneratorInput, localizer.generator_path(gen_id, "input.json")
-        )
+        input_path = localizer.generator_path(gen_id, "input.json")
+        if os.path.exists(input_path):
+            input = read_json(GeneratorInput, input_path)
+        else:
+            input = None
     else:
         input = None
 
@@ -88,13 +90,21 @@ def load_generator_data(
 
     # generator_input
     if filter_has_prefix(include, "astra_input"):
-        astra_input = read_txt(localizer.generator_path(gen_id, "generator.in"))
+        astra_input_path = localizer.generator_path(gen_id, "generator.in")
+        if os.path.exists(astra_input_path):
+            astra_input = read_txt(astra_input_path)
+        else:
+            astra_input = None
     else:
         astra_input = None
 
     # generator_output
     if filter_has_prefix(include, "astra_output"):
-        astra_output = read_txt(localizer.generator_path(gen_id, "generator.out"))
+        astra_output_path = localizer.generator_path(gen_id, "generator.out")
+        if os.path.exists(astra_output_path):
+            astra_output = read_txt(astra_output_path)
+        else:
+            astra_output = None
     else:
         astra_output = None
 
