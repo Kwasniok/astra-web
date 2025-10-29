@@ -6,4 +6,4 @@ class DispatchStatus(Enum):
     ANY = "any"
     FAILED = "failed"
     FINISHED = "finished"
-    PENDING = "pending"
+    UNFINISHED = "unfinished"

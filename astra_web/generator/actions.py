@@ -219,4 +219,4 @@ def get_generation_status(ge_id: str, localizer: HostLocalizer) -> DispatchStatu
     if os.path.isfile(path):
         if "phase-space distribution saved to file" in read_txt(path):
             return DispatchStatus.FINISHED
-    return DispatchStatus.PENDING
+    return DispatchStatus.UNFINISHED

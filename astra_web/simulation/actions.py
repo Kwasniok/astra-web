@@ -397,9 +397,12 @@ def get_simulation_status(sim_id: str, localizer: HostLocalizer) -> DispatchStat
         return DispatchStatus.FAILED
     path = localizer.simulation_path(sim_id, "run.out")
     if os.path.isfile(path):
-        if "finished simulation" in read_txt(path):
+        run_out = read_txt(path)
+        if "finished simulation" in run_out:
             return DispatchStatus.FINISHED
-    return DispatchStatus.PENDING
+        if "Error" in run_out:
+            return DispatchStatus.FAILED
+    return DispatchStatus.UNFINISHED
 
 
 def get_simulation_input_comment(sim_id: str, localizer: HostLocalizer) -> str | None:
