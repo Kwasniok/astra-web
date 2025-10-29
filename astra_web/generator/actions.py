@@ -146,6 +146,20 @@ def list_generator_ids(
         )
 
 
+def list_particle_distribution_states(
+    localizer: HostLocalizer,
+    gen_ids: list[str] | None = None,
+) -> list[tuple[str, DispatchStatus]]:
+    """
+    Returns the current state of the particle distributions.
+    """
+    if gen_ids is None:
+        gen_ids = list_generator_ids(localizer, DispatchStatus.ANY)
+    return list(
+        (gen_id, get_generation_status(gen_id, localizer)) for gen_id in gen_ids
+    )
+
+
 def delete_particle_distribution(
     gen_id: str, localizer: HostLocalizer
 ) -> list[str] | None:

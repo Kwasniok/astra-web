@@ -23,6 +23,7 @@ from .generator.actions import (
     delete_particle_distribution,
     dispatch_particle_distribution_generation,
     list_generator_ids,
+    list_particle_distribution_states,
     load_generator_data,
     write_particle_distribution,
 )
@@ -41,6 +42,7 @@ from .simulation.actions import (
     delete_simulation,
     dispatch_simulation_run,
     list_simulation_ids,
+    list_simulation_states,
     load_simulation_data,
 )
 from .simulation.schemas.io import (
@@ -139,6 +141,19 @@ def list_particle_distribution_ids(
     """
     localizer = LocalHostLocalizer.instance()
     return list_generator_ids(localizer, state=state)
+
+
+@app.get(
+    "/particles/states",
+    dependencies=[Depends(api_key_auth)],
+    tags=["simulations"],
+)
+async def _list_particle_distribution_states(
+    gen_ids=Body(default=None, examples=[["gen_id_1", "gen_id_2"]]),
+) -> list[tuple[str, DispatchStatus]]:
+    # local
+    local_localizer = LocalHostLocalizer.instance()
+    return list_particle_distribution_states(local_localizer, gen_ids=gen_ids)
 
 
 @app.post(
@@ -279,6 +294,19 @@ def list_simulation_ids_(
     """
     localizer = LocalHostLocalizer.instance()
     return list_simulation_ids(localizer, state=state)
+
+
+@app.get(
+    "/simulations/states",
+    dependencies=[Depends(api_key_auth)],
+    tags=["simulations"],
+)
+async def _list_simulation_states(
+    sim_ids=Body(default=None, examples=[["sim_id_1", "sim_id_2"]]),
+) -> list[tuple[str, DispatchStatus]]:
+    # local
+    local_localizer = LocalHostLocalizer.instance()
+    return list_simulation_states(local_localizer, sim_ids=sim_ids)
 
 
 @app.post(

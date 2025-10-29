@@ -357,6 +357,20 @@ def list_simulation_ids(
         )
 
 
+def list_simulation_states(
+    localizer: HostLocalizer,
+    sim_ids: list[str] | None = None,
+) -> list[tuple[str, DispatchStatus]]:
+    """
+    Returns the current state of the simulations.
+    """
+    if sim_ids is None:
+        sim_ids = list_simulation_ids(localizer, DispatchStatus.ANY)
+    return list(
+        (sim_id, get_simulation_status(sim_id, localizer)) for sim_id in sim_ids
+    )
+
+
 def delete_simulation(sim_id: str, localizer: HostLocalizer) -> None:
     """
     Deletes the simulation directory for a given simulation ID.
