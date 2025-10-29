@@ -464,6 +464,14 @@ class GeneratorOutput(BaseModel):
     particles: Particles
 
 
+class GeneratorMeta(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    comment: str | None = Field(
+        default=None, description="Optional comment for the generator."
+    )
+
+
 class GeneratorData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -479,4 +487,8 @@ class GeneratorData(BaseModel):
     )
     astra_output: str | None = Field(
         description="Raw output file from ASTRA generator."
+    )
+    meta: GeneratorMeta | None = Field(
+        default=None,
+        description="Metadata associated with the particle distribution.",
     )

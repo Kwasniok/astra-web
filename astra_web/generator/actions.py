@@ -10,6 +10,7 @@ from astra_web.uuid import get_uuid
 
 from .schemas.io import (
     GeneratorData,
+    GeneratorMeta,
     GeneratorDispatchOutput,
     GeneratorInput,
     GeneratorOutput,
@@ -97,11 +98,22 @@ def load_generator_data(
     else:
         astra_output = None
 
+    # meta
+    if filter_has_prefix(include, "meta"):
+        meta_path = localizer.generator_path(gen_id, "meta.json")
+        if os.path.exists(meta_path):
+            meta = read_json(GeneratorMeta, meta_path)
+        else:
+            meta = None
+    else:
+        meta = None
+
     return GeneratorData(
         input=input,
         output=output,
         astra_input=astra_input,
         astra_output=astra_output,
+        meta=meta,
     )
 
 
@@ -160,16 +172,25 @@ def delete_particle_distribution(
     return
 
 
-def write_particle_distribution(particles: Particles, localizer: HostLocalizer) -> str:
+def write_particle_distribution(
+    particles: Particles, localizer: HostLocalizer, comment: str | None = None
+) -> str:
     """
     Writes the particle distribution to disk.
     """
     gen_id = get_uuid()
-    path = localizer.generator_path(gen_id, "distribution.ini")
-    if os.path.exists(path):
-        os.remove(path)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    particles.write_to_csv(path)
+    dist_path = localizer.generator_path(gen_id, "distribution.ini")
+
+    if os.path.exists(dist_path):
+        raise RuntimeError("Generated ID already exists.")
+    os.makedirs(os.path.dirname(dist_path), exist_ok=True)
+
+    particles.write_to_csv(dist_path)
+
+    meta = GeneratorMeta(comment=comment)
+    meta_path = localizer.generator_path(gen_id, "meta.json")
+    write_json(meta, path=meta_path)
+
     return gen_id
 
 
