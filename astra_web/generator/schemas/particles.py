@@ -42,22 +42,32 @@ class Particles(BaseModel):
         description="List of particle pz values.",
         json_schema_extra={"format": "Unit: [eV/c]"},
     )
-    t_clock: list[float] | None = []
+    t_clock: list[float] = Field(
+        default=[],
+        description="List of particle time values.",
+        json_schema_extra={"format": "Unit: [ns]"},
+    )
     macro_charge: list[float] = Field(
         default=[],
         description="List of particle macro charges.",
         json_schema_extra={"format": "Unit: [nC]"},
     )
-    species: list[int] | None = []
-    status: list[int] | None = []
+    species: list[int] = Field(
+        default=[],
+        description=r"List of species specifications:\n1\telectrons\n2\tpositrons\n3\tprotons\n4\tH-ions\n5-14\tuser defined mass-charge-ratios",
+    )
+    status_flag: list[int] = Field(
+        default=[],
+        description=r"List of particle ASTRA status flags:\nsee ATRA manual for details",
+    )
 
     @property
     def active_particles(self):
-        return np.array(self.status) >= 0
+        return np.array(self.status_flag) >= 0
 
     @property
     def lost_particles(self):
-        return np.array(self.status) < 0
+        return np.array(self.status_flag) < 0
 
     def write_to_csv(self, path: str) -> None:
         write_csv(self, path)

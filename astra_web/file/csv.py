@@ -2,13 +2,10 @@ from typing import Any, TypeVar, Type, Callable, get_origin, get_args
 import os
 from pydantic import BaseModel
 import pandas as pd
+from .txt import write as write_txt
 
 
 T = TypeVar("T", bound=BaseModel)
-
-_is_list: Callable[[Any, list[type]], bool] = (
-    lambda a, types: get_origin(a) is list and get_args(a)[0] in types
-)
 
 
 def write(
@@ -20,20 +17,26 @@ def write(
     """
     Writes a Pydantic model to a CSV file.
 
-    Note: Writes only fields that are lists of the specified types.
+    Note: Writes only fields that are lists of the specified types. (Does NOT check for union etc.)
     """
 
     if ensure_parent_dir_exists:
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
     fields = object.__class__.model_fields
-    pd.DataFrame(
+    df = pd.DataFrame(
         {
             field: getattr(object, field)
             for field, info in fields.items()
-            if _is_list(info.annotation, types)
+            if _is_list_of_any(info.annotation, types)
         }
-    ).to_csv(path, sep=" ", header=False, index=False)
+    )
+    df.to_csv(path, sep=" ", header=False, index=False)
+
+
+_is_list_of_any: Callable[[Any, list[type]], bool] = (
+    lambda a, types: get_origin(a) is list and get_args(a)[0] in types
+)
 
 
 def read(cls: Type[T], path: str) -> T:
