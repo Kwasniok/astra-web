@@ -476,19 +476,20 @@ class GeneratorData(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     input: GeneratorInput | None = Field(
-        description="Generator input as provided by the user."
+        description="Generator input as provided by the user. (Not available if raw ASTRA particle distribution was uploaded.)"
     )
     output: GeneratorOutput | None = Field(
         default=None,
         description="Generator output, if the generation has finished successfully.",
     )
     astra_input: str | None = Field(
-        default=None, description="Raw input file for ASTRA generator."
+        default=None,
+        description="Raw input file for ASTRA generator. (Not available if raw ASTRA particle distribution was uploaded.)",
     )
     astra_output: str | None = Field(
-        description="Raw output file from ASTRA generator."
+        description="Raw output file from ASTRA generator. (Not available if raw ASTRA particle distribution was uploaded.)"
     )
     meta: GeneratorMeta | None = Field(
         default=None,
-        description="Metadata associated with the particle distribution.",
+        description="Metadata associated with the particle distribution. (Only available if raw ASTRA particle distribution was uploaded.)",
     )
