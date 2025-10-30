@@ -7,7 +7,7 @@ from typing import Type, TypeVar
 
 from astra_web._aux import filter_has_prefix, get_filter_subtree
 from astra_web.file import read_json, read_txt, write_json, write_txt
-from astra_web.generator.schemas.particles import Particles
+from astra_web.generator.schemas.particles import Particles, ParticleCounts
 from astra_web.host_localizer import HostLocalizer
 from astra_web.simulation.schemas.auto_phase import CavityAutoPhaseTable
 from astra_web.status import DispatchStatus
@@ -128,12 +128,17 @@ def load_simulation_data(
             filter_out, "final_particle_counts"
         ):
             particle_paths = _particle_paths(sim_id, localizer)
+            if filter_out is not None and not filter_has_prefix(
+                filter_out, "particles"
+            ):
+                # just final counts -> load last only
+                particle_paths = particle_paths[-1:]
             particles = [Particles.read_from_csv(path) for path in particle_paths]
-            final_particle_counts = {
-                "total": len(particles[-1].x),
-                "active": int(sum(particles[-1].active_particles)),
-                "lost": int(sum(particles[-1].lost_particles)),
-            }
+            final_particle_counts = ParticleCounts(
+                total=len(particles[-1].x),
+                active=int(sum(particles[-1].active_particles)),
+                lost=int(sum(particles[-1].lost_particles)),
+            )
         else:
             particles = None
             final_particle_counts = None

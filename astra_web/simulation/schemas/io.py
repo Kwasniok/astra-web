@@ -1,7 +1,7 @@
 from typing import Any
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
-from astra_web.generator.schemas.particles import Particles
+from astra_web.generator.schemas.particles import Particles, ParticleCounts
 from astra_web.host_localizer.schemas.dispatch import DispatchResponse
 from astra_web.uuid import get_uuid
 from astra_web.file import IniExportableModel, IniExportableArrayModel
@@ -145,8 +145,8 @@ class SimulationOutput(BaseModel):
     particles: list[Particles] | None = Field(
         description="List of particle distributions at output positions."
     )
-    final_particle_counts: dict[str, int] | None = Field(
-        description="Number of particles - active, inactive, total."
+    final_particle_counts: ParticleCounts | None = Field(
+        description="Number of particles per final state."
     )
     norm_emittance_table_x: Transversal1DNormalizedEmittanceTable | None = Field(
         default=None

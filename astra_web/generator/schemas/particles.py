@@ -106,3 +106,11 @@ class Particles(BaseModel):
         data_dict["t"] = ref_particle["t_clock"] * 1e-9
 
         return ParticleGroup(data=data_dict)
+
+
+class ParticleCounts(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    total: int = Field(description="Total number of particles.")
+    active: int = Field(description="Number of active particles.")
+    lost: int = Field(description="Number of lost particles.")
