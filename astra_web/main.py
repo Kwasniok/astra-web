@@ -497,9 +497,13 @@ async def update_slurm_user_token(
     dependencies=[Depends(api_key_auth)],
     tags=["slurm"],
 )
-async def ping_slurm() -> dict[str, Any]:
+async def ping_slurm(
+    timeout: int | None = Query(
+        default=None, description="SLURM REST API request timeout in seconds."
+    ),
+) -> dict[str, Any]:
     slurm_localizer = SLURMHostLocalizer.instance()
-    return await slurm_localizer.ping()  # type: ignore
+    return await slurm_localizer.ping(timeout)  # type: ignore
 
 
 @app.get(
@@ -507,9 +511,13 @@ async def ping_slurm() -> dict[str, Any]:
     dependencies=[Depends(api_key_auth)],
     tags=["slurm"],
 )
-async def diagnose_slurm() -> dict[str, Any]:
+async def diagnose_slurm(
+    timeout: int | None = Query(
+        default=None, description="SLURM REST API request timeout in seconds."
+    ),
+) -> dict[str, Any]:
     slurm_localizer = SLURMHostLocalizer.instance()
-    return await slurm_localizer.diagnose()  # type: ignore
+    return await slurm_localizer.diagnose(timeout)  # type: ignore
 
 
 @app.get(
@@ -519,6 +527,9 @@ async def diagnose_slurm() -> dict[str, Any]:
 )
 async def list_slurm_jobs(
     states: set[SLURMJobState] = Query(default=set(), alias="state"),
+    timeout: int | None = Query(
+        default=None, description="SLURM REST API request timeout in seconds."
+    ),
 ) -> list[dict[str, Any]]:
     """
     Lists jobs currently managed by SLURM.
@@ -526,7 +537,7 @@ async def list_slurm_jobs(
     see: https://slurm.schedmd.com/rest_api.html#slurmdbV0043GetJobs
     """
     slurm_localizer = SLURMHostLocalizer.instance()
-    return await slurm_localizer.list_jobs(states=states)  # type: ignore
+    return await slurm_localizer.list_jobs(states=states, timeout=timeout)  # type: ignore
 
 
 @app.get(
@@ -536,6 +547,9 @@ async def list_slurm_jobs(
 )
 async def list_slurm_managed_ids(
     state: set[SLURMJobState] = Query(default=set()),
+    timeout: int | None = Query(
+        default=None, description="SLURM REST API request timeout in seconds."
+    ),
 ) -> JobIdsOutput:
     """
     Lists IDs of existing generations or simulations which have been dispatched to and are still remembered by SLURM.
@@ -545,5 +559,6 @@ async def list_slurm_managed_ids(
     slurm_localizer = SLURMHostLocalizer.instance()
     return await slurm_localizer.list_job_names(
         state=state,
+        timeout=timeout,
         local_localizer=LocalHostLocalizer.instance(),
     )

@@ -152,7 +152,7 @@ status=$?
             slurm_response=response,
         )
 
-    async def ping(self) -> JSON:
+    async def ping(self, timeout: int | None) -> JSON:
         """
         Pings the SLURM server to check if it is reachable.
 
@@ -163,12 +163,13 @@ status=$?
                 method=RequestMethod.GET,
                 midpoint="slurm",
                 endpoint="ping",
+                timeout=timeout,
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to ping SLURM.") from e
         return response
 
-    async def diagnose(self) -> JSON:
+    async def diagnose(self, timeout: int | None) -> JSON:
         """
         Diagnoses the connection to SLURM.
 
@@ -179,12 +180,17 @@ status=$?
                 method=RequestMethod.GET,
                 midpoint="slurm",
                 endpoint="diag",
+                timeout=timeout,
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to diagnose connection to SLURM.") from e
         return response
 
-    async def list_jobs(self, states: set[SLURMJobState]) -> list[JSON]:
+    async def list_jobs(
+        self,
+        states: set[SLURMJobState],
+        timeout: int | None,
+    ) -> list[JSON]:
         """
         Lists all jobs currently managed by SLURM.
         """
@@ -198,6 +204,7 @@ status=$?
                 midpoint="slurmdb",
                 endpoint="jobs",
                 body=data,
+                timeout=timeout,
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to list SLURM job IDs.") from e
@@ -212,12 +219,15 @@ status=$?
         return jobs
 
     async def list_job_names(
-        self, state: set[SLURMJobState], local_localizer: HostLocalizer
+        self,
+        state: set[SLURMJobState],
+        timeout: int | None,
+        local_localizer: HostLocalizer,
     ) -> JobIdsOutput:
         """
         Lists all IDs for jobs currently managed by SLURM.
         """
-        job_names: list[str] = [j["name"] for j in await self.list_jobs(state)]  # type: ignore
+        job_names: list[str] = [j["name"] for j in await self.list_jobs(state, timeout)]  # type: ignore
 
         response = JobIdsOutput(
             particles=[
@@ -246,17 +256,20 @@ status=$?
         midpoint: str,
         endpoint: str,
         body: JSON | None = None,
+        timeout: int | None = None,
     ) -> JSON:
 
         return await slurm.request(
             method=method,
             midpoint=midpoint,
             endpoint=endpoint,
-            body=body or {},
             url=self._config.base_url,
             api_version=self._config.api_version,
-            headers=self._header_credentials,
-            proxy_url=self._config.proxy_url,
             user_name=self._config.user_name,
             user_token=self._config.user_token,
+            headers=self._header_credentials,
+            body=body or {},
+            timeout=timeout,
+            proxy_url=self._config.proxy_url,
+            dry_run=None,
         )  # type: ignore
