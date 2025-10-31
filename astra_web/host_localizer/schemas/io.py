@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
 
-class JobIdsOutput(BaseModel):
-    particles: list[str] = Field(description="List of particle IDs.")
-    simulations: list[str] = Field(description="List of simulation IDs.")
+class JobNamesOutput(BaseModel):
+    particles: list[str] = Field(description="List of particle names.")
+    simulations: list[str] = Field(description="List of simulation names.")

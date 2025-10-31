@@ -37,7 +37,7 @@ from .host_localizer import (
     SLURMJobState,
 )
 from .host_localizer.schemas.config import SLURMConfiguration
-from .host_localizer.schemas.io import JobIdsOutput
+from .host_localizer.schemas.io import JobNamesOutput
 from .simulation.actions import (
     delete_simulation,
     dispatch_simulation_run,
@@ -541,18 +541,18 @@ async def list_slurm_jobs(
 
 
 @app.get(
-    "/slurm/jobs/ids",
+    "/slurm/jobs/names",
     dependencies=[Depends(api_key_auth)],
     tags=["slurm"],
 )
-async def list_slurm_managed_ids(
+async def list_slurm_managed_job_names(
     state: set[SLURMJobState] = Query(default=set()),
     timeout: int | None = Query(
         default=None, description="SLURM REST API request timeout in seconds."
     ),
-) -> JobIdsOutput:
+) -> JobNamesOutput:
     """
-    Lists IDs of existing generations or simulations which have been dispatched to and are still remembered by SLURM.
+    Lists job names of existing generations or simulations which have been dispatched to and are still remembered by SLURM.
 
     note: This means that jobs which have been deleted or are too old are not included in the list.
     """

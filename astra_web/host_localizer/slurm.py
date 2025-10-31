@@ -5,7 +5,7 @@ from slurm_requests import RequestMethod, SLURMJobState, JSON
 from .base import HostLocalizer
 from .schemas.config import SLURMConfiguration
 from .schemas.dispatch import DispatchResponse
-from .schemas.io import JobIdsOutput
+from .schemas.io import JobNamesOutput
 
 
 class SLURMHostLocalizer(HostLocalizer):
@@ -223,13 +223,13 @@ status=$?
         state: set[SLURMJobState],
         timeout: int | None,
         local_localizer: HostLocalizer,
-    ) -> JobIdsOutput:
+    ) -> JobNamesOutput:
         """
-        Lists all IDs for jobs currently managed by SLURM.
+        Lists all names for jobs currently managed by SLURM.
         """
         job_names: list[str] = [j["name"] for j in await self.list_jobs(state, timeout)]  # type: ignore
 
-        response = JobIdsOutput(
+        response = JobNamesOutput(
             particles=[
                 j.removeprefix(self.GENERATE_DISPATCH_NAME_PREFIX)
                 for j in job_names
