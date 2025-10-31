@@ -36,8 +36,11 @@ from .host_localizer import (
     SLURMHostLocalizer,
     SLURMJobState,
 )
-from .host_localizer.schemas.config import SLURMConfiguration
-from .host_localizer.schemas.io import JobNamesOutput
+from .host_localizer.schemas.slurm import (
+    SLURMConfiguration,
+    SLURMDispatchedIDsOutput,
+    SLURMDispatchedJobsOutput,
+)
 from .simulation.actions import (
     delete_simulation,
     dispatch_simulation_run,
@@ -84,7 +87,7 @@ app = FastAPI(
     description="This is an API wrapper for the ASTRA simulation code developed \
                  by K. Floettmann at DESY Hamburg. For more information, refer to the official \
                  [website](https://www.desy.de/~mpyflo/).",
-    version="3.0.0",
+    version="4.0.0",
     contact={
         "name": "Jens Kwasniok",
         "email": "jens.kwasniok@desy.de",
@@ -526,39 +529,36 @@ async def diagnose_slurm(
     tags=["slurm"],
 )
 async def list_slurm_jobs(
-    states: set[SLURMJobState] = Query(default=set(), alias="state"),
     timeout: int | None = Query(
         default=None, description="SLURM REST API request timeout in seconds."
     ),
-) -> list[dict[str, Any]]:
+) -> SLURMDispatchedJobsOutput:
     """
     Lists jobs currently managed by SLURM.
 
     see: https://slurm.schedmd.com/rest_api.html#slurmdbV0043GetJobs
     """
     slurm_localizer = SLURMHostLocalizer.instance()
-    return await slurm_localizer.list_jobs(states=states, timeout=timeout)  # type: ignore
+    return await slurm_localizer.list_jobs(timeout=timeout)
 
 
 @app.get(
-    "/slurm/jobs/names",
+    "/slurm/jobs/ids",
     dependencies=[Depends(api_key_auth)],
     tags=["slurm"],
 )
-async def list_slurm_managed_job_names(
-    state: set[SLURMJobState] = Query(default=set()),
+async def list_dispatched_ids_by_state(
+    state: SLURMJobState = Query(
+        default=None, description="Filter by SLURM job state."
+    ),
     timeout: int | None = Query(
         default=None, description="SLURM REST API request timeout in seconds."
     ),
-) -> JobNamesOutput:
+) -> SLURMDispatchedIDsOutput:
     """
-    Lists job names of existing generations or simulations which have been dispatched to and are still remembered by SLURM.
-
-    note: This means that jobs which have been deleted or are too old are not included in the list.
+    Lists all dispatched IDs currently managed by SLURM filtered by state.
     """
     slurm_localizer = SLURMHostLocalizer.instance()
-    return await slurm_localizer.list_job_names(
-        state=state,
-        timeout=timeout,
-        local_localizer=LocalHostLocalizer.instance(),
+    return await slurm_localizer.list_dispatched_ids_by_state(
+        state=state, timeout=timeout
     )

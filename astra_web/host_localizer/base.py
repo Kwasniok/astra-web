@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import os
 from astra_web.generator.schemas.io import GeneratorInput
 from astra_web.simulation.schemas.io import SimulationInput
-from .schemas.dispatch import DispatchResponse
+from .schemas.any import DispatchResponse
 
 
 class HostLocalizer(ABC):

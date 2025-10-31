@@ -2,7 +2,7 @@ import os
 from subprocess import run
 import threading
 from .base import HostLocalizer
-from .schemas.dispatch import DispatchResponse
+from .schemas.any import DispatchResponse
 
 
 class LocalHostLocalizer(HostLocalizer):

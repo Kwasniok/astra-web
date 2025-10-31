@@ -3,9 +3,14 @@ import os
 import slurm_requests as slurm
 from slurm_requests import RequestMethod, SLURMJobState, JSON
 from .base import HostLocalizer
-from .schemas.config import SLURMConfiguration
-from .schemas.dispatch import DispatchResponse
-from .schemas.io import JobNamesOutput
+from .schemas.any import DispatchResponse
+from .schemas.slurm import (
+    SLURMConfiguration,
+    SLURMDispatchedJobOutput,
+    SLURMDispatchedJobsOutput,
+    SLURMJobOutput,
+    SLURMDispatchedIDsOutput,
+)
 
 
 class SLURMHostLocalizer(HostLocalizer):
@@ -188,15 +193,14 @@ status=$?
 
     async def list_jobs(
         self,
-        states: set[SLURMJobState],
         timeout: int | None,
-    ) -> list[JSON]:
+    ) -> SLURMDispatchedJobsOutput:
         """
         Lists all jobs currently managed by SLURM.
         """
+
         data: JSON = {
             "users": self._config.user_name,
-            # state: does not work due to bug in SLURM REST API
         }
         try:
             response = await self._request(
@@ -208,47 +212,67 @@ status=$?
             )
         except RuntimeError as e:
             raise RuntimeError(f"Failed to list SLURM job IDs.") from e
-        # manual filtering due to bug in SLURM REST API
-        jobs: list[JSON] = response["jobs"]  # type: ignore
-        if states:
-            filter: Callable[[JSON], bool] = lambda j: bool(
-                set(s.lower() for s in j["state"]["current"])  # type: ignore
-                & set(s.value for s in states)
+
+        def extract(job: JSON) -> SLURMDispatchedJobOutput:
+            id: int = job["job_id"]  # type: ignore
+            name: str = job["name"]  # type: ignore
+            state: dict = job.get("state", {})  # type: ignore
+            current: list[SLURMJobState] = list(
+                SLURMJobState.select(s) for s in state.get("current", [])
             )
-            jobs = list(j for j in jobs if filter(j))
-        return jobs
+            reason: str = state.get("reason", "")  # type: ignore
+            return SLURMDispatchedJobOutput(
+                id=name.removeprefix(self.GENERATE_DISPATCH_NAME_PREFIX).removeprefix(
+                    self.SIMULATE_DISPATCH_NAME_PREFIX
+                ),
+                slurm=SLURMJobOutput(
+                    id=id,
+                    name=name,
+                    state_current=current,
+                    state_reason=reason,
+                ),
+            )
 
-    async def list_job_names(
-        self,
-        state: set[SLURMJobState],
-        timeout: int | None,
-        local_localizer: HostLocalizer,
-    ) -> JobNamesOutput:
-        """
-        Lists all names for jobs currently managed by SLURM.
-        """
-        job_names: list[str] = [j["name"] for j in await self.list_jobs(state, timeout)]  # type: ignore
+        def filter(jobs: list[JSON], prefix: str) -> list[JSON]:
+            return [job for job in jobs if job.get("name", "").startswith(prefix)]  # type: ignore
 
-        response = JobNamesOutput(
+        jobs_all: list[JSON] = response.get("jobs", [])  # type: ignore
+
+        jobs = SLURMDispatchedJobsOutput(
             particles=[
-                j.removeprefix(self.GENERATE_DISPATCH_NAME_PREFIX)
-                for j in job_names
-                if j.startswith(self.GENERATE_DISPATCH_NAME_PREFIX)
+                extract(job)
+                for job in filter(jobs_all, self.GENERATE_DISPATCH_NAME_PREFIX)
             ],
             simulations=[
-                j.removeprefix(self.SIMULATE_DISPATCH_NAME_PREFIX)
-                for j in job_names
-                if j.startswith(self.SIMULATE_DISPATCH_NAME_PREFIX)
+                extract(job)
+                for job in filter(jobs_all, self.SIMULATE_DISPATCH_NAME_PREFIX)
             ],
         )
 
-        # filter for managed ids
-        gen_ns = local_localizer.generator_ids
-        sim_ns = local_localizer.simulation_ids
-        response.particles = [n for n in response.particles if n in gen_ns]
-        response.simulations = [n for n in response.simulations if n in sim_ns]
+        return jobs
 
-        return response
+    async def list_dispatched_ids_by_state(
+        self,
+        state: SLURMJobState | None = None,
+        timeout: int | None = None,
+    ) -> SLURMDispatchedIDsOutput:
+        """
+        Lists all dispatched IDs currently managed by SLURM filtered by state.
+        """
+
+        jobs = await self.list_jobs(timeout=timeout)
+
+        def filter_and_extract(jobs: list[SLURMDispatchedJobOutput]) -> list[str]:
+            return [
+                job.id
+                for job in jobs
+                if state is not None and state in job.slurm.state_current
+            ]
+
+        return SLURMDispatchedIDsOutput(
+            particles=filter_and_extract(jobs.particles),
+            simulations=filter_and_extract(jobs.simulations),
+        )
 
     async def _request(
         self,

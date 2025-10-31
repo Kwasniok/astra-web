@@ -1,7 +1,7 @@
 from typing import Any
 from pydantic import BaseModel, Field, ConfigDict, computed_field
 from astra_web.file import IniExportableModel
-from astra_web.host_localizer.schemas.dispatch import DispatchResponse
+from astra_web.host_localizer.schemas.any import DispatchResponse
 from astra_web.uuid import get_uuid
 from .enums import Distribution, ParticleType
 from .particles import Particles
