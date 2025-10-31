@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-10-31
+
+### Added
+  - Optimization: Filter by comment option for feature table
+  - Optimization: Filter by id option for feature table
+  - Alias translation table
+
+### Changed
+  - various IO names
+  - SLURM-related API
+    - Simplified requests
+    - Extended configuration
+    - Added timeout
+    - Changed SLUR backend
+  - Particle IO
+  - Feature IO
+
+### Fixed
+  - Various bugs
 
 ## [3.0.0] - 2025-08-29
 
