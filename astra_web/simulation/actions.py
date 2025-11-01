@@ -269,7 +269,7 @@ def _load_astra_output_and_meta(
     status = get_simulation_status(sim_id, localizer)
 
     if not status == DispatchStatus.FINISHED:
-        return None, SimulationMetaData(status=DispatchStatus.PENDING)
+        return None, SimulationMetaData(status=DispatchStatus.UNFINISHED)
 
     run_output = read_txt(localizer.simulation_path(sim_id, "run.out"))
     finished_date = None
