@@ -111,69 +111,30 @@ def load_simulation_data(
     if not os.path.exists(localizer.simulation_path(sim_id)):
         return None
 
-    # input
-    if filter_has_prefix(include, "input"):
-        input = read_json(
-            SimulationInput, localizer.simulation_path(sim_id, "input.json")
-        )
-    else:
-        input = None
+    input = (
+        read_json(SimulationInput, localizer.simulation_path(sim_id, "input.json"))
+        if filter_has_prefix(include, "input")
+        else None
+    )
 
-    # output
-    if filter_has_prefix(include, "output"):
-        filter_out = get_filter_subtree(include, "output")
+    output = (
+        _load_output(sim_id, localizer, get_filter_subtree(include, "output"))
+        if filter_has_prefix(include, "output")
+        else None
+    )
 
-        # particles, final_particle_counts
-        if filter_has_prefix(filter_out, "particles") or filter_has_prefix(
-            filter_out, "final_particle_counts"
-        ):
-            particles, final_particle_counts = _load_particle_data(
-                sim_id, localizer, filter_out
-            )
-        else:
-            particles = None
-            final_particle_counts = None
+    astra_input = (
+        read_txt(localizer.simulation_path(sim_id, "run.in"))
+        if filter_has_prefix(include, "astra_input")
+        else None
+    )
 
-        # norm_emittance_table
-        if (
-            filter_has_prefix(filter_out, "norm_emittance_table_x")
-            or filter_has_prefix(filter_out, "norm_emittance_table_y")
-            or filter_has_prefix(filter_out, "norm_emittance_table_z")
-        ):
-            norm_emittance_x, norm_emittance_y, norm_emittance_z = (
-                _load_normalized_emittance(sim_id, localizer)
-            )
-        else:
-            norm_emittance_x, norm_emittance_y, norm_emittance_z = None, None, None
-
-        # trace_space_emittance_table
-        if filter_has_prefix(filter_out, "trace_space_emittance_table"):
-            tr_sp_emittance = _load_trace_space_emittance(sim_id, localizer)
-        else:
-            tr_sp_emittance = None
-
-        output = SimulationOutput(
-            particles=particles,
-            final_particle_counts=final_particle_counts,
-            norm_emittance_table_x=norm_emittance_x,
-            norm_emittance_table_y=norm_emittance_y,
-            norm_emittance_table_z=norm_emittance_z,
-            trace_space_emittance_table=tr_sp_emittance,
-        )
-    else:
-        output = None
-
-    # astra_input
-    if filter_has_prefix(include, "astra_input"):
-        astra_input = read_txt(localizer.simulation_path(sim_id, "run.in"))
-    else:
-        astra_input = None
-
-    # astra_output or meta
-    if filter_has_prefix(include, "astra_output") or filter_has_prefix(include, "meta"):
-        astra_output, meta = _extract_output(sim_id, localizer)
-    else:
-        astra_output, meta = None, None
+    astra_output, meta = (
+        _load_astra_output_and_meta(sim_id, localizer)
+        if filter_has_prefix(include, "astra_output")
+        or filter_has_prefix(include, "meta")
+        else (None, None)
+    )
 
     return SimulationDataWithMeta(
         input=input,
@@ -184,14 +145,57 @@ def load_simulation_data(
     )
 
 
+def _load_output(
+    sim_id: str,
+    localizer: HostLocalizer,
+    include: list[str] | None = None,
+) -> SimulationOutput:
+
+    particles, final_particle_counts = (
+        _load_particle_data(sim_id, localizer, include)
+        if filter_has_prefix(include, "particles")
+        or filter_has_prefix(include, "final_particle_counts")
+        else (None, None)
+    )
+
+    norm_emittance_x, norm_emittance_y, norm_emittance_z = (
+        _load_normalized_emittance(sim_id, localizer)
+        if (
+            filter_has_prefix(include, "norm_emittance_table_x")
+            or filter_has_prefix(include, "norm_emittance_table_y")
+            or filter_has_prefix(include, "norm_emittance_table_z")
+        )
+        else (None, None, None)
+    )
+
+    tr_sp_emittance = (
+        _load_trace_space_emittance(sim_id, localizer)
+        if filter_has_prefix(include, "trace_space_emittance_table")
+        else None
+    )
+
+    return SimulationOutput(
+        particles=particles,
+        final_particle_counts=final_particle_counts,
+        norm_emittance_table_x=norm_emittance_x,
+        norm_emittance_table_y=norm_emittance_y,
+        norm_emittance_table_z=norm_emittance_z,
+        trace_space_emittance_table=tr_sp_emittance,
+    )
+
+
 def _load_particle_data(
     sim_id, localizer, filter_out
 ) -> tuple[list[Particles], ParticleCounts]:
+
     particle_paths = _particle_paths(sim_id, localizer)
+
     if filter_out is not None and not filter_has_prefix(filter_out, "particles"):
-        # just final counts -> load last only
+        # if just final counts -> load final only
         particle_paths = particle_paths[-1:]
+
     particles = [Particles.read_from_csv(path) for path in particle_paths]
+
     final_particle_counts = ParticleCounts(
         total=len(particles[-1].x),
         active=int(sum(particles[-1].active_particles)),
@@ -258,7 +262,7 @@ def _load_trace_space_emittance(
         return None
 
 
-def _extract_output(
+def _load_astra_output_and_meta(
     sim_id: str, localizer: HostLocalizer
 ) -> tuple[str | None, SimulationMetaData]:
 

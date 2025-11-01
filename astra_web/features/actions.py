@@ -103,6 +103,8 @@ def get_features(
             raise ValueError(
                 f"Simulation with ID {sim_id} not found or is not finished yet."
             )
+        if sim.input is None:
+            raise ValueError(f"Simulation with ID {sim_id} has no input data.")
         gen_id = sim.input.run.generator_id
 
     if include_gen == []:
