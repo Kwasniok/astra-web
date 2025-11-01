@@ -127,17 +127,8 @@ def load_simulation_data(
         if filter_has_prefix(filter_out, "particles") or filter_has_prefix(
             filter_out, "final_particle_counts"
         ):
-            particle_paths = _particle_paths(sim_id, localizer)
-            if filter_out is not None and not filter_has_prefix(
-                filter_out, "particles"
-            ):
-                # just final counts -> load last only
-                particle_paths = particle_paths[-1:]
-            particles = [Particles.read_from_csv(path) for path in particle_paths]
-            final_particle_counts = ParticleCounts(
-                total=len(particles[-1].x),
-                active=int(sum(particles[-1].active_particles)),
-                lost=int(sum(particles[-1].lost_particles)),
+            particles, final_particle_counts = _load_particle_data(
+                sim_id, localizer, filter_out
             )
         else:
             particles = None
@@ -190,6 +181,31 @@ def load_simulation_data(
         input_astra=astra_input,
         output_astra=astra_output,
         meta=meta,
+    )
+
+
+def _load_particle_data(
+    sim_id, localizer, filter_out
+) -> tuple[list[Particles], ParticleCounts]:
+    particle_paths = _particle_paths(sim_id, localizer)
+    if filter_out is not None and not filter_has_prefix(filter_out, "particles"):
+        # just final counts -> load last only
+        particle_paths = particle_paths[-1:]
+    particles = [Particles.read_from_csv(path) for path in particle_paths]
+    final_particle_counts = ParticleCounts(
+        total=len(particles[-1].x),
+        active=int(sum(particles[-1].active_particles)),
+        lost=int(sum(particles[-1].lost_particles)),
+    )
+
+    return particles, final_particle_counts
+
+
+def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
+    files = glob.glob(localizer.simulation_path(id, "run.*[0-9].001"))
+    return sorted(
+        files,
+        key=lambda s: s.split(".")[1],
     )
 
 
@@ -383,14 +399,6 @@ def delete_simulation(sim_id: str, localizer: HostLocalizer) -> None:
     path = localizer.simulation_path(sim_id)
     if os.path.exists(path):
         rmtree(path)
-
-
-def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
-    files = glob.glob(localizer.simulation_path(id, "run.*[0-9].001"))
-    return sorted(
-        files,
-        key=lambda s: s.split(".")[1],
-    )
 
 
 def get_simulation_status(sim_id: str, localizer: HostLocalizer) -> DispatchStatus:
