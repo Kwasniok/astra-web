@@ -119,26 +119,29 @@ def compress_simulation(
     if not os.path.exists(localizer.simulation_path(sim_id)):
         raise ValueError(f"Simulation with ID {sim_id} not found.")
 
-    paths = _particle_paths(sim_id, localizer)
-    keys = [k for k in map(lambda p: p.split(".")[-2], paths)]
-    data: dict[str, np.typing.NDArray] = {
-        k: _np_loadtxt_with_precision(p, precision, max_rel_err)
-        for k, p in zip(keys, paths)
-    }
+    try:
+        paths = _particle_paths(sim_id, localizer)
+        keys = [k for k in map(lambda p: p.split(".")[-2], paths)]
+        data: dict[str, np.typing.NDArray] = {
+            k: _np_loadtxt_with_precision(p, precision, max_rel_err)
+            for k, p in zip(keys, paths)
+        }
 
-    if len(data) > 0:
-        compressed_path = localizer.simulation_path(
-            sim_id,
-            f"run.{keys[0]}-{keys[-1]}.001.{precision.value}.compressed.npz",
-        )
-        np.savez_compressed(
-            compressed_path,
-            **data,
-            allow_pickle=False,
-        )
-        if os.path.exists(compressed_path):
-            for p in paths:
-                os.remove(p)
+        if len(data) > 0:
+            compressed_path = localizer.simulation_path(
+                sim_id,
+                f"run.{keys[0]}-{keys[-1]}.001.{precision.value}.compressed.npz",
+            )
+            np.savez_compressed(
+                compressed_path,
+                **data,
+                allow_pickle=False,
+            )
+            if os.path.exists(compressed_path):
+                for p in paths:
+                    os.remove(p)
+    except ValueError as e:
+        raise RuntimeError(f"Failed to compress simulation with ID {sim_id}.") from e
 
 
 def _np_loadtxt_with_precision(
@@ -184,19 +187,22 @@ def uncompress_simulation(
     if not os.path.exists(localizer.simulation_path(sim_id)):
         raise ValueError(f"Simulation with ID {sim_id} not found.")
 
-    compressed_path = _compressed_particle_path(sim_id, localizer)
-    if compressed_path is None:
-        return
+    try:
+        compressed_path = _compressed_particle_path(sim_id, localizer)
+        if compressed_path is None:
+            return
 
-    data = np.load(compressed_path)
+        data = np.load(compressed_path)
 
-    for k in data.keys():
-        particle_path = localizer.simulation_path(sim_id, f"run.{k:04d}.001")
-        float_fmt = "%20.12E" if high_precision else "%20.4E"
-        int_fmt = "%4d"
-        np.savetxt(particle_path, data[k], fmt=[float_fmt] * 8 + [int_fmt] * 2)
+        for k in data.keys():
+            particle_path = localizer.simulation_path(sim_id, f"run.{k}.001")
+            float_fmt = "%20.12E" if high_precision else "%20.4E"
+            int_fmt = "%4d"
+            np.savetxt(particle_path, data[k], fmt=[float_fmt] * 8 + [int_fmt] * 2)
 
-    os.remove(compressed_path)
+        os.remove(compressed_path)
+    except ValueError as e:
+        raise RuntimeError(f"Failed to uncompress simulation with ID {sim_id}.") from e
 
 
 def load_simulation_data(
@@ -319,7 +325,7 @@ def _compressed_particle_path(sim_id: str, localizer: HostLocalizer) -> str | No
         raise RuntimeError(
             f"Multiple compressed particle files found for simulation with ID {sim_id}."
         )
-    return paths[0] if len(paths) == 0 else None
+    return paths[0] if len(paths) == 1 else None
 
 
 def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
