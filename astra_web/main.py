@@ -387,6 +387,14 @@ async def delete_simulation_(
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
     description="Internally compresses some simulation files to save disk space on server. Deletes original files. Compression can be LOSSY!",
+    responses={
+        200: {"description": "Simulation compressed successfully."},
+        400: {
+            "description": "Invalid compression parameters. E.g. caused by low `max_rel_err` for a given `precision`."
+        },
+        404: {"description": "Simulation not found."},
+        409: {"description": "Simulation is already compressed."},
+    },
 )
 async def compress_simulation_(
     sim_id: str,
@@ -429,6 +437,10 @@ async def compress_simulation_(
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
     description="Internally uncompresses previously compressed simulation files if available. Restored data may not be identical to original data due to LOSSY compression.",
+    responses={
+        200: {"description": "Simulation uncompressed successfully."},
+        404: {"description": "Simulation not found."},
+    },
 )
 async def uncompress_simulation_(
     sim_id: str,
