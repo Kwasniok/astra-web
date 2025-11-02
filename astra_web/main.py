@@ -152,7 +152,7 @@ def list_particle_distribution_ids(
 @app.get(
     "/particles/states",
     dependencies=[Depends(api_key_auth)],
-    tags=["simulations"],
+    tags=["particles"],
 )
 async def _list_particle_distribution_states(
     gen_ids=Body(default=None, examples=[["gen_id_1", "gen_id_2"]]),
