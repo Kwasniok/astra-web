@@ -105,19 +105,29 @@ def compress_simulation(
     """
     Compresses some simulation output files to save disk space.
 
-    **WARNING**: Deletes original files.
+    **WARNING**: **Deletes original files**.
 
-    **WARNING**: Compression may be lossy, and is intended for reducing disk usage.
+    **WARNING**: Compression may be **lossy**, and is intended for reducing disk usage.
+
+    **INFO**: Compression is **not idempotent**. Uncompress first before compressing again.
 
     - Compressed files:
         - Particle distribution files `run.0000.001` ... `run.<N>.001` -> `run.0000-<N>.001.f<P>.compressed.npz`
 
     Raises:
         ValueError: If the simulation with the given ID does not exist.
+        FileExistsError: If the simulation is already compressed.
         RuntimeError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
     """
     if not os.path.exists(localizer.simulation_path(sim_id)):
         raise ValueError(f"Simulation with ID {sim_id} not found.")
+
+    if glob.glob(
+        localizer.simulation_path(sim_id, "run.*[0-9]-*[0-9].001.f*.compressed.npz")
+    ):
+        raise FileExistsError(
+            f"Simulation with ID {sim_id} is already compressed. Uncompress first."
+        )
 
     try:
         paths = _particle_paths(sim_id, localizer)
@@ -177,6 +187,8 @@ def uncompress_simulation(
 
     - Uncompressed files:
         - Particle distribution files `run.0000-<N>.f<P>.compressed.npz` -> `run.0000.001` ... `run.<N>.001`
+
+    - Note: Uncompression is an **idempotent** operation.
 
     Args:
         high_precision (bool): If `True`, writes floating point numbers with high precision (12 digits after the decimal point).  If `False`, uses 4 digits after the decimal point. See ASTRA documentation for details.

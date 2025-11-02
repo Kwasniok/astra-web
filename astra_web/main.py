@@ -411,6 +411,11 @@ async def compress_simulation_(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         )
+    except FileExistsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e),
+        )
 
 
 @app.put(
