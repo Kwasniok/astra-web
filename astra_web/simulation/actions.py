@@ -543,7 +543,11 @@ def list_simulation_states(
     )
 
 
-def delete_simulation(sim_id: str, localizer: HostLocalizer) -> None:
+def delete_simulation(
+    sim_id: str,
+    localizer: HostLocalizer,
+    force: bool = False,
+) -> None:
     """
     Deletes the simulation directory for a given simulation ID.
     """

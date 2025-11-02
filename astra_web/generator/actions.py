@@ -180,27 +180,30 @@ def list_particle_distribution_states(
 
 
 def delete_particle_distribution(
-    gen_id: str, localizer: HostLocalizer
+    gen_id: str,
+    localizer: HostLocalizer,
+    force: bool = False,
 ) -> list[str] | None:
     """
     Deletes the particle distribution file for a given generator ID.
 
-    Returns a list of symlinks that are referencing the distribution file and blocking the deletion.
+    Returns a list of symlinks that are referencing the distribution file and blocking the deletion when not forced. Otherwise, returns None.
     """
     path = localizer.generator_path(gen_id)
     if not os.path.exists(path):
         return
 
-    # delete only when nothing is referencing it
-    links = find_symlinks(
-        localizer.generator_path(gen_id, "distribution.ini"),
-        localizer.data_path(),
-        link_name="run.0000.001",
-    )
-    if len(links) > 0:
-        return links
+    if not force:
+        # delete only when nothing is referencing it
+        links = find_symlinks(
+            localizer.generator_path(gen_id, "distribution.ini"),
+            localizer.data_path(),
+            link_name="run.0000.001",
+        )
+        if len(links) > 0:
+            return links
+        # now its safe to remove
 
-    # now its safe to remove
     rmtree(path)
     return
 

@@ -25,26 +25,31 @@ def read_field_table(file_name: str, localizer: HostLocalizer) -> FieldTable:
     return FieldTable.read_from_csv(path)
 
 
-def delete_field_table(file_name: str, localizer: HostLocalizer) -> list[str]:
+def delete_field_table(
+    file_name: str,
+    localizer: HostLocalizer,
+    force: bool = False,
+) -> list[str]:
     """
     Deletes the field table from disk.
 
-    Returns a list of symlinks that are referencing to the field file and blocking the deletion.
+    Returns a list of symlinks that are referencing to the field file and blocking the deletion when not forced. Otherwise, returns None.
     """
     path = localizer.field_path(file_name)
     if not os.path.exists(path):
         return []
 
-    # delete only when nothing is referencing it
-    links = find_symlinks(
-        path,
-        localizer.data_path(),
-        link_name=file_name,
-    )
-    if len(links) > 0:
-        return links
+    if not force:
+        # delete only when nothing is referencing it
+        links = find_symlinks(
+            path,
+            localizer.data_path(),
+            link_name=file_name,
+        )
+        if len(links) > 0:
+            return links
+        # now it's safe to remove
 
-    # now it's safe to remove
     os.remove(path)
     return []
 

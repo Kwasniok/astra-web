@@ -219,9 +219,15 @@ def download_generator_results(gen_id: str) -> GeneratorData:
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
 )
-async def delete_particle_distribution_(gen_id: str) -> None:
+async def delete_particle_distribution_(
+    gen_id: str,
+    force: bool = Query(
+        default=False,
+        description="If true, deletes the particle distribution even if it is referenced by simulations.",
+    ),
+) -> None:
     localizer = LocalHostLocalizer.instance()
-    blocking_links = delete_particle_distribution(gen_id, localizer)
+    blocking_links = delete_particle_distribution(gen_id, localizer, force=force)
     if blocking_links is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -277,9 +283,15 @@ async def upload_field_table_(file_name: str, table: FieldTable) -> None:
     dependencies=[Depends(api_key_auth)],
     tags=["fields"],
 )
-async def delete_field_table_(file_name: str) -> None:
+async def delete_field_table_(
+    file_name: str,
+    force: bool = Query(
+        default=False,
+        description="If true, forces deletion even if the field table is referenced by a simulation.",
+    ),
+) -> None:
     localizer = LocalHostLocalizer.instance()
-    blocking_links = delete_field_table(file_name, localizer)
+    blocking_links = delete_field_table(file_name, localizer, force=force)
     if blocking_links:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -358,9 +370,15 @@ def download_simulation_data(sim_id: str) -> SimulationDataWithMeta:
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
 )
-async def delete_simulation_(sim_id: str) -> None:
+async def delete_simulation_(
+    sim_id: str,
+    force: bool = Query(
+        default=False,
+        description="If true, deletes the simulation even if it is referenced by other entities.",
+    ),
+) -> None:
     localizer = LocalHostLocalizer.instance()
-    return delete_simulation(sim_id, localizer)
+    return delete_simulation(sim_id, localizer, force=force)
 
 
 @app.put(
