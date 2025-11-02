@@ -12,6 +12,7 @@ from astra_web.file import read_json, read_txt, write_json, write_txt
 from astra_web.generator.schemas.particles import Particles, ParticleCounts
 from astra_web.host_localizer import HostLocalizer
 from astra_web.simulation.schemas.auto_phase import CavityAutoPhaseTable
+from astra_web.simulation.schemas.compression import CompressionReport
 from astra_web.status import DispatchStatus
 
 from .schemas.emittance_table import (
@@ -107,7 +108,7 @@ def compress_simulation(
     localizer: HostLocalizer,
     precision: FloatPrecision = FloatPrecision.FLOAT64,
     max_rel_err: float = 1e-4,
-) -> None:
+) -> CompressionReport | None:
     """
     Compresses some simulation output files to save disk space.
 
@@ -120,11 +121,16 @@ def compress_simulation(
     - Compressed files:
         - Particle distribution files `run.0000.001` ... `run.<N>.001` -> `run.0000-<N>.001.f<P>.compressed.npz`
 
+    Returns:
+        - `CompressionReport` summarizing the compression operation.
+        - `None` if there is nothing to be compressed.
+
     Raises:
         ValueError: If the simulation with the given ID does not exist.
         FileExistsError: If the simulation is already compressed.
         CompressionError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
     """
+
     if not os.path.exists(localizer.simulation_path(sim_id)):
         raise ValueError(f"Simulation with ID {sim_id} not found.")
 
@@ -136,6 +142,9 @@ def compress_simulation(
         )
 
     paths = _particle_paths(sim_id, localizer)
+
+    total_original_size = sum(os.path.getsize(p) for p in paths)
+
     keys = [k for k in map(lambda p: p.split(".")[-2], paths)]
     data: dict[str, np.typing.NDArray] = {
         k: _np_loadtxt_with_precision(p, precision, max_rel_err)
@@ -155,6 +164,18 @@ def compress_simulation(
         if os.path.exists(compressed_path):
             for p in paths:
                 os.remove(p)
+
+        total_new_size = os.path.getsize(compressed_path)
+
+        return CompressionReport(
+            original_files=[os.path.basename(p) for p in paths],
+            new_files=[os.path.basename(compressed_path)],
+            total_original_size=total_original_size,
+            total_new_size=total_new_size,
+            compression_ratio=(total_original_size / total_new_size),
+        )
+
+    return None
 
 
 def _np_loadtxt_with_precision(
@@ -184,7 +205,7 @@ def uncompress_simulation(
     sim_id: str,
     localizer: HostLocalizer,
     high_precision: bool = True,
-) -> None:
+) -> CompressionReport | None:
     """
     Uncompresses previously compressed simulation output files if available.
 
@@ -196,17 +217,24 @@ def uncompress_simulation(
     Args:
         high_precision (bool): If `True`, writes floating point numbers with high precision (12 digits after the decimal point).  If `False`, uses 4 digits after the decimal point. See ASTRA documentation for details.
 
+    Returns:
+        - `CompressionReport` summarizing the uncompression operation.
+        - `None` if the simulation is already uncompressed.
+
     Raises:
         ValueError: If the simulation with the given ID does not exist.
     """
     if not os.path.exists(localizer.simulation_path(sim_id)):
         raise ValueError(f"Simulation with ID {sim_id} not found.")
 
-    try:
-        compressed_path = _compressed_particle_path(sim_id, localizer)
-        if compressed_path is None:
-            return
+    compressed_path = _compressed_particle_path(sim_id, localizer)
+    if compressed_path is None:
+        # already uncompressed
+        return None
 
+    total_original_size = os.path.getsize(compressed_path)
+
+    try:
         data = np.load(compressed_path)
 
         for k in data.keys():
@@ -214,10 +242,23 @@ def uncompress_simulation(
             float_fmt = "%20.12E" if high_precision else "%20.4E"
             int_fmt = "%4d"
             np.savetxt(particle_path, data[k], fmt=[float_fmt] * 8 + [int_fmt] * 2)
-
-        os.remove(compressed_path)
     except ValueError as e:
         raise RuntimeError(f"Failed to uncompress simulation with ID {sim_id}.") from e
+
+    os.remove(compressed_path)
+
+    total_new_size = sum(
+        os.path.getsize(localizer.simulation_path(sim_id, f"run.{k}.001"))
+        for k in data.keys()
+    )
+
+    return CompressionReport(
+        original_files=[os.path.basename(compressed_path)],
+        new_files=[f"run.{k}.001" for k in data.keys()],
+        total_original_size=total_original_size,
+        total_new_size=total_new_size,
+        compression_ratio=(total_original_size / total_new_size),
+    )
 
 
 def load_simulation_data(

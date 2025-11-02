@@ -57,6 +57,7 @@ from .simulation.schemas.io import (
     SimulationDispatchOutput,
     SimulationInput,
 )
+from .simulation.schemas.compression import CompressionReport
 from .status import DispatchStatus
 
 tags_metadata = [
@@ -388,7 +389,9 @@ async def delete_simulation_(
     tags=["simulations"],
     description="Internally compresses some simulation files to save disk space on server. Deletes original files. Compression can be LOSSY!",
     responses={
-        200: {"description": "Simulation compressed successfully."},
+        200: {
+            "description": "Simulation compressed successfully. Returns `None` if there is nothing to be compressed."
+        },
         400: {
             "description": "Invalid compression parameters. E.g. caused by low `max_rel_err` for a given `precision`."
         },
@@ -406,7 +409,7 @@ async def compress_simulation_(
         default=1e-4,
         description="Maximum allowed element-wise relative error during lossy compression.",
     ),
-) -> None:
+) -> CompressionReport | None:
     localizer = LocalHostLocalizer.instance()
     try:
         return compress_simulation(
@@ -436,9 +439,11 @@ async def compress_simulation_(
     "/simulations/{sim_id}/uncompress",
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
-    description="Internally uncompresses previously compressed simulation files if available. Restored data may not be identical to original data due to LOSSY compression.",
+    description="Internally uncompresses previously compressed simulation files if available. Restored data may not be identical to original data due to LOSSY compression!",
     responses={
-        200: {"description": "Simulation uncompressed successfully."},
+        200: {
+            "description": "Simulation uncompressed successfully. Returns `None` if simulation is not compressed."
+        },
         404: {"description": "Simulation not found."},
     },
 )
@@ -448,7 +453,7 @@ async def uncompress_simulation_(
         default=True,
         description="If `true`, writes floating point numbers with high precision (12 digits after the decimal point).  If `false`, uses 4 digits after the decimal point. See ASTRA documentation for details.",
     ),
-) -> None:
+) -> CompressionReport | None:
     localizer = LocalHostLocalizer.instance()
     try:
         return uncompress_simulation(sim_id, localizer, high_precision=high_precision)
