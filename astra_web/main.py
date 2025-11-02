@@ -5,6 +5,7 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Query, status
 from fastapi.responses import ORJSONResponse, RedirectResponse
 from pydantic import BaseModel
 
+from .dtypes import FloatPrecision
 from .auth.auth_schemes import api_key_auth
 from .features.actions import (
     get_all_varying_features,
@@ -42,11 +43,13 @@ from .host_localizer.schemas.slurm import (
     SLURMDispatchedJobsOutput,
 )
 from .simulation.actions import (
+    compress_simulation,
     delete_simulation,
     dispatch_simulation_run,
     list_simulation_ids,
     list_simulation_states,
     load_simulation_data,
+    uncompress_simulation,
 )
 from .simulation.schemas.io import (
     SimulationDataWithMeta,
@@ -358,6 +361,61 @@ def download_simulation_data(sim_id: str) -> SimulationDataWithMeta:
 async def delete_simulation_(sim_id: str) -> None:
     localizer = LocalHostLocalizer.instance()
     return delete_simulation(sim_id, localizer)
+
+
+@app.put(
+    "/simulations/{sim_id}/compress",
+    dependencies=[Depends(api_key_auth)],
+    tags=["simulations"],
+    description="Internally compresses some simulation files to save disk space on server. Deletes original files. Compression can be LOSSY!",
+)
+async def compress_simulation_(
+    sim_id: str,
+    precision: FloatPrecision = Query(
+        default=FloatPrecision.FLOAT64,
+        description="Floating point data type to be used internally.",
+    ),
+    max_rel_err: float = Query(
+        default=1e-4,
+        description="Maximum allowed element-wise relative error during lossy compression.",
+    ),
+) -> None:
+    localizer = LocalHostLocalizer.instance()
+    try:
+        return compress_simulation(
+            sim_id,
+            localizer,
+            precision=precision,
+            max_rel_err=max_rel_err,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+
+@app.put(
+    "/simulations/{sim_id}/uncompress",
+    dependencies=[Depends(api_key_auth)],
+    tags=["simulations"],
+    description="Internally uncompresses previously compressed simulation files if available. Restored data may not be identical to original data due to LOSSY compression.",
+)
+async def uncompress_simulation_(
+    sim_id: str,
+    high_precision: bool = Query(
+        default=True,
+        description="If `true`, writes floating point numbers with high precision (12 digits after the decimal point).  If `false`, uses 4 digits after the decimal point. See ASTRA documentation for details.",
+    ),
+) -> None:
+    localizer = LocalHostLocalizer.instance()
+    try:
+        return uncompress_simulation(sim_id, localizer, high_precision=high_precision)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
 
 
 # note: get is not allowed with a body, so post is used as a workaround

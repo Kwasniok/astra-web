@@ -76,6 +76,33 @@ class Particles(BaseModel):
     def read_from_csv(cls: Type[T], path: str) -> T:
         return read_csv(cls, path)
 
+    @classmethod
+    def from_array(cls: Type[T], array: np.typing.NDArray) -> T:
+        """
+        Create Particles instance from numpy array.
+
+        - Index: `[<row>, <col>]`
+        """
+        # prefer hard coded fields to avoid issues with pydantic introspection
+        columns = [
+            ("x", float),
+            ("y", float),
+            ("z", float),
+            ("px", float),
+            ("py", float),
+            ("pz", float),
+            ("t_clock", float),
+            ("macro_charge", float),
+            ("species", int),
+            ("status_flag", int),
+        ]
+        return cls(
+            **{
+                col: array[:, i].astype(dtype).tolist()
+                for i, (col, dtype) in enumerate(columns)
+            }
+        )
+
     def to_df(self):
         return pd.DataFrame(self.model_dump())
 

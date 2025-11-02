@@ -3,8 +3,10 @@ import os
 import re
 from datetime import datetime
 from shutil import rmtree
-from typing import Type, TypeVar
+from typing import Any, Type, TypeVar
+import numpy as np
 
+from astra_web.dtypes import FloatPrecision
 from astra_web._aux import filter_has_prefix, get_filter_subtree
 from astra_web.file import read_json, read_txt, write_json, write_txt
 from astra_web.generator.schemas.particles import Particles, ParticleCounts
@@ -92,6 +94,109 @@ def _link_field_file(file_name: str, run_dir: str, localizer: HostLocalizer):
     target = localizer.field_path(file_name)
     target = os.path.relpath(target, localizer.simulation_path(run_dir))
     os.symlink(target, localizer.simulation_path(run_dir, file_name))
+
+
+def compress_simulation(
+    sim_id: str,
+    localizer: HostLocalizer,
+    precision: FloatPrecision = FloatPrecision.FLOAT64,
+    max_rel_err: float = 1e-4,
+) -> None:
+    """
+    Compresses some simulation output files to save disk space.
+
+    **WARNING**: Deletes original files.
+
+    **WARNING**: Compression may be lossy, and is intended for reducing disk usage.
+
+    - Compressed files:
+        - Particle distribution files `run.0000.001` ... `run.<N>.001` -> `run.0000-<N>.001.f<P>.compressed.npz`
+
+    Raises:
+        ValueError: If the simulation with the given ID does not exist.
+        RuntimeError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
+    """
+    if not os.path.exists(localizer.simulation_path(sim_id)):
+        raise ValueError(f"Simulation with ID {sim_id} not found.")
+
+    paths = _particle_paths(sim_id, localizer)
+    keys = [k for k in map(lambda p: p.split(".")[-2], paths)]
+    data: dict[str, np.typing.NDArray] = {
+        k: _np_loadtxt_with_precision(p, precision, max_rel_err)
+        for k, p in zip(keys, paths)
+    }
+
+    if len(data) > 0:
+        compressed_path = localizer.simulation_path(
+            sim_id,
+            f"run.{keys[0]}-{keys[-1]}.001.{precision.value}.compressed.npz",
+        )
+        np.savez_compressed(
+            compressed_path,
+            **data,
+            allow_pickle=False,
+        )
+        if os.path.exists(compressed_path):
+            for p in paths:
+                os.remove(p)
+
+
+def _np_loadtxt_with_precision(
+    path: str,
+    precision: FloatPrecision,
+    max_rel_err: float,
+) -> np.typing.NDArray:
+    """
+    Loads a text file with numpy and converts it to the specified precision.
+
+    Raises:
+        RuntimeError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
+    """
+    data = np.loadtxt(path)
+    data_compressed = data.astype(precision.numpy_dtype())
+
+    rel_error = lambda x, y: np.max(np.abs(x - y) / np.maximum(np.abs(x), 1e-12))
+    if rel_error(data, data_compressed) > max_rel_err:
+        raise RuntimeError(
+            f"Compression of particle data in file {path} exceeds maximum relative error of {max_rel_err}."
+        )
+
+    return data_compressed
+
+
+def uncompress_simulation(
+    sim_id: str,
+    localizer: HostLocalizer,
+    high_precision: bool = True,
+) -> None:
+    """
+    Uncompresses previously compressed simulation output files if available.
+
+    - Uncompressed files:
+        - Particle distribution files `run.0000-<N>.f<P>.compressed.npz` -> `run.0000.001` ... `run.<N>.001`
+
+    Args:
+        high_precision (bool): If `True`, writes floating point numbers with high precision (12 digits after the decimal point).  If `False`, uses 4 digits after the decimal point. See ASTRA documentation for details.
+
+    Raises:
+        ValueError: If the simulation with the given ID does not exist.
+    """
+    if not os.path.exists(localizer.simulation_path(sim_id)):
+        raise ValueError(f"Simulation with ID {sim_id} not found.")
+
+    compressed_path = _compressed_particle_path(sim_id, localizer)
+    if compressed_path is None:
+        return
+
+    data = np.load(compressed_path)
+
+    for k in data.keys():
+        particle_path = localizer.simulation_path(sim_id, f"run.{k:04d}.001")
+        float_fmt = "%20.12E" if high_precision else "%20.4E"
+        int_fmt = "%4d"
+        np.savetxt(particle_path, data[k], fmt=[float_fmt] * 8 + [int_fmt] * 2)
+
+    os.remove(compressed_path)
 
 
 def load_simulation_data(
@@ -185,16 +290,17 @@ def _load_output(
 
 
 def _load_particle_data(
-    sim_id, localizer, filter_out
+    sim_id, localizer, include
 ) -> tuple[list[Particles], ParticleCounts]:
 
-    particle_paths = _particle_paths(sim_id, localizer)
-
-    if filter_out is not None and not filter_has_prefix(filter_out, "particles"):
-        # if just final counts -> load final only
-        particle_paths = particle_paths[-1:]
-
-    particles = [Particles.read_from_csv(path) for path in particle_paths]
+    final_only = include is not None and not filter_has_prefix(include, "particles")
+    compressed_path = _compressed_particle_path(sim_id, localizer)
+    if compressed_path is None:
+        particles = _load_particle_data_from_raw_files(sim_id, localizer, final_only)
+    else:
+        particles = _load_particle_data_from_compressed_file(
+            compressed_path, final_only
+        )
 
     final_particle_counts = ParticleCounts(
         total=len(particles[-1].x),
@@ -205,12 +311,53 @@ def _load_particle_data(
     return particles, final_particle_counts
 
 
+def _compressed_particle_path(sim_id: str, localizer: HostLocalizer) -> str | None:
+    paths = glob.glob(
+        localizer.simulation_path(sim_id, "run.*[0-9]-*[0-9].001.f*.compressed.npz")
+    )
+    if len(paths) > 1:
+        raise RuntimeError(
+            f"Multiple compressed particle files found for simulation with ID {sim_id}."
+        )
+    return paths[0] if len(paths) == 0 else None
+
+
 def _particle_paths(id: str, localizer: HostLocalizer) -> list[str]:
     files = glob.glob(localizer.simulation_path(id, "run.*[0-9].001"))
     return sorted(
         files,
         key=lambda s: s.split(".")[1],
     )
+
+
+def _load_particle_data_from_raw_files(
+    sim_id: str, localizer: HostLocalizer, final_only: bool = False
+) -> list[Particles]:
+
+    particle_paths = _particle_paths(sim_id, localizer)
+
+    if final_only:
+        particle_paths = particle_paths[-1:]
+
+    particles = [Particles.read_from_csv(path) for path in particle_paths]
+
+    return particles
+
+
+def _load_particle_data_from_compressed_file(
+    compressed_path: str,
+    final_only: bool = False,
+) -> list[Particles]:
+    data = np.load(compressed_path)
+
+    particle_keys = sorted(data.keys())
+
+    if final_only:
+        particle_keys = particle_keys[-1:]
+
+    particles = [Particles.from_array(data[k]) for k in particle_keys]
+
+    return particles
 
 
 def get_generator_id(sim_id: str, localizer: HostLocalizer) -> str:
