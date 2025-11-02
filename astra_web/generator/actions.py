@@ -146,7 +146,7 @@ def _load_meta(gen_id: str, localizer: HostLocalizer) -> GeneratorMeta | None:
 
 def list_generator_ids(
     localizer: HostLocalizer,
-    state: DispatchStatus,
+    state: DispatchStatus | None = None,
 ) -> list[str]:
     """
     Lists IDs of particle distribution generations.
@@ -157,7 +157,7 @@ def list_generator_ids(
         glob.glob(localizer.generator_path("*")),
     )
 
-    if state == DispatchStatus.ANY:
+    if state is None:
         return sorted(ids_all)
     else:
         return sorted(
@@ -173,7 +173,7 @@ def list_particle_distribution_states(
     Returns the current state of the particle distributions.
     """
     if gen_ids is None:
-        gen_ids = list_generator_ids(localizer, DispatchStatus.ANY)
+        gen_ids = list_generator_ids(localizer)
     return list(
         (gen_id, get_generation_status(gen_id, localizer)) for gen_id in gen_ids
     )

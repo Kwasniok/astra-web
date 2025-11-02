@@ -40,7 +40,7 @@ def make_simulation_feature_table(
     """
 
     if sim_ids is None:
-        sim_ids = list_simulation_ids(localizer, DispatchStatus.ANY)
+        sim_ids = list_simulation_ids(localizer)
 
     feature_table: dict[str, list[Any]] = {col: [] for col in features}
     feature_tree = _build_tree(features)
