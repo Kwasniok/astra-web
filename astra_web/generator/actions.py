@@ -195,7 +195,7 @@ def delete_particle_distribution(
     links = find_symlinks(
         localizer.generator_path(gen_id, "distribution.ini"),
         localizer.data_path(),
-        link_name="distribution.ini",
+        link_name="run.0000.001",
     )
     if len(links) > 0:
         return links
