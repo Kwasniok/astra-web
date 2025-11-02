@@ -43,6 +43,7 @@ from .host_localizer.schemas.slurm import (
     SLURMDispatchedJobsOutput,
 )
 from .simulation.actions import (
+    CompressionError,
     compress_simulation,
     delete_simulation,
     dispatch_simulation_run,
@@ -405,6 +406,11 @@ async def compress_simulation_(
             localizer,
             precision=precision,
             max_rel_err=max_rel_err,
+        )
+    except CompressionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
         )
     except ValueError as e:
         raise HTTPException(

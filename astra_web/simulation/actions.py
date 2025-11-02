@@ -96,6 +96,12 @@ def _link_field_file(file_name: str, run_dir: str, localizer: HostLocalizer):
     os.symlink(target, localizer.simulation_path(run_dir, file_name))
 
 
+class CompressionError(ValueError):
+    """Raised when compression fails e.g. due to exceeding maximum relative error."""
+
+    pass
+
+
 def compress_simulation(
     sim_id: str,
     localizer: HostLocalizer,
@@ -117,7 +123,7 @@ def compress_simulation(
     Raises:
         ValueError: If the simulation with the given ID does not exist.
         FileExistsError: If the simulation is already compressed.
-        RuntimeError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
+        CompressionError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
     """
     if not os.path.exists(localizer.simulation_path(sim_id)):
         raise ValueError(f"Simulation with ID {sim_id} not found.")
@@ -129,29 +135,26 @@ def compress_simulation(
             f"Simulation with ID {sim_id} is already compressed. Uncompress first."
         )
 
-    try:
-        paths = _particle_paths(sim_id, localizer)
-        keys = [k for k in map(lambda p: p.split(".")[-2], paths)]
-        data: dict[str, np.typing.NDArray] = {
-            k: _np_loadtxt_with_precision(p, precision, max_rel_err)
-            for k, p in zip(keys, paths)
-        }
+    paths = _particle_paths(sim_id, localizer)
+    keys = [k for k in map(lambda p: p.split(".")[-2], paths)]
+    data: dict[str, np.typing.NDArray] = {
+        k: _np_loadtxt_with_precision(p, precision, max_rel_err)
+        for k, p in zip(keys, paths)
+    }
 
-        if len(data) > 0:
-            compressed_path = localizer.simulation_path(
-                sim_id,
-                f"run.{keys[0]}-{keys[-1]}.001.{precision.value}.compressed.npz",
-            )
-            np.savez_compressed(
-                compressed_path,
-                **data,
-                allow_pickle=False,
-            )
-            if os.path.exists(compressed_path):
-                for p in paths:
-                    os.remove(p)
-    except ValueError as e:
-        raise RuntimeError(f"Failed to compress simulation with ID {sim_id}.") from e
+    if len(data) > 0:
+        compressed_path = localizer.simulation_path(
+            sim_id,
+            f"run.{keys[0]}-{keys[-1]}.001.{precision.value}.compressed.npz",
+        )
+        np.savez_compressed(
+            compressed_path,
+            **data,
+            allow_pickle=False,
+        )
+        if os.path.exists(compressed_path):
+            for p in paths:
+                os.remove(p)
 
 
 def _np_loadtxt_with_precision(
@@ -163,14 +166,14 @@ def _np_loadtxt_with_precision(
     Loads a text file with numpy and converts it to the specified precision.
 
     Raises:
-        RuntimeError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
+        CompressionError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
     """
     data = np.loadtxt(path)
     data_compressed = data.astype(precision.numpy_dtype())
 
     rel_error = lambda x, y: np.max(np.abs(x - y) / np.maximum(np.abs(x), 1e-12))
     if rel_error(data, data_compressed) > max_rel_err:
-        raise RuntimeError(
+        raise CompressionError(
             f"Compression of particle data in file {path} exceeds maximum relative error of {max_rel_err}."
         )
 
