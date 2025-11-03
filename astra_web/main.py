@@ -157,7 +157,7 @@ def list_particle_distribution_ids(
     tags=["particles"],
 )
 async def _list_particle_distribution_states(
-    gen_ids=Body(default=None, examples=[["gen_id_1", "gen_id_2"]]),
+    gen_ids: list[str] | None = Body(default=None, examples=[["gen_id_1", "gen_id_2"]]),
 ) -> list[tuple[str, DispatchStatus]]:
     # local
     local_localizer = LocalHostLocalizer.instance()
@@ -322,7 +322,7 @@ def list_simulation_ids_(
     tags=["simulations"],
 )
 async def _list_simulation_states(
-    sim_ids=Body(default=None, examples=[["sim_id_1", "sim_id_2"]]),
+    sim_ids: list[str] | None = Body(default=None, examples=[["sim_id_1", "sim_id_2"]]),
 ) -> list[tuple[str, DispatchStatus]]:
     # local
     local_localizer = LocalHostLocalizer.instance()
