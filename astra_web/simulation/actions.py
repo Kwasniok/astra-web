@@ -579,7 +579,7 @@ def list_simulation_ids(
     Lists IDs of simulations.
     """
     ids_all = map(
-        lambda p: os.path.split(p)[-1],
+        lambda p: os.path.basename(p),
         glob.glob(localizer.simulation_path("*")),
     )
 

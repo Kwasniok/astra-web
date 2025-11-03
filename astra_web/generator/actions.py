@@ -153,7 +153,7 @@ def list_generator_ids(
     """
 
     ids_all = map(
-        lambda p: os.path.split(p)[-1],
+        lambda p: os.path.basename(p),
         glob.glob(localizer.generator_path("*")),
     )
 
