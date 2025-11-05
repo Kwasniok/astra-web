@@ -2,6 +2,8 @@
 
 set -eo pipefail
 
+PORT=${1:-8000}
+
 # python
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
@@ -52,4 +54,4 @@ for binary in "${binaries[@]}"; do
 done
 
 # run
-uvicorn astra_web.main:app --host 0.0.0.0 --port 8000
+uvicorn astra_web.main:app --host 0.0.0.0 --port $PORT
