@@ -34,6 +34,7 @@ class SLURMConfiguration(BaseModel):
 
 class SLURMJobOutput(BaseModel):
     id: int = Field(description="The ID of the SLURM job.")
+    partition: str | None = Field(description="The partition of the SLURM job.")
     name: str = Field(description="Full name of the SLURM job.")
     state_current: list[SLURMJobState] = Field(
         description="The current state of the SLURM job."

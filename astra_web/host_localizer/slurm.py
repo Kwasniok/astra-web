@@ -215,6 +215,7 @@ status=$?
 
         def extract(job: JSON) -> SLURMDispatchedJobOutput:
             id: int = job["job_id"]  # type: ignore
+            partition: str | None = job.get("partition", None)  # type: ignore
             name: str = job["name"]  # type: ignore
             state: dict = job.get("state", {})  # type: ignore
             current: list[SLURMJobState] = list(
@@ -227,6 +228,7 @@ status=$?
                 ),
                 slurm=SLURMJobOutput(
                     id=id,
+                    partition=partition,
                     name=name,
                     state_current=current,
                     state_reason=reason,
