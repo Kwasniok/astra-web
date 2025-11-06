@@ -72,7 +72,9 @@ def load_generator_data(
         return None
 
     input = (
-        _load_input(gen_id, localizer) if filter_has_prefix(include, "input") else None
+        load_generator_input(gen_id, localizer)
+        if filter_has_prefix(include, "input")
+        else None
     )
 
     output = (
@@ -104,7 +106,12 @@ def load_generator_data(
     )
 
 
-def _load_input(gen_id: str, localizer: HostLocalizer) -> GeneratorInput | None:
+def load_generator_input(
+    gen_id: str, localizer: HostLocalizer
+) -> GeneratorInput | None:
+    """
+    Loads the generator input for a given generator ID.
+    """
     input_path = localizer.generator_path(gen_id, "input.json")
     if os.path.exists(input_path):
         return read_json(GeneratorInput, input_path)

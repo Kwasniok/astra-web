@@ -296,7 +296,7 @@ def load_simulation_data(
         return None
 
     input = (
-        read_json(SimulationInput, localizer.simulation_path(sim_id, "input.json"))
+        load_simulation_input(sim_id, localizer)
         if filter_has_prefix(include, "input")
         else None
     )
@@ -366,6 +366,18 @@ def _load_output(
         norm_emittance_table_z=norm_emittance_z,
         trace_space_emittance_table=tr_sp_emittance,
     )
+
+
+def load_simulation_input(
+    sim_id: str, localizer: HostLocalizer
+) -> SimulationInput | None:
+    """
+    Loads the simulation input for a given simulation ID.
+    """
+    path = localizer.simulation_path(sim_id, "input.json")
+    if os.path.exists(path):
+        return read_json(SimulationInput, path)
+    return None
 
 
 def _load_particle_data(
