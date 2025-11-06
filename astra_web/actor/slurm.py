@@ -2,7 +2,7 @@ from typing import Any, Callable
 import os
 import slurm_requests as slurm
 from slurm_requests import RequestMethod, SLURMJobState, JSON
-from .base import HostLocalizer
+from .base import Actor
 from .schemas.any import DispatchResponse
 from .schemas.slurm import (
     SLURMConfiguration,
@@ -13,14 +13,14 @@ from .schemas.slurm import (
 )
 
 
-class SLURMHostLocalizer(HostLocalizer):
+class SLURMActor(Actor):
 
     _instance = None
 
     @classmethod
-    def instance(cls) -> "SLURMHostLocalizer":
+    def instance(cls) -> "SLURMActor":
         if cls._instance is None:
-            cls._instance = SLURMHostLocalizer(do_not_init_manually_use_instance=None)
+            cls._instance = SLURMActor(do_not_init_manually_use_instance=None)
 
             # acquire environment variables only upon first use
             # avoids errors due to undefined env if SLURM is never used
@@ -59,7 +59,7 @@ class SLURMHostLocalizer(HostLocalizer):
     @property
     def configuration(self) -> SLURMConfiguration:
         """
-        Returns the current configuration of the SLURM host localizer.
+        Returns the current configuration of the SLURM host actor.
         """
         return self._config
 

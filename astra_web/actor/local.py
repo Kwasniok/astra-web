@@ -1,11 +1,11 @@
 import os
 from subprocess import run
 import threading
-from .base import HostLocalizer
+from .base import Actor
 from .schemas.any import DispatchResponse
 
 
-class LocalHostLocalizer(HostLocalizer):
+class LocalActor(Actor):
 
     _ASTRA_BINARY_PATH = os.environ["ASTRA_BINARY_PATH"]
     _DATA_PATH = os.environ["ASTRA_DATA_PATH"]
@@ -15,9 +15,9 @@ class LocalHostLocalizer(HostLocalizer):
     _dispatched_threads: list[threading.Thread] = []
 
     @classmethod
-    def instance(cls) -> "LocalHostLocalizer":
+    def instance(cls) -> "LocalActor":
         if cls._instance is None:
-            cls._instance = LocalHostLocalizer(do_not_init_manually_use_instance=None)
+            cls._instance = LocalActor(do_not_init_manually_use_instance=None)
         return cls._instance
 
     def data_path(self) -> str:

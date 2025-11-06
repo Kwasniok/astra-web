@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from astra_web._aux import get_filter_subtree
 from astra_web.file.json import JSONType
 from astra_web.generator.actions import load_generator_data
-from astra_web.host_localizer import HostLocalizer
+from astra_web.actor import Actor
 from astra_web.simulation.actions import (
     get_generator_id,
     get_simulation_input_comment,
@@ -22,7 +22,7 @@ from .schemas.io import Features, FeatureTable, FeatureTableInput
 def make_simulation_feature_table(
     sim_ids: list[str] | None,
     features: FeatureTableInput,
-    localizer: HostLocalizer,
+    actor: Actor,
     *,
     filter_by_comment: str | None = None,
 ) -> FeatureTable:
@@ -40,7 +40,7 @@ def make_simulation_feature_table(
     """
 
     if sim_ids is None:
-        sim_ids = list_simulation_ids(localizer)
+        sim_ids = list_simulation_ids(actor)
 
     feature_table: dict[str, list[Any]] = {col: [] for col in features}
     feature_tree = _build_tree(features)
@@ -51,18 +51,18 @@ def make_simulation_feature_table(
             feature_table[path].append(value)
 
     for sim_id in sim_ids:
-        if get_simulation_status(sim_id, localizer) != DispatchStatus.FINISHED:
+        if get_simulation_status(sim_id, actor) != DispatchStatus.FINISHED:
             # skip unfinished simulations
             continue
         if comment_re:
-            comment = get_simulation_input_comment(sim_id, localizer) or ""
+            comment = get_simulation_input_comment(sim_id, actor) or ""
             if not comment_re.search(comment):
                 # skip non-matching comments
                 continue
         append_row(
             get_features(
                 sim_id,
-                localizer,
+                actor,
                 include=features,
             )
         )
@@ -72,7 +72,7 @@ def make_simulation_feature_table(
 
 def get_features(
     sim_id: str,
-    localizer: HostLocalizer,
+    actor: Actor,
     include: list[str] | None = None,
 ) -> Features:
     """
@@ -96,9 +96,9 @@ def get_features(
     if include_sim == []:
         # explicitly nothing to include -> skip loading any simulation data
         sim = None
-        gen_id = get_generator_id(sim_id, localizer)  # raises ValueError
+        gen_id = get_generator_id(sim_id, actor)  # raises ValueError
     else:
-        sim = load_simulation_data(sim_id, localizer, include_sim)
+        sim = load_simulation_data(sim_id, actor, include_sim)
         if sim is None:
             raise ValueError(
                 f"Simulation with ID {sim_id} not found or is not finished yet."
@@ -111,7 +111,7 @@ def get_features(
         # explicitly nothing to include -> skip loading any generator data
         gen = None
     else:
-        gen = load_generator_data(gen_id, localizer, include_gen)
+        gen = load_generator_data(gen_id, actor, include_gen)
         if gen is None:
             raise ValueError(f"Generator with ID {gen_id} not found.")
 
@@ -124,7 +124,7 @@ def get_features(
 
 def get_all_varying_features(
     sim_ids: list[str] | None,
-    localizer: HostLocalizer,
+    actor: Actor,
 ) -> dict[str, list[JSONType]]:
     """
     Returns a dictionary of all varying features across for the specified simulations.
@@ -137,11 +137,11 @@ def get_all_varying_features(
 
     result: list[JSONType] = []
 
-    for sim_id in list_simulation_ids(localizer, DispatchStatus.FINISHED):
+    for sim_id in list_simulation_ids(actor, DispatchStatus.FINISHED):
         if sim_ids is not None and sim_id not in sim_ids:
             # skip excluded simulations
             continue
-        result.append(get_features(sim_id, localizer).model_dump(mode="json"))
+        result.append(get_features(sim_id, actor).model_dump(mode="json"))
 
     return _deep_diff_dicts(result)
 

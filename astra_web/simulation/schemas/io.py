@@ -2,7 +2,7 @@ from typing import Any
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 from astra_web.generator.schemas.particles import Particles, ParticleCounts
-from astra_web.host_localizer.schemas.any import DispatchResponse
+from astra_web.actor.schemas.any import DispatchResponse
 from astra_web.uuid import get_uuid
 from astra_web.file import IniExportableModel, IniExportableArrayModel
 from astra_web.status import DispatchStatus

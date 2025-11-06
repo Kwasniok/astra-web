@@ -31,14 +31,14 @@ from .generator.actions import (
 )
 from .generator.schemas.io import GeneratorData, GeneratorDispatchOutput, GeneratorInput
 from .generator.schemas.particles import Particles
-from .host_localizer import (
-    HostLocalizerTypes,
-    Hosts,
-    LocalHostLocalizer,
-    SLURMHostLocalizer,
+from .actor import (
+    ActorTypes,
+    Actors,
+    LocalActor,
+    SLURMActor,
     SLURMJobState,
 )
-from .host_localizer.schemas.slurm import (
+from .actor.schemas.slurm import (
     SLURMConfiguration,
     SLURMDispatchedIDsOutput,
     SLURMDispatchedJobsOutput,
@@ -149,8 +149,8 @@ def list_particle_distribution_ids(
     """
     Returns a list of particle distribution IDs.
     """
-    localizer = LocalHostLocalizer.instance()
-    return list_generator_ids(localizer, state=state)
+    actor = LocalActor.instance()
+    return list_generator_ids(actor, state=state)
 
 
 @app.get(
@@ -162,8 +162,8 @@ async def _list_particle_distribution_states(
     gen_ids: list[str] | None = Body(default=None, examples=[["gen_id_1", "gen_id_2"]]),
 ) -> list[tuple[str, DispatchStatus]]:
     # local
-    local_localizer = LocalHostLocalizer.instance()
-    return list_particle_distribution_states(local_localizer, gen_ids=gen_ids)
+    local_actor = LocalActor.instance()
+    return list_particle_distribution_states(local_actor, gen_ids=gen_ids)
 
 
 @app.post(
@@ -173,14 +173,14 @@ async def _list_particle_distribution_states(
 )
 async def dispatch_particle_distribution_generation_(
     generator_input: GeneratorInput,
-    host: Hosts = Query(default=Hosts.LOCAL),
+    host: Actors = Query(default=Actors.LOCAL),
 ) -> GeneratorDispatchOutput:
-    local_localizer = LocalHostLocalizer.instance()
-    host_localizer = HostLocalizerTypes.get_localizer(host)
+    local_actor = LocalActor.instance()
+    host_actor = ActorTypes.select(host)
     return await dispatch_particle_distribution_generation(
         generator_input,
-        local_localizer,
-        host_localizer,
+        local_actor,
+        host_actor,
     )
 
 
@@ -196,13 +196,13 @@ async def dispatch_particle_distribution_generation_(
 )
 async def redispatch_particle_distribution_(
     gen_id: str,
-    host: Hosts = Query(default=Hosts.LOCAL),
+    host: Actors = Query(default=Actors.LOCAL),
 ) -> GeneratorDispatchOutput:
-    localizer = HostLocalizerTypes.get_localizer(host)
+    actor = ActorTypes.select(host)
     try:
         return await redispatch_particle_distribution_generation(
             gen_id,
-            localizer,
+            actor,
         )
     except FileNotFoundError:
         raise HTTPException(
@@ -222,8 +222,8 @@ def upload_particle_distribution(
         default=None, description="Optional comment for the particle distribution."
     ),
 ) -> dict[str, str]:
-    localizer = LocalHostLocalizer.instance()
-    gen_id = write_particle_distribution(output, localizer, comment=comment)
+    actor = LocalActor.instance()
+    gen_id = write_particle_distribution(output, actor, comment=comment)
     return {"gen_id": gen_id}
 
 
@@ -233,8 +233,8 @@ def upload_particle_distribution(
     tags=["particles"],
 )
 def download_generator_results(gen_id: str) -> GeneratorData:
-    localizer = LocalHostLocalizer.instance()
-    output = load_generator_data(gen_id, localizer)
+    actor = LocalActor.instance()
+    output = load_generator_data(gen_id, actor)
     if output is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -255,8 +255,8 @@ async def delete_particle_distribution_(
         description="If true, deletes the particle distribution even if it is referenced by simulations.",
     ),
 ) -> None:
-    localizer = LocalHostLocalizer.instance()
-    blocking_links = delete_particle_distribution(gen_id, localizer, force=force)
+    actor = LocalActor.instance()
+    blocking_links = delete_particle_distribution(gen_id, actor, force=force)
     if blocking_links is not None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -270,8 +270,8 @@ async def delete_particle_distribution_(
     tags=["fields"],
 )
 async def list_field_table_file_names_() -> list[str]:
-    localizer = LocalHostLocalizer.instance()
-    return list_field_table_file_names(localizer)
+    actor = LocalActor.instance()
+    return list_field_table_file_names(actor)
 
 
 @app.get(
@@ -280,9 +280,9 @@ async def list_field_table_file_names_() -> list[str]:
     tags=["fields"],
 )
 async def download_field_table_(file_name: str) -> FieldTable:
-    localizer = LocalHostLocalizer.instance()
+    actor = LocalActor.instance()
     try:
-        table = read_field_table(file_name, localizer)
+        table = read_field_table(file_name, actor)
     except FileNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -297,9 +297,9 @@ async def download_field_table_(file_name: str) -> FieldTable:
     tags=["fields"],
 )
 async def upload_field_table_(file_name: str, table: FieldTable) -> None:
-    localizer = LocalHostLocalizer.instance()
+    actor = LocalActor.instance()
     try:
-        write_field_table(file_name, table, localizer)
+        write_field_table(file_name, table, actor)
     except FileExistsError:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -319,8 +319,8 @@ async def delete_field_table_(
         description="If true, forces deletion even if the field table is referenced by a simulation.",
     ),
 ) -> None:
-    localizer = LocalHostLocalizer.instance()
-    blocking_links = delete_field_table(file_name, localizer, force=force)
+    actor = LocalActor.instance()
+    blocking_links = delete_field_table(file_name, actor, force=force)
     if blocking_links:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -339,8 +339,8 @@ def list_simulation_ids_(
     """
     Returns a list of  simulation IDs.
     """
-    localizer = LocalHostLocalizer.instance()
-    return list_simulation_ids(localizer, state=state)
+    actor = LocalActor.instance()
+    return list_simulation_ids(actor, state=state)
 
 
 @app.get(
@@ -352,8 +352,8 @@ async def _list_simulation_states(
     sim_ids: list[str] | None = Body(default=None, examples=[["sim_id_1", "sim_id_2"]]),
 ) -> list[tuple[str, DispatchStatus]]:
     # local
-    local_localizer = LocalHostLocalizer.instance()
-    return list_simulation_states(local_localizer, sim_ids=sim_ids)
+    local_actor = LocalActor.instance()
+    return list_simulation_states(local_actor, sim_ids=sim_ids)
 
 
 @app.post(
@@ -363,14 +363,12 @@ async def _list_simulation_states(
 )
 async def dispatch_simulation(
     simulation_input: SimulationInput,
-    host: Hosts = Query(default=Hosts.LOCAL),
+    host: Actors = Query(default=Actors.LOCAL),
 ) -> SimulationDispatchOutput:
     # local
-    local_localizer = LocalHostLocalizer.instance()
-    host_localizer = HostLocalizerTypes.get_localizer(host)
-    return await dispatch_simulation_run(
-        simulation_input, local_localizer, host_localizer
-    )
+    local_actor = LocalActor.instance()
+    host_actor = ActorTypes.select(host)
+    return await dispatch_simulation_run(simulation_input, local_actor, host_actor)
 
 
 @app.put(
@@ -385,13 +383,13 @@ async def dispatch_simulation(
 )
 async def redispatch_simulation_(
     sim_id: str,
-    host: Hosts = Query(default=Hosts.LOCAL),
+    host: Actors = Query(default=Actors.LOCAL),
 ) -> SimulationDispatchOutput:
-    localizer = HostLocalizerTypes.get_localizer(host)
+    actor = ActorTypes.select(host)
     try:
         return await redispatch_simulation_run(
             sim_id,
-            localizer,
+            actor,
         )
     except FileNotFoundError:
         raise HTTPException(
@@ -410,8 +408,8 @@ def download_simulation_data(sim_id: str) -> SimulationDataWithMeta:
     Returns the output of a specific ASTRA simulation on the requested server depending
     on the given ID.
     """
-    localizer = LocalHostLocalizer.instance()
-    output = load_simulation_data(sim_id, localizer)
+    actor = LocalActor.instance()
+    output = load_simulation_data(sim_id, actor)
     if output is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -433,8 +431,8 @@ async def delete_simulation_(
         description="If true, deletes the simulation even if it is referenced by other entities.",
     ),
 ) -> None:
-    localizer = LocalHostLocalizer.instance()
-    return delete_simulation(sim_id, localizer, force=force)
+    actor = LocalActor.instance()
+    return delete_simulation(sim_id, actor, force=force)
 
 
 @app.put(
@@ -464,11 +462,11 @@ async def compress_simulation_(
         description="Maximum allowed element-wise relative error during lossy compression.",
     ),
 ) -> CompressionReport | None:
-    localizer = LocalHostLocalizer.instance()
+    actor = LocalActor.instance()
     try:
         return compress_simulation(
             sim_id,
-            localizer,
+            actor,
             precision=precision,
             max_rel_err=max_rel_err,
         )
@@ -508,9 +506,9 @@ async def uncompress_simulation_(
         description="If `true`, writes floating point numbers with high precision (12 digits after the decimal point).  If `false`, uses 4 digits after the decimal point. See ASTRA documentation for details.",
     ),
 ) -> CompressionReport | None:
-    localizer = LocalHostLocalizer.instance()
+    actor = LocalActor.instance()
     try:
-        return uncompress_simulation(sim_id, localizer, high_precision=high_precision)
+        return uncompress_simulation(sim_id, actor, high_precision=high_precision)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -556,12 +554,12 @@ async def download_features_table(
 
     See schema `Features` for a list of all available features.
     """
-    localizer = LocalHostLocalizer.instance()
+    actor = LocalActor.instance()
     try:
         return make_simulation_feature_table(
             sim_ids,
             features,
-            localizer,
+            actor,
             filter_by_comment=filter_by_comment,
         )
     except ValueError as e:
@@ -587,8 +585,8 @@ async def download_varying_features(
     The `sim_ids` parameter is a list of (finished) simulation IDs for which the features should be computed.
     If none are provided, the features will be computed for all simulations in the database.
     """
-    localizer = LocalHostLocalizer.instance()
-    return get_all_varying_features(sim_ids, localizer)
+    actor = LocalActor.instance()
+    return get_all_varying_features(sim_ids, actor)
 
 
 # note: get is not allowed with a body, so post is used as a workaround
@@ -606,9 +604,9 @@ async def download_all_features_for_simulation(
     Returns all features for a specific simulation run.
     note: May include raw and meta data as well.
     """
-    localizer = LocalHostLocalizer.instance()
+    actor = LocalActor.instance()
     try:
-        return get_features(sim_id, localizer)
+        return get_features(sim_id, actor)
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -622,8 +620,8 @@ async def download_all_features_for_simulation(
     tags=["slurm"],
 )
 async def download_slurm_configuration() -> SLURMConfiguration:
-    slurm_localizer = SLURMHostLocalizer.instance()
-    return slurm_localizer.configuration
+    slurm_actor = SLURMActor.instance()
+    return slurm_actor.configuration
 
 
 @app.put(
@@ -632,8 +630,8 @@ async def download_slurm_configuration() -> SLURMConfiguration:
     tags=["slurm"],
 )
 async def configure_slurm(config: SLURMConfiguration) -> None:
-    slurm_localizer = SLURMHostLocalizer.instance()
-    slurm_localizer.configure(config)
+    slurm_actor = SLURMActor.instance()
+    slurm_actor.configure(config)
 
 
 @app.put(
@@ -649,8 +647,8 @@ async def update_slurm_user_token(
 
     Usefull in case the previous token has expired or is no longer valid.
     """
-    slurm_localizer = SLURMHostLocalizer.instance()
-    slurm_localizer.update_user_token(value)
+    slurm_actor = SLURMActor.instance()
+    slurm_actor.update_user_token(value)
 
 
 @app.get(
@@ -663,8 +661,8 @@ async def ping_slurm(
         default=None, description="SLURM REST API request timeout in seconds."
     ),
 ) -> dict[str, Any]:
-    slurm_localizer = SLURMHostLocalizer.instance()
-    return await slurm_localizer.ping(timeout)  # type: ignore
+    slurm_actor = SLURMActor.instance()
+    return await slurm_actor.ping(timeout)  # type: ignore
 
 
 @app.get(
@@ -677,8 +675,8 @@ async def diagnose_slurm(
         default=None, description="SLURM REST API request timeout in seconds."
     ),
 ) -> dict[str, Any]:
-    slurm_localizer = SLURMHostLocalizer.instance()
-    return await slurm_localizer.diagnose(timeout)  # type: ignore
+    slurm_actor = SLURMActor.instance()
+    return await slurm_actor.diagnose(timeout)  # type: ignore
 
 
 @app.get(
@@ -696,8 +694,8 @@ async def list_slurm_jobs(
 
     see: https://slurm.schedmd.com/rest_api.html#slurmdbV0043GetJobs
     """
-    slurm_localizer = SLURMHostLocalizer.instance()
-    return await slurm_localizer.list_jobs(timeout=timeout)
+    slurm_actor = SLURMActor.instance()
+    return await slurm_actor.list_jobs(timeout=timeout)
 
 
 @app.get(
@@ -716,7 +714,5 @@ async def list_dispatched_ids_by_state(
     """
     Lists all dispatched IDs currently managed by SLURM filtered by state.
     """
-    slurm_localizer = SLURMHostLocalizer.instance()
-    return await slurm_localizer.list_dispatched_ids_by_state(
-        state=state, timeout=timeout
-    )
+    slurm_actor = SLURMActor.instance()
+    return await slurm_actor.list_dispatched_ids_by_state(state=state, timeout=timeout)

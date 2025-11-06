@@ -4,7 +4,7 @@ from shutil import rmtree
 
 from astra_web._aux import filter_has_prefix
 from astra_web.file import find_symlinks, read_json, read_txt, write_json, write_txt
-from astra_web.host_localizer import HostLocalizer
+from astra_web.actor import Actor
 from astra_web.status import DispatchStatus
 from astra_web.uuid import get_uuid
 
@@ -20,16 +20,16 @@ from .schemas.particles import Particles
 
 async def dispatch_particle_distribution_generation(
     generator_input: GeneratorInput,
-    local_localizer: HostLocalizer,
-    host_localizer: HostLocalizer,
+    local_actor: Actor,
+    host_actor: Actor,
 ) -> GeneratorDispatchOutput:
     """Dispatches the generation of a particle distribution based on the provided generator input.
     The generator input is written to disk, and the generation is dispatched to the appropriate host.
     """
     # local
-    _write_generator_files(generator_input, local_localizer)
+    _write_generator_files(generator_input, local_actor)
     # 'remote'
-    response = await host_localizer.dispatch_generation(
+    response = await host_actor.dispatch_generation(
         generator_input,
     )
     return GeneratorDispatchOutput(
@@ -40,7 +40,7 @@ async def dispatch_particle_distribution_generation(
 
 async def redispatch_particle_distribution_generation(
     gen_id: str,
-    localizer: HostLocalizer,
+    actor: Actor,
 ) -> GeneratorDispatchOutput:
     """
     Redispatches the generation of a particle distribution based on an existing generator ID.
@@ -51,13 +51,13 @@ async def redispatch_particle_distribution_generation(
         FileNotFoundError: If the generator input does not exist.
     """
 
-    _reset_generator(gen_id, localizer)
+    _reset_generator(gen_id, actor)
 
-    generator_input = load_generator_input(gen_id, localizer)
+    generator_input = load_generator_input(gen_id, actor)
     if generator_input is None:
         raise FileNotFoundError(f"Generator input for ID {gen_id} not found.")
 
-    response = await localizer.dispatch_generation(
+    response = await actor.dispatch_generation(
         generator_input,
     )
     return GeneratorDispatchOutput(
@@ -66,23 +66,19 @@ async def redispatch_particle_distribution_generation(
     )
 
 
-def _write_generator_files(
-    generator_input: GeneratorInput, localizer: HostLocalizer
-) -> None:
-    path = localizer.generator_path(generator_input.id)
+def _write_generator_files(generator_input: GeneratorInput, actor: Actor) -> None:
+    path = actor.generator_path(generator_input.id)
     os.makedirs(path, exist_ok=True)
-    write_json(
-        generator_input, localizer.generator_path(generator_input.id, "input.json")
-    )
+    write_json(generator_input, actor.generator_path(generator_input.id, "input.json"))
     write_txt(
         generator_input.to_ini(),
-        localizer.generator_path(generator_input.id, "generator.in"),
+        actor.generator_path(generator_input.id, "generator.in"),
     )
 
 
 def _reset_generator(
     gen_id: str,
-    localizer: HostLocalizer,
+    actor: Actor,
 ) -> None:
     """
     Clears ALL generator files and rewrites the initially required files.
@@ -91,17 +87,17 @@ def _reset_generator(
         FileNotFoundError: If no generator input for the given ID is found.
     """
 
-    input = load_generator_input(gen_id, localizer)
+    input = load_generator_input(gen_id, actor)
     if input is None:
         raise FileNotFoundError(f"Generator input for ID {gen_id} not found.")
 
-    delete_particle_distribution(gen_id, localizer)
-    _write_generator_files(input, localizer)
+    delete_particle_distribution(gen_id, actor)
+    _write_generator_files(input, actor)
 
 
 def load_generator_data(
     gen_id: str,
-    localizer: HostLocalizer,
+    actor: Actor,
     include: list[str] | None = None,
 ) -> GeneratorData | None:
     """
@@ -114,34 +110,32 @@ def load_generator_data(
             Example: `["input.run", "output"]`
 
     """
-    if not os.path.exists(localizer.generator_path(gen_id, "distribution.ini")):
+    if not os.path.exists(actor.generator_path(gen_id, "distribution.ini")):
         return None
 
     input = (
-        load_generator_input(gen_id, localizer)
+        load_generator_input(gen_id, actor)
         if filter_has_prefix(include, "input")
         else None
     )
 
     output = (
-        _load_output(gen_id, localizer)
-        if filter_has_prefix(include, "output")
-        else None
+        _load_output(gen_id, actor) if filter_has_prefix(include, "output") else None
     )
 
     astra_input = (
-        _load_generator_input(gen_id, localizer)
+        _load_generator_input(gen_id, actor)
         if filter_has_prefix(include, "astra_input")
         else None
     )
 
     astra_output = (
-        _load_generator_output(gen_id, localizer)
+        _load_generator_output(gen_id, actor)
         if filter_has_prefix(include, "astra_output")
         else None
     )
 
-    meta = _load_meta(gen_id, localizer) if filter_has_prefix(include, "meta") else None
+    meta = _load_meta(gen_id, actor) if filter_has_prefix(include, "meta") else None
 
     return GeneratorData(
         input=input,
@@ -152,13 +146,11 @@ def load_generator_data(
     )
 
 
-def load_generator_input(
-    gen_id: str, localizer: HostLocalizer
-) -> GeneratorInput | None:
+def load_generator_input(gen_id: str, actor: Actor) -> GeneratorInput | None:
     """
     Loads the generator input for a given generator ID.
     """
-    input_path = localizer.generator_path(gen_id, "input.json")
+    input_path = actor.generator_path(gen_id, "input.json")
     if os.path.exists(input_path):
         input = read_json(GeneratorInput, input_path)
         input._id = gen_id
@@ -166,41 +158,41 @@ def load_generator_input(
     return None
 
 
-def _load_output(gen_id: str, localizer: HostLocalizer) -> GeneratorOutput | None:
-    return GeneratorOutput(particles=_load_particle_file(gen_id, localizer))
+def _load_output(gen_id: str, actor: Actor) -> GeneratorOutput | None:
+    return GeneratorOutput(particles=_load_particle_file(gen_id, actor))
 
 
-def _load_particle_file(gen_id: str, localizer: HostLocalizer) -> Particles:
+def _load_particle_file(gen_id: str, actor: Actor) -> Particles:
     """
     Reads the particle file generated by the ASTRA generator."""
-    path = localizer.generator_path(gen_id, "distribution.ini")
+    path = actor.generator_path(gen_id, "distribution.ini")
 
     return Particles.read_from_csv(path)
 
 
-def _load_generator_input(gen_id: str, localizer: HostLocalizer) -> str | None:
-    astra_input_path = localizer.generator_path(gen_id, "generator.in")
+def _load_generator_input(gen_id: str, actor: Actor) -> str | None:
+    astra_input_path = actor.generator_path(gen_id, "generator.in")
     if os.path.exists(astra_input_path):
         return read_txt(astra_input_path)
     return None
 
 
-def _load_generator_output(gen_id: str, localizer: HostLocalizer) -> str | None:
-    astra_output_path = localizer.generator_path(gen_id, "generator.out")
+def _load_generator_output(gen_id: str, actor: Actor) -> str | None:
+    astra_output_path = actor.generator_path(gen_id, "generator.out")
     if os.path.exists(astra_output_path):
         return read_txt(astra_output_path)
     return None
 
 
-def _load_meta(gen_id: str, localizer: HostLocalizer) -> GeneratorMeta | None:
-    meta_path = localizer.generator_path(gen_id, "meta.json")
+def _load_meta(gen_id: str, actor: Actor) -> GeneratorMeta | None:
+    meta_path = actor.generator_path(gen_id, "meta.json")
     if os.path.exists(meta_path):
         return read_json(GeneratorMeta, meta_path)
     return None
 
 
 def list_generator_ids(
-    localizer: HostLocalizer,
+    actor: Actor,
     state: DispatchStatus | None = None,
 ) -> list[str]:
     """
@@ -209,34 +201,30 @@ def list_generator_ids(
 
     ids_all = map(
         lambda p: os.path.basename(p),
-        glob.glob(localizer.generator_path("*")),
+        glob.glob(actor.generator_path("*")),
     )
 
     if state is None:
         return sorted(ids_all)
     else:
-        return sorted(
-            id for id in ids_all if get_generation_status(id, localizer) == state
-        )
+        return sorted(id for id in ids_all if get_generation_status(id, actor) == state)
 
 
 def list_particle_distribution_states(
-    localizer: HostLocalizer,
+    actor: Actor,
     gen_ids: list[str] | None = None,
 ) -> list[tuple[str, DispatchStatus]]:
     """
     Returns the current state of the particle distributions.
     """
     if gen_ids is None:
-        gen_ids = list_generator_ids(localizer)
-    return list(
-        (gen_id, get_generation_status(gen_id, localizer)) for gen_id in gen_ids
-    )
+        gen_ids = list_generator_ids(actor)
+    return list((gen_id, get_generation_status(gen_id, actor)) for gen_id in gen_ids)
 
 
 def delete_particle_distribution(
     gen_id: str,
-    localizer: HostLocalizer,
+    actor: Actor,
     force: bool = False,
 ) -> list[str] | None:
     """
@@ -244,15 +232,15 @@ def delete_particle_distribution(
 
     Returns a list of symlinks that are referencing the distribution file and blocking the deletion when not forced. Otherwise, returns None.
     """
-    path = localizer.generator_path(gen_id)
+    path = actor.generator_path(gen_id)
     if not os.path.exists(path):
         return
 
     if not force:
         # delete only when nothing is referencing it
         links = find_symlinks(
-            localizer.generator_path(gen_id, "distribution.ini"),
-            localizer.data_path(),
+            actor.generator_path(gen_id, "distribution.ini"),
+            actor.data_path(),
             link_name="run.0000.001",
         )
         if len(links) > 0:
@@ -264,13 +252,13 @@ def delete_particle_distribution(
 
 
 def write_particle_distribution(
-    particles: Particles, localizer: HostLocalizer, comment: str | None = None
+    particles: Particles, actor: Actor, comment: str | None = None
 ) -> str:
     """
     Writes the particle distribution to disk.
     """
     gen_id = get_uuid()
-    dist_path = localizer.generator_path(gen_id, "distribution.ini")
+    dist_path = actor.generator_path(gen_id, "distribution.ini")
 
     if os.path.exists(dist_path):
         raise RuntimeError("Generated ID already exists.")
@@ -279,20 +267,20 @@ def write_particle_distribution(
     particles.write_to_csv(dist_path)
 
     meta = GeneratorMeta(comment=comment)
-    meta_path = localizer.generator_path(gen_id, "meta.json")
+    meta_path = actor.generator_path(gen_id, "meta.json")
     write_json(meta, path=meta_path)
 
     return gen_id
 
 
-def get_generation_status(ge_id: str, localizer: HostLocalizer) -> DispatchStatus:
+def get_generation_status(ge_id: str, actor: Actor) -> DispatchStatus:
     """
     Returns status of the particle generation.
     """
-    path = localizer.generator_path(ge_id, "generator.err")
+    path = actor.generator_path(ge_id, "generator.err")
     if os.path.isfile(path) and os.path.getsize(path) > 0:
         return DispatchStatus.FAILED
-    path = localizer.generator_path(ge_id, "generator.out")
+    path = actor.generator_path(ge_id, "generator.out")
     if os.path.isfile(path):
         if "phase-space distribution saved to file" in read_txt(path):
             return DispatchStatus.FINISHED

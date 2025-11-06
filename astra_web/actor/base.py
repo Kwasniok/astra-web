@@ -5,7 +5,7 @@ from astra_web.simulation.schemas.io import SimulationInput
 from .schemas.any import DispatchResponse
 
 
-class HostLocalizer(ABC):
+class Actor(ABC):
     """
     Abstract base class for data storage and processing management.
 
@@ -22,9 +22,9 @@ class HostLocalizer(ABC):
 
     @classmethod
     @abstractmethod
-    def instance(cls) -> "HostLocalizer":
+    def instance(cls) -> "Actor":
         """
-        Returns the singleton instance of the host localizer.
+        Returns the singleton instance of the host actor.
         """
         pass
 
