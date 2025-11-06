@@ -36,7 +36,7 @@ class GeneratorInput(IniExportableModel):
     )
 
     def excluded_ini_fields(self) -> set[str]:
-        return {"id", "comment"}
+        return {"id", "comment", "timeout"}
 
     # ASTRA fields:
     @computed_field
