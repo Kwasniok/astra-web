@@ -12,8 +12,6 @@ class LocalActor(Actor):
 
     _instance = None
 
-    _dispatched_threads: list[threading.Thread] = []
-
     @classmethod
     def instance(cls) -> "LocalActor":
         if cls._instance is None:
@@ -59,11 +57,3 @@ class LocalActor(Actor):
             )
 
         return DispatchResponse(dispatch_type="local")
-
-    def join_all_dispatched_threads(self):
-        """
-        Join all dispatched threads and forget them.
-        """
-        for thread in self._dispatched_threads:
-            thread.join()
-        self._dispatched_threads.clear()
