@@ -376,7 +376,9 @@ def load_simulation_input(
     """
     path = localizer.simulation_path(sim_id, "input.json")
     if os.path.exists(path):
-        return read_json(SimulationInput, path)
+        input = read_json(SimulationInput, path)
+        input._id = sim_id
+        return input
     return None
 
 

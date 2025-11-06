@@ -113,7 +113,9 @@ def load_generator_input(
     """
     input_path = localizer.generator_path(gen_id, "input.json")
     if os.path.exists(input_path):
-        return read_json(GeneratorInput, input_path)
+        input = read_json(GeneratorInput, input_path)
+        input._id = gen_id
+        return input
     return None
 
 
