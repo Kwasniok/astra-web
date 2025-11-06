@@ -261,6 +261,23 @@ def uncompress_simulation(
     )
 
 
+def is_compressed_simulation(
+    sim_id: str,
+    localizer: HostLocalizer,
+) -> bool:
+    """
+    Checks if the simulation with the given ID is compressed.
+
+    Raises:
+        ValueError: If the simulation with the given ID does not exist.
+    """
+    if not os.path.exists(localizer.simulation_path(sim_id)):
+        raise ValueError(f"Simulation with ID {sim_id} not found.")
+
+    compressed_path = _compressed_particle_path(sim_id, localizer)
+    return compressed_path is not None
+
+
 def load_simulation_data(
     sim_id: str,
     localizer: HostLocalizer,
@@ -480,6 +497,8 @@ def _load_astra_output_and_meta(
     if not status == DispatchStatus.FINISHED:
         return None, SimulationMetaData(status=DispatchStatus.UNFINISHED)
 
+    is_compressed = is_compressed_simulation(sim_id, localizer)
+
     run_output = read_txt(localizer.simulation_path(sim_id, "run.out"))
     finished_date = None
     execution_time = None
@@ -524,6 +543,7 @@ def _load_astra_output_and_meta(
             execution_time=execution_time,
             warnings=warnings,
             cavity_auto_phasing=cavity_auto_phase,
+            is_compressed=is_compressed,
         ),
     )
 

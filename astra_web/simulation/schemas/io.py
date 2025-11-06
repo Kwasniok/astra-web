@@ -137,6 +137,10 @@ class SimulationMetaData(BaseModel):
         default=None,
         description="Table of automatically determined cavity phases.",
     )
+    is_compressed: bool | None = Field(
+        default=None,
+        description="Indicates whether some of the simulation data is stored in a compressed format.",
+    )
 
 
 class SimulationOutput(BaseModel):
