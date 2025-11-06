@@ -6,6 +6,13 @@ from .schemas.any import DispatchResponse
 
 
 class HostLocalizer(ABC):
+    """
+    Abstract base class for data storage and processing management.
+
+    Depending on which computer (host) is used for a task, different
+    implementations of this class may be used to manage data paths and command
+    dispatching.
+    """
 
     def __init__(self, *, do_not_init_manually_use_instance: None):
         pass
