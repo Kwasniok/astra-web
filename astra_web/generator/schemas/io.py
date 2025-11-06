@@ -29,6 +29,12 @@ class GeneratorInput(IniExportableModel):
         description="Optional comment for the particle generation.",
     )
 
+    timeout: int = Field(
+        default=600,
+        description="The timeout for the generation. Generation is terminated if timeout time is exceeded.",
+        json_schema_extra={"format": "Unit: [s]"},
+    )
+
     def excluded_ini_fields(self) -> set[str]:
         return {"id", "comment"}
 

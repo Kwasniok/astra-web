@@ -22,7 +22,6 @@ async def dispatch_particle_distribution_generation(
     generator_input: GeneratorInput,
     local_localizer: HostLocalizer,
     host_localizer: HostLocalizer,
-    timeout: int,
 ) -> GeneratorDispatchOutput:
     """Dispatches the generation of a particle distribution based on the provided generator input.
     The generator input is written to disk, and the generation is dispatched to the appropriate host.
@@ -31,7 +30,7 @@ async def dispatch_particle_distribution_generation(
     _write_generator_files(generator_input, local_localizer)
     # 'remote'
     response = await host_localizer.dispatch_generation(
-        generator_input, timeout=timeout
+        generator_input,
     )
     return GeneratorDispatchOutput(
         gen_id=generator_input.id,
