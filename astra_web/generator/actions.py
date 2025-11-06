@@ -38,6 +38,34 @@ async def dispatch_particle_distribution_generation(
     )
 
 
+async def redispatch_particle_distribution_generation(
+    gen_id: str,
+    localizer: HostLocalizer,
+) -> GeneratorDispatchOutput:
+    """
+    Redispatches the generation of a particle distribution based on an existing generator ID.
+
+    The existing generator input is loaded from disk, and the generation is dispatched to the appropriate host.
+
+    Raises:
+        FileNotFoundError: If the generator input does not exist.
+    """
+
+    _reset_generator(gen_id, localizer)
+
+    generator_input = load_generator_input(gen_id, localizer)
+    if generator_input is None:
+        raise FileNotFoundError(f"Generator input for ID {gen_id} not found.")
+
+    response = await localizer.dispatch_generation(
+        generator_input,
+    )
+    return GeneratorDispatchOutput(
+        gen_id=gen_id,
+        dispatch_response=response,
+    )
+
+
 def _write_generator_files(
     generator_input: GeneratorInput, localizer: HostLocalizer
 ) -> None:
@@ -50,6 +78,25 @@ def _write_generator_files(
         generator_input.to_ini(),
         localizer.generator_path(generator_input.id, "generator.in"),
     )
+
+
+def _reset_generator(
+    gen_id: str,
+    localizer: HostLocalizer,
+) -> None:
+    """
+    Clears ALL generator files and rewrites the initially required files.
+
+    Raises:
+        FileNotFoundError: If no generator input for the given ID is found.
+    """
+
+    input = load_generator_input(gen_id, localizer)
+    if input is None:
+        raise FileNotFoundError(f"Generator input for ID {gen_id} not found.")
+
+    delete_particle_distribution(gen_id, localizer)
+    _write_generator_files(input, localizer)
 
 
 def load_generator_data(

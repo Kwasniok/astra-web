@@ -47,6 +47,29 @@ async def dispatch_simulation_run(
     )
 
 
+async def redispatch_simulation_run(
+    sim_id: str,
+    localizer: HostLocalizer,
+) -> SimulationDispatchOutput:
+    """
+    Redispatches the simulation run based on an existing simulation ID.
+
+    The existing simulation input is loaded from disk, and the run is dispatched to the appropriate host.
+    """
+
+    _reset_simulation(sim_id, localizer)
+
+    simulation_input = load_simulation_input(sim_id, localizer)
+    if simulation_input is None:
+        raise FileNotFoundError(f"Simulation input for ID {sim_id} not found.")
+
+    response = await localizer.dispatch_simulation(simulation_input)
+    return SimulationDispatchOutput(
+        sim_id=sim_id,
+        dispatch_response=response,
+    )
+
+
 def write_simulation_files(
     simulation_input: SimulationInput, localizer: HostLocalizer
 ) -> None:
@@ -95,6 +118,25 @@ def _link_field_file(file_name: str, run_dir: str, localizer: HostLocalizer):
     target = localizer.field_path(file_name)
     target = os.path.relpath(target, localizer.simulation_path(run_dir))
     os.symlink(target, localizer.simulation_path(run_dir, file_name))
+
+
+def _reset_simulation(
+    sim_id: str,
+    localizer: HostLocalizer,
+) -> None:
+    """
+    Clears ALL simulation files and rewrites the initially required files.
+
+    Raises:
+        FileNotFoundError: If no simulation input for the given ID is found.
+    """
+    input = load_simulation_input(sim_id, localizer)
+    if input is None:
+        raise FileNotFoundError(
+            f"No simulation input for ID {sim_id} found. Cannot reset safely."
+        )
+    delete_simulation(sim_id, localizer)
+    write_simulation_files(input, localizer)
 
 
 class CompressionError(ValueError):

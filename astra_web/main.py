@@ -23,6 +23,7 @@ from .field.schemas.field_table import FieldTable
 from .generator.actions import (
     delete_particle_distribution,
     dispatch_particle_distribution_generation,
+    redispatch_particle_distribution_generation,
     list_generator_ids,
     list_particle_distribution_states,
     load_generator_data,
@@ -47,6 +48,7 @@ from .simulation.actions import (
     compress_simulation,
     delete_simulation,
     dispatch_simulation_run,
+    redispatch_simulation_run,
     list_simulation_ids,
     list_simulation_states,
     load_simulation_data,
@@ -180,6 +182,33 @@ async def dispatch_particle_distribution_generation_(
         local_localizer,
         host_localizer,
     )
+
+
+@app.put(
+    "/particles/{gen_id}/redispatch",
+    dependencies=[Depends(api_key_auth)],
+    tags=["particles"],
+    responses={
+        409: {
+            "description": "Generator input not found on server. Cannot reset generation."
+        },
+    },
+)
+async def redispatch_particle_distribution_(
+    gen_id: str,
+    host: Hosts = Query(default=Hosts.LOCAL),
+) -> GeneratorDispatchOutput:
+    localizer = HostLocalizerTypes.get_localizer(host)
+    try:
+        return await redispatch_particle_distribution_generation(
+            gen_id,
+            localizer,
+        )
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"No input for particle distribution '{gen_id}' found.",
+        )
 
 
 @app.put(
@@ -342,6 +371,33 @@ async def dispatch_simulation(
     return await dispatch_simulation_run(
         simulation_input, local_localizer, host_localizer
     )
+
+
+@app.put(
+    "/simulations/{sim_id}/redispatch",
+    dependencies=[Depends(api_key_auth)],
+    tags=["simulations"],
+    responses={
+        409: {
+            "description": "Simulation input not found on server. Cannot reset simulation."
+        },
+    },
+)
+async def redispatch_simulation_(
+    sim_id: str,
+    host: Hosts = Query(default=Hosts.LOCAL),
+) -> SimulationDispatchOutput:
+    localizer = HostLocalizerTypes.get_localizer(host)
+    try:
+        return await redispatch_simulation_run(
+            sim_id,
+            localizer,
+        )
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"No input for simulation '{sim_id}' found.",
+        )
 
 
 @app.get(
