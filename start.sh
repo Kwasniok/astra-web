@@ -57,4 +57,4 @@ done
 cp tools/* "$ASTRA_BINARY_PATH/"
 
 # run
-uvicorn astra_web.main:app --host 0.0.0.0 --port $PORT
+uvicorn astra_web.web_api:app --host 0.0.0.0 --port $PORT
