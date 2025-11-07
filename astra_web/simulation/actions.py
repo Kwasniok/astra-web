@@ -259,6 +259,8 @@ def uncompress_simulation(
 
     Raises:
         ValueError: If the simulation with the given ID does not exist.
+        FileNotFoundError: If multiple compressed particle files are found.
+        CompressionError: If uncompression fails.
     """
     if not os.path.exists(actor.simulation_path(sim_id)):
         raise ValueError(f"Simulation with ID {sim_id} not found.")
@@ -279,7 +281,9 @@ def uncompress_simulation(
             int_fmt = "%4d"
             np.savetxt(particle_path, data[k], fmt=[float_fmt] * 8 + [int_fmt] * 2)
     except ValueError as e:
-        raise RuntimeError(f"Failed to uncompress simulation with ID {sim_id}.") from e
+        raise CompressionError(
+            f"Failed to uncompress simulation with ID {sim_id}."
+        ) from e
 
     os.remove(compressed_path)
 
@@ -306,6 +310,7 @@ def is_compressed_simulation(
 
     Raises:
         ValueError: If the simulation with the given ID does not exist.
+        FileNotFoundError: If multiple compressed particle files are found.
     """
     if not os.path.exists(actor.simulation_path(sim_id)):
         raise ValueError(f"Simulation with ID {sim_id} not found.")
@@ -439,11 +444,17 @@ def _load_particle_data(
 
 
 def _compressed_particle_path(sim_id: str, actor: Actor) -> str | None:
+    """
+    Returns the path to the compressed particle file if it exists.
+
+    Raises:
+        FileNotFoundError: If multiple compressed particle files are found.
+    """
     paths = glob.glob(
         actor.simulation_path(sim_id, "run.*[0-9]-*[0-9].001.f*.compressed.npz")
     )
     if len(paths) > 1:
-        raise RuntimeError(
+        raise FileNotFoundError(
             f"Multiple compressed particle files found for simulation with ID {sim_id}."
         )
     return paths[0] if len(paths) == 1 else None

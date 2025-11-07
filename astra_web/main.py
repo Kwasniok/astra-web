@@ -496,7 +496,9 @@ async def compress_simulation_(
         200: {
             "description": "Simulation uncompressed successfully. Returns `None` if simulation is not compressed."
         },
+        400: {"description": "Uncompression failed."},
         404: {"description": "Simulation not found."},
+        409: {"description": "No (unique) compressed simulation file found."},
     },
 )
 async def uncompress_simulation_(
@@ -509,9 +511,19 @@ async def uncompress_simulation_(
     actor = LocalActor.instance()
     try:
         return uncompress_simulation(sim_id, actor, high_precision=high_precision)
+    except CompressionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+    except FileNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
             detail=str(e),
         )
 
