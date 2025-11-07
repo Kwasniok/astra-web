@@ -99,14 +99,16 @@ class Actor(ABC):
         """
         Dispatches the generation process by running the ASTRA generator binary with the appropriate input file.
         """
-        return await self._dispatch_task(
-            Task(
-                name=f"{self.GENERATE_DISPATCH_NAME_PREFIX}{generator_input.id}",
-                command=self._generator_command(generator_input),
-                cwd=self.generator_path(generator_input.id),
-                output_file_name_base="generator",
-                timeout=generator_input.timeout,
-            )
+        return await self._dispatch_tasks(
+            [
+                Task(
+                    name=f"{self.GENERATE_DISPATCH_NAME_PREFIX}{generator_input.id}",
+                    command=self._generator_command(generator_input),
+                    cwd=self.generator_path(generator_input.id),
+                    output_file_name_base="generator",
+                    timeout=generator_input.timeout,
+                )
+            ]
         )
 
     async def dispatch_simulation(
@@ -115,19 +117,21 @@ class Actor(ABC):
         """
         Dispatches a simulation to the host system.
         """
-        return await self._dispatch_task(
-            Task(
-                name=f"{self.SIMULATE_DISPATCH_NAME_PREFIX}{simulation_input.id}",
-                command=self._simulation_command(simulation_input),
-                cwd=self.simulation_path(simulation_input.run_dir),
-                output_file_name_base="run",
-                timeout=simulation_input.run.timeout,
-                threads=simulation_input.run.thread_num,
-            )
+        return await self._dispatch_tasks(
+            [
+                Task(
+                    name=f"{self.SIMULATE_DISPATCH_NAME_PREFIX}{simulation_input.id}",
+                    command=self._simulation_command(simulation_input),
+                    cwd=self.simulation_path(simulation_input.run_dir),
+                    output_file_name_base="run",
+                    timeout=simulation_input.run.timeout,
+                    threads=simulation_input.run.thread_num,
+                )
+            ]
         )
 
     @abstractmethod
-    async def _dispatch_task(self, task: Task) -> DispatchResponse:
+    async def _dispatch_tasks(self, tasks: list[Task]) -> DispatchResponse:
         """
         Dispatches a task with the specified directory and output configuration.
 

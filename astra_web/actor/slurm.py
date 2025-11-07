@@ -11,6 +11,7 @@ from .schemas.slurm import (
     SLURMJobOutput,
     SLURMDispatchedIDsOutput,
 )
+from astra_web.uuid import get_uuid
 
 
 class SLURMActor(Actor):
@@ -82,14 +83,31 @@ class SLURMActor(Actor):
         """
         return os.path.join(self._config.astra_binary_path, binary)
 
-    async def _dispatch_task(self, task: Task) -> DispatchResponse:
+    async def _dispatch_tasks(self, tasks: list[Task]) -> DispatchResponse:
         """
-        Dispatches a command for the specified directory and captures the output.
+        Dispatches tasks for their respective directories and captures their output.
         """
 
-        quote: Callable[[str], str] = lambda s: f'"{s}"' if " " in s else s
+        if len(tasks) == 0:
+            return DispatchResponse(
+                dispatch_type="slurm",
+                slurm_submission={},
+                slurm_response={},
+            )
 
-        cmd: str = " ".join(map(quote, task.command))
+        name = _resolve_slurm_job_name(tasks)
+        timeout = (
+            sum(task.timeout for task in tasks if task.timeout is not None)
+            if any(task.timeout is not None for task in tasks)
+            else None
+        )
+        threads = (
+            max(task.threads for task in tasks if task.threads is not None)
+            if any(task.threads is not None for task in tasks)
+            else None
+        )
+
+        tasks_script_fragment = "\n".join(map(self._task_script_fragment, tasks))
 
         script = f"""#!/usr/bin/env bash
 
@@ -97,17 +115,15 @@ set -euo pipefail
 
 # setup
 {self._config.script_setup}
-# dispatched command
-{cmd} > '{task.output_file_name_base}.out' 2> '{task.output_file_name_base}.err'
-# finalize
-status=$?
-[ ! -s '{task.output_file_name_base}.out' ] && rm -f '{task.output_file_name_base}.out'
-[ ! -s '{task.output_file_name_base}.err' ] && rm -f '{task.output_file_name_base}.err'
+
+# tasks: {','.join(task.name for task in tasks)}
+
+{tasks_script_fragment}
 """
 
         data: dict[str, Any] = {
             "job": {
-                "name": task.name,
+                "name": name,
                 "partition": self._config.partition,
                 **(
                     {
@@ -117,18 +133,16 @@ status=$?
                     else {}
                 ),
                 "time_limit": {
-                    "set": task.timeout is not None,
+                    "set": timeout is not None,
                     # convert seconds -> minutes
-                    "number": (task.timeout // 60 if task.timeout is not None else 0),
+                    "number": (timeout // 60 if timeout is not None else 0),
                 },
-                **(
-                    {"tasks_per_node": task.threads} if task.threads is not None else {}
-                ),
-                "current_working_directory": task.cwd,
+                **({"tasks_per_node": threads} if threads is not None else {}),
+                "current_working_directory": "/tmp",
                 "environment": self._config.environment,
                 # separate SLURM output if desired
-                "standard_output": f"{self._config.output_path}/{task.output_file_name_base}-slurm-%j.out",
-                "standard_error": f"{self._config.output_path}/{task.output_file_name_base}-slurm-%j.err",
+                "standard_output": f"{self._config.output_path}/%x-slurm-%j.out",
+                "standard_error": f"{self._config.output_path}/%x-slurm-%j.err",
                 "script": script,
             },
         }
@@ -142,7 +156,7 @@ status=$?
             )
         except RuntimeError as e:
             raise RuntimeError(
-                f"Failed to dispatch command '{cmd}' @ '{task.cwd}' to SLURM"
+                f"Failed to dispatch tasks {','.join(task.name for task in tasks)} to SLURM!"
             ) from e
 
         return DispatchResponse(
@@ -150,6 +164,28 @@ status=$?
             slurm_submission=data,
             slurm_response=response,
         )
+
+    def _task_script_fragment(self, task: Task) -> str:
+        """
+        Returns the script fragment for a single task.
+
+        Changes directory for task and captures output.
+        Timing information and completion message are written to `stderr`.
+        """
+
+        quote: Callable[[str], str] = lambda s: f'"{s}"' if " " in s else s
+
+        cmd: str = " ".join(map(quote, task.command))
+
+        # note: `time` always writes to stderr
+        script = f"""# task: '{task.name}'
+cd '{task.cwd}'
+time {cmd} > '{task.output_file_name_base}.out' 2> '{task.output_file_name_base}.err'
+[ ! -s '{task.output_file_name_base}.out' ] && rm -f '{task.output_file_name_base}.out'
+[ ! -s '{task.output_file_name_base}.err' ] && rm -f '{task.output_file_name_base}.err'
+echo "finished '{task.name}'" >&2
+"""
+        return script
 
     async def ping(self, timeout: int | None) -> JSON:
         """
@@ -291,5 +327,34 @@ status=$?
             body=body or {},
             timeout=timeout,
             proxy_url=self._config.proxy_url,
-            dry_run=None,
+            dry_run=True,  # TODO: DEBUG only, revert to None
         )  # type: ignore
+
+
+def _resolve_slurm_job_name(tasks: list[Task]) -> str:
+    """
+    Attempts to provide a meaningful name for a SLURM job consisting of multiple tasks.
+
+    May fall back to `cummulative-tasks-<UUID>` if no good name can be found.
+    """
+
+    # idea:
+    # assume name format: <prefix>-<id> where <id> is <YYYY>-<MM>-<DD>-<hh>-<mm>-<ss>-<UUID>
+    # combine prefixes if all ids identical
+    # else fall back to generic name
+
+    def name_prefix_and_id(task: Task) -> tuple[str, str]:
+        parts = task.name.split("-", 1)
+        return (parts[0], parts[1]) if len(parts) == 2 else (task.name, "")
+
+    prefixes_and_ids = list(map(name_prefix_and_id, tasks))
+
+    # all ids identical
+    if all(prefixes_and_ids[0][1] == pid for _, pid in prefixes_and_ids):
+        return (
+            "".join(map(lambda x: x[0], prefixes_and_ids))
+            + "-"
+            + prefixes_and_ids[0][1]
+        )
+
+    return f"cummulative-tasks-{get_uuid()}"

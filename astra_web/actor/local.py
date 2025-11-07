@@ -26,9 +26,17 @@ class LocalActor(Actor):
         """
         return os.path.join(self._ASTRA_BINARY_PATH, binary)
 
-    async def _dispatch_task(self, task: Task) -> DispatchResponse:
+    async def _dispatch_tasks(self, tasks: list[Task]) -> DispatchResponse:
         """
-        Runs a command in the specified directory and captures the output.
+        Runs tasks in their respective directories and captures their output.
+        """
+        for task in tasks:
+            await self._dispatch_task(task)
+        return DispatchResponse(dispatch_type="local")
+
+    async def _dispatch_task(self, task: Task) -> None:
+        """
+        Runs a single task in its respective directory and captures its output.
         """
 
         os.makedirs(task.cwd, exist_ok=True)
@@ -46,5 +54,3 @@ class LocalActor(Actor):
                 stderr=stderr_file,
                 timeout=task.timeout,
             )
-
-        return DispatchResponse(dispatch_type="local")
