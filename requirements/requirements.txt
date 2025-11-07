@@ -14,4 +14,4 @@ h5py
 scipy
 matplotlib
 openpmd-beamphysics
-slurm-requests==2.0.0
+slurm-requests==2.1.0
