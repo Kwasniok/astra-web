@@ -1,7 +1,7 @@
 from enum import Enum
 from .base import Actor
 from .local import LocalActor
-from .slurm import SLURMActor, SLURMJobState
+from .slurm import SLURMActor
 
 
 class Actors(Enum):

@@ -1,16 +1,10 @@
 from typing import Any, Callable
 import os
 import slurm_requests as slurm
-from slurm_requests import RequestMethod, SLURMJobState, JSON
+from slurm_requests import RequestMethod, JSON
 from .base import Actor, Task
 from .schemas.any import DispatchResponse
-from .schemas.slurm import (
-    SLURMConfiguration,
-    SLURMDispatchedJobOutput,
-    SLURMDispatchedJobsOutput,
-    SLURMJobOutput,
-    SLURMDispatchedIDsOutput,
-)
+from .schemas.slurm import SLURMConfiguration
 from astra_web.uuid import get_uuid
 
 
@@ -225,91 +219,6 @@ echo "finished '{task.name}'" >&2
         except RuntimeError as e:
             raise RuntimeError(f"Failed to diagnose connection to SLURM.") from e
         return response
-
-    async def list_jobs(
-        self,
-        timeout: int | None,
-    ) -> SLURMDispatchedJobsOutput:
-        """
-        Lists all jobs currently managed by SLURM.
-        """
-
-        data: JSON = {
-            "users": self._config.user_name,
-        }
-        try:
-            response = await self._request(
-                method=RequestMethod.GET,
-                midpoint="slurmdb",
-                endpoint="jobs",
-                body=data,
-                timeout=timeout,
-            )
-        except RuntimeError as e:
-            raise RuntimeError(f"Failed to list SLURM job IDs.") from e
-
-        def extract(job: JSON) -> SLURMDispatchedJobOutput:
-            id: int = job["job_id"]  # type: ignore
-            partition: str | None = job.get("partition", None)  # type: ignore
-            name: str = job["name"]  # type: ignore
-            state: dict = job.get("state", {})  # type: ignore
-            current: list[SLURMJobState] = list(
-                SLURMJobState.select(s) for s in state.get("current", [])
-            )
-            reason: str = state.get("reason", "")  # type: ignore
-            return SLURMDispatchedJobOutput(
-                id=name.removeprefix(self.GENERATE_DISPATCH_NAME_PREFIX).removeprefix(
-                    self.SIMULATE_DISPATCH_NAME_PREFIX
-                ),
-                slurm=SLURMJobOutput(
-                    id=id,
-                    partition=partition,
-                    name=name,
-                    state_current=current,
-                    state_reason=reason,
-                ),
-            )
-
-        def filter(jobs: list[JSON], prefix: str) -> list[JSON]:
-            return [job for job in jobs if job.get("name", "").startswith(prefix)]  # type: ignore
-
-        jobs_all: list[JSON] = response.get("jobs", [])  # type: ignore
-
-        jobs = SLURMDispatchedJobsOutput(
-            particles=[
-                extract(job)
-                for job in filter(jobs_all, self.GENERATE_DISPATCH_NAME_PREFIX)
-            ],
-            simulations=[
-                extract(job)
-                for job in filter(jobs_all, self.SIMULATE_DISPATCH_NAME_PREFIX)
-            ],
-        )
-
-        return jobs
-
-    async def list_dispatched_ids_by_state(
-        self,
-        state: SLURMJobState | None = None,
-        timeout: int | None = None,
-    ) -> SLURMDispatchedIDsOutput:
-        """
-        Lists all dispatched IDs currently managed by SLURM filtered by state.
-        """
-
-        jobs = await self.list_jobs(timeout=timeout)
-
-        def filter_and_extract(jobs: list[SLURMDispatchedJobOutput]) -> list[str]:
-            return [
-                job.id
-                for job in jobs
-                if state is not None and state in job.slurm.state_current
-            ]
-
-        return SLURMDispatchedIDsOutput(
-            particles=filter_and_extract(jobs.particles),
-            simulations=filter_and_extract(jobs.simulations),
-        )
 
     async def _request(
         self,

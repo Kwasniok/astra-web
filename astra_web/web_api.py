@@ -36,13 +36,8 @@ from .actor import (
     Actors,
     LocalActor,
     SLURMActor,
-    SLURMJobState,
 )
-from .actor.schemas.slurm import (
-    SLURMConfiguration,
-    SLURMDispatchedIDsOutput,
-    SLURMDispatchedJobsOutput,
-)
+from .actor.schemas.slurm import SLURMConfiguration
 from .simulation.actions import (
     CompressionError,
     compress_simulation,
@@ -689,42 +684,3 @@ async def diagnose_slurm(
 ) -> dict[str, Any]:
     slurm_actor = SLURMActor.instance()
     return await slurm_actor.diagnose(timeout)  # type: ignore
-
-
-@app.get(
-    "/slurm/jobs",
-    dependencies=[Depends(api_key_auth)],
-    tags=["slurm"],
-)
-async def list_slurm_jobs(
-    timeout: int | None = Query(
-        default=None, description="SLURM REST API request timeout in seconds."
-    ),
-) -> SLURMDispatchedJobsOutput:
-    """
-    Lists jobs currently managed by SLURM.
-
-    see: https://slurm.schedmd.com/rest_api.html#slurmdbV0043GetJobs
-    """
-    slurm_actor = SLURMActor.instance()
-    return await slurm_actor.list_jobs(timeout=timeout)
-
-
-@app.get(
-    "/slurm/jobs/ids",
-    dependencies=[Depends(api_key_auth)],
-    tags=["slurm"],
-)
-async def list_dispatched_ids_by_state(
-    state: SLURMJobState = Query(
-        default=None, description="Filter by SLURM job state."
-    ),
-    timeout: int | None = Query(
-        default=None, description="SLURM REST API request timeout in seconds."
-    ),
-) -> SLURMDispatchedIDsOutput:
-    """
-    Lists all dispatched IDs currently managed by SLURM filtered by state.
-    """
-    slurm_actor = SLURMActor.instance()
-    return await slurm_actor.list_dispatched_ids_by_state(state=state, timeout=timeout)
