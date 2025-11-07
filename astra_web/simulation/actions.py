@@ -164,11 +164,14 @@ def compress_simulation(
     Raises:
         ValueError: If the simulation with the given ID does not exist.
         FileExistsError: If the simulation is already compressed.
-        CompressionError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
+        CompressionError: Compression not possible - e.g. if the simulation has not finished yet or if the maximum of the element-wise relative error exceeds `max_rel_error`.
     """
 
     if not os.path.exists(actor.simulation_path(sim_id)):
         raise ValueError(f"Simulation with ID {sim_id} not found.")
+
+    if get_simulation_status(sim_id, actor) != DispatchStatus.FINISHED:
+        raise CompressionError(f"Simulation with ID {sim_id} is not finished.")
 
     if glob.glob(
         actor.simulation_path(sim_id, "run.*[0-9]-*[0-9].001.f*.compressed.npz")

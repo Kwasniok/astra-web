@@ -440,7 +440,7 @@ async def delete_simulation_(
             "description": "Simulation compressed successfully. Returns `None` if there is nothing to be compressed."
         },
         400: {
-            "description": "Invalid compression parameters. E.g. caused by low `max_rel_err` for a given `precision`."
+            "description": "Invalid compression attempt. E.g. caused by simulation not finished or low `max_rel_err` for a given `precision`."
         },
         404: {"description": "Simulation not found."},
         409: {"description": "Simulation is already compressed."},
