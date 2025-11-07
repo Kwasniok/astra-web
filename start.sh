@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -eo pipefail
 
 PORT=${1:-8000}
 
-# python
+# setup python
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
     python3 -m venv .venv
@@ -52,6 +52,20 @@ for binary in "${binaries[@]}"; do
         fi
     fi
 done
+
+# check cli interface
+CLI_PATH="$ASTRA_BINARY_PATH/astra-web-cli"
+if [ ! -f "$CLI_PATH" ]; then
+    echo "WARNING: astra-web cli not found at $CLI_PATH"
+    echo "installing it ..."
+    cp "scripts/astra-web-cli" "$CLI_PATH"
+    SCRIPT_DIR="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+    sed -i "s|{{ASTRA_WEB_DIR}}|$SCRIPT_DIR|g" "$CLI_PATH"
+    chmod ug+x "$CLI_PATH"
+fi
+# test cli
+"$CLI_PATH" --help > /dev/null
+
 
 # run
 uvicorn astra_web.web_api:app --host 0.0.0.0 --port $PORT

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+cd {{ASTRA_WEB_DIR}}
+
+python -m astra_web "$@"

@@ -1,4 +1,18 @@
 from pydantic import BaseModel, Field
+from astra_web.dtypes import FloatPrecision
+
+
+class CompressionConfig(BaseModel):
+    """Configuration for (un-)compression of simulation data files."""
+
+    precision: FloatPrecision = Field(
+        default=FloatPrecision.FLOAT64,
+        description="Precision level for compression (e.g., 'f32', 'f64').",
+    )
+    max_rel_err: float = Field(
+        default=1e-4,
+        description="Maximum relative error per element allowed during compression.",
+    )
 
 
 class CompressionReport(BaseModel):

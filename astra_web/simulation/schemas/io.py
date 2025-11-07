@@ -6,6 +6,7 @@ from astra_web.actor.schemas.any import DispatchResponse
 from astra_web.uuid import get_uuid
 from astra_web.file import IniExportableModel, IniExportableArrayModel
 from astra_web.status import DispatchStatus
+from .compression import CompressionConfig
 from .output import SimulationOutputSpecification
 from .run import SimulationRunSpecifications
 from .scan import SimulationScanSpecifications
@@ -33,9 +34,9 @@ class SimulationInput(IniExportableModel):
         description="Optional comment for the simulation.",
     )
 
-    auto_compress_after_run: bool = Field(
-        default=False,
-        description="Automatically compress simulation data after run.",
+    auto_compress_after_run: CompressionConfig | None = Field(
+        default=None,
+        description="When specified, automatically compress simulation data after run.",
     )
 
     @property
@@ -55,6 +56,7 @@ class SimulationInput(IniExportableModel):
         return {
             "id",
             "comment",
+            "auto_compress_after_run",
             "run_dir",
             "field_file_names",
             "run",

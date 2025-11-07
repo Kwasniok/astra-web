@@ -139,7 +139,12 @@ set -euo pipefail
                 },
                 **({"tasks_per_node": threads} if threads is not None else {}),
                 "current_working_directory": "/tmp",
-                "environment": self._config.environment,
+                "environment": self._config.environment
+                # add ASTRA specific environment variables for astra-web-cli
+                + [
+                    f"ASTRA_BINARY_PATH={self._config.astra_binary_path}",
+                    f"ASTRA_DATA_PATH={self._config.data_path}",
+                ],
                 # separate SLURM output if desired
                 "standard_output": f"{self._config.output_path}/%x-slurm-%j.out",
                 "standard_error": f"{self._config.output_path}/%x-slurm-%j.err",
@@ -327,7 +332,6 @@ echo "finished '{task.name}'" >&2
             body=body or {},
             timeout=timeout,
             proxy_url=self._config.proxy_url,
-            dry_run=True,  # TODO: DEBUG only, revert to None
         )  # type: ignore
 
 
@@ -352,7 +356,7 @@ def _resolve_slurm_job_name(tasks: list[Task]) -> str:
     # all ids identical
     if all(prefixes_and_ids[0][1] == pid for _, pid in prefixes_and_ids):
         return (
-            "".join(map(lambda x: x[0], prefixes_and_ids))
+            ",".join(map(lambda x: x[0], prefixes_and_ids))
             + "-"
             + prefixes_and_ids[0][1]
         )

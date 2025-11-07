@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import os
 from astra_web.generator.schemas.io import GeneratorInput
+from astra_web.simulation.schemas.compression import CompressionConfig
 from astra_web.simulation.schemas.io import SimulationInput
 from .schemas.any import DispatchResponse
 
@@ -30,6 +31,7 @@ class Actor(ABC):
 
     GENERATE_DISPATCH_NAME_PREFIX = "generate-"
     SIMULATE_DISPATCH_NAME_PREFIX = "simulate-"
+    COMPRESS_DISPATCH_NAME_PREFIX = "compress-"
 
     @classmethod
     @abstractmethod
@@ -117,18 +119,31 @@ class Actor(ABC):
         """
         Dispatches a simulation to the host system.
         """
-        return await self._dispatch_tasks(
-            [
+        tasks = [
+            Task(
+                name=f"{self.SIMULATE_DISPATCH_NAME_PREFIX}{simulation_input.id}",
+                command=self._simulation_command(simulation_input),
+                cwd=self.simulation_path(simulation_input.run_dir),
+                output_file_name_base="run",
+                timeout=simulation_input.run.timeout,
+                threads=simulation_input.run.thread_num,
+            ),
+        ]
+
+        if simulation_input.auto_compress_after_run is not None:
+            tasks.append(
                 Task(
-                    name=f"{self.SIMULATE_DISPATCH_NAME_PREFIX}{simulation_input.id}",
-                    command=self._simulation_command(simulation_input),
+                    name=f"{self.COMPRESS_DISPATCH_NAME_PREFIX}{simulation_input.id}",
+                    command=self._compression_command(
+                        sim_id=simulation_input.id,
+                        config=simulation_input.auto_compress_after_run,
+                    ),
                     cwd=self.simulation_path(simulation_input.run_dir),
-                    output_file_name_base="run",
-                    timeout=simulation_input.run.timeout,
-                    threads=simulation_input.run.thread_num,
+                    output_file_name_base="compress",
                 )
-            ]
-        )
+            )
+
+        return await self._dispatch_tasks(tasks)
 
     @abstractmethod
     async def _dispatch_tasks(self, tasks: list[Task]) -> DispatchResponse:
@@ -150,6 +165,20 @@ class Actor(ABC):
 
         if simulation_input.run.thread_num > 1:
             cmd = ["mpirun", "-n", str(simulation_input.run.thread_num)] + cmd
+        return cmd
+
+    def _compression_command(
+        self,
+        sim_id: str,
+        config: CompressionConfig,
+    ) -> list[str]:
+        cmd = [
+            self.astra_binary_path("astra-web-cli"),
+            "compress-sim",
+            f"--sim-id={sim_id}",
+        ]
+        cmd.append(f"--precision={config.precision.value}")
+        cmd.append(f"--max-rel-err={config.max_rel_err}")
         return cmd
 
     def _astra_simulation_binary_path(
