@@ -1,8 +1,19 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 import os
 from astra_web.generator.schemas.io import GeneratorInput
 from astra_web.simulation.schemas.io import SimulationInput
 from .schemas.any import DispatchResponse
+
+
+@dataclass
+class Task:
+    name: str
+    command: list[str]
+    cwd: str
+    output_file_name_base: str
+    timeout: int | None = None
+    threads: int | None = None
 
 
 class Actor(ABC):
@@ -88,12 +99,14 @@ class Actor(ABC):
         """
         Dispatches the generation process by running the ASTRA generator binary with the appropriate input file.
         """
-        return await self._dispatch_command(
-            name=f"{self.GENERATE_DISPATCH_NAME_PREFIX}{generator_input.id}",
-            command=self._generator_command(generator_input),
-            cwd=self.generator_path(generator_input.id),
-            output_file_name_base="generator",
-            timeout=generator_input.timeout,
+        return await self._dispatch_task(
+            Task(
+                name=f"{self.GENERATE_DISPATCH_NAME_PREFIX}{generator_input.id}",
+                command=self._generator_command(generator_input),
+                cwd=self.generator_path(generator_input.id),
+                output_file_name_base="generator",
+                timeout=generator_input.timeout,
+            )
         )
 
     async def dispatch_simulation(
@@ -102,32 +115,21 @@ class Actor(ABC):
         """
         Dispatches a simulation to the host system.
         """
-        return await self._dispatch_command(
-            name=f"{self.SIMULATE_DISPATCH_NAME_PREFIX}{simulation_input.id}",
-            command=self._simulation_command(simulation_input),
-            cwd=self.simulation_path(simulation_input.run_dir),
-            output_file_name_base="run",
-            timeout=simulation_input.run.timeout,
-            threads=simulation_input.run.thread_num,
+        return await self._dispatch_task(
+            Task(
+                name=f"{self.SIMULATE_DISPATCH_NAME_PREFIX}{simulation_input.id}",
+                command=self._simulation_command(simulation_input),
+                cwd=self.simulation_path(simulation_input.run_dir),
+                output_file_name_base="run",
+                timeout=simulation_input.run.timeout,
+                threads=simulation_input.run.thread_num,
+            )
         )
 
     @abstractmethod
-    async def _dispatch_command(
-        self,
-        name: str,
-        command: list[str],
-        cwd: str,
-        output_file_name_base: str,
-        timeout: int | None = None,
-        threads: int | None = None,
-    ) -> DispatchResponse:
+    async def _dispatch_task(self, task: Task) -> DispatchResponse:
         """
-        Dispatches a command with the specified directory and output configuration.
-
-        :param command: The command to be executed on the host.
-        :param cwd: The working directory where the command should be executed.
-        :param output_file_name_base: The base name for the output files to be written to the working directory. (will be extended by .out and .err)
-        :param timeout: Optional timeout for the command execution in seconds
+        Dispatches a task with the specified directory and output configuration.
 
         May create additional files with the captured stdout (.out) and stderr (.err) inside of `cwd` when non-empty.
         """

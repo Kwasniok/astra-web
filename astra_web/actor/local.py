@@ -1,6 +1,6 @@
 import os
 from subprocess import run
-from .base import Actor
+from .base import Actor, Task
 from .schemas.any import DispatchResponse
 
 
@@ -26,33 +26,25 @@ class LocalActor(Actor):
         """
         return os.path.join(self._ASTRA_BINARY_PATH, binary)
 
-    async def _dispatch_command(
-        self,
-        name: str,
-        command: list[str],
-        cwd: str,
-        output_file_name_base: str,
-        timeout: int | None = None,
-        threads: int | None = None,
-    ) -> DispatchResponse:
+    async def _dispatch_task(self, task: Task) -> DispatchResponse:
         """
         Runs a command in the specified directory and captures the output.
         """
 
-        os.makedirs(cwd, exist_ok=True)
+        os.makedirs(task.cwd, exist_ok=True)
 
-        stdout_path = os.path.join(cwd, output_file_name_base + ".out")
-        stderr_path = os.path.join(cwd, output_file_name_base + ".err")
+        stdout_path = os.path.join(task.cwd, task.output_file_name_base + ".out")
+        stderr_path = os.path.join(task.cwd, task.output_file_name_base + ".err")
 
         with open(stdout_path, "w") as stdout_file, open(
             stderr_path, "w"
         ) as stderr_file:
             run(
-                command,
-                cwd=cwd,
+                task.command,
+                cwd=task.cwd,
                 stdout=stdout_file,
                 stderr=stderr_file,
-                timeout=timeout,
+                timeout=task.timeout,
             )
 
         return DispatchResponse(dispatch_type="local")

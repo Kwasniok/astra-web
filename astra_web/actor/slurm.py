@@ -2,7 +2,7 @@ from typing import Any, Callable
 import os
 import slurm_requests as slurm
 from slurm_requests import RequestMethod, SLURMJobState, JSON
-from .base import Actor
+from .base import Actor, Task
 from .schemas.any import DispatchResponse
 from .schemas.slurm import (
     SLURMConfiguration,
@@ -82,22 +82,14 @@ class SLURMActor(Actor):
         """
         return os.path.join(self._config.astra_binary_path, binary)
 
-    async def _dispatch_command(
-        self,
-        name: str,
-        command: list[str],
-        cwd: str,
-        output_file_name_base: str,
-        timeout: int | None = None,
-        threads: int | None = None,
-    ) -> DispatchResponse:
+    async def _dispatch_task(self, task: Task) -> DispatchResponse:
         """
         Dispatches a command for the specified directory and captures the output.
         """
 
         quote: Callable[[str], str] = lambda s: f'"{s}"' if " " in s else s
 
-        cmd: str = " ".join(map(quote, command))
+        cmd: str = " ".join(map(quote, task.command))
 
         script = f"""#!/usr/bin/env bash
 
@@ -106,16 +98,16 @@ set -euo pipefail
 # setup
 {self._config.script_setup}
 # dispatched command
-{cmd} > '{output_file_name_base}.out' 2> '{output_file_name_base}.err'
+{cmd} > '{task.output_file_name_base}.out' 2> '{task.output_file_name_base}.err'
 # finalize
 status=$?
-[ ! -s '{output_file_name_base}.out' ] && rm -f '{output_file_name_base}.out'
-[ ! -s '{output_file_name_base}.err' ] && rm -f '{output_file_name_base}.err'
+[ ! -s '{task.output_file_name_base}.out' ] && rm -f '{task.output_file_name_base}.out'
+[ ! -s '{task.output_file_name_base}.err' ] && rm -f '{task.output_file_name_base}.err'
 """
 
         data: dict[str, Any] = {
             "job": {
-                "name": name,
+                "name": task.name,
                 "partition": self._config.partition,
                 **(
                     {
@@ -125,16 +117,18 @@ status=$?
                     else {}
                 ),
                 "time_limit": {
-                    "set": timeout is not None,
+                    "set": task.timeout is not None,
                     # convert seconds -> minutes
-                    "number": (timeout // 60 if timeout is not None else 0),
+                    "number": (task.timeout // 60 if task.timeout is not None else 0),
                 },
-                **({"tasks_per_node": threads} if threads is not None else {}),
-                "current_working_directory": cwd,
+                **(
+                    {"tasks_per_node": task.threads} if task.threads is not None else {}
+                ),
+                "current_working_directory": task.cwd,
                 "environment": self._config.environment,
                 # separate SLURM output if desired
-                "standard_output": f"{self._config.output_path}/{output_file_name_base}-slurm-%j.out",
-                "standard_error": f"{self._config.output_path}/{output_file_name_base}-slurm-%j.err",
+                "standard_output": f"{self._config.output_path}/{task.output_file_name_base}-slurm-%j.out",
+                "standard_error": f"{self._config.output_path}/{task.output_file_name_base}-slurm-%j.err",
                 "script": script,
             },
         }
@@ -148,7 +142,7 @@ status=$?
             )
         except RuntimeError as e:
             raise RuntimeError(
-                f"Failed to dispatch command '{cmd}' @ '{cwd}' to SLURM"
+                f"Failed to dispatch command '{cmd}' @ '{task.cwd}' to SLURM"
             ) from e
 
         return DispatchResponse(

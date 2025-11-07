@@ -33,6 +33,11 @@ class SimulationInput(IniExportableModel):
         description="Optional comment for the simulation.",
     )
 
+    auto_compress_after_run: bool = Field(
+        default=False,
+        description="Automatically compress simulation data after run.",
+    )
+
     @property
     def run_dir(self) -> str:
         return self.id
