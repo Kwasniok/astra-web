@@ -6,7 +6,7 @@ from fastapi.responses import ORJSONResponse, RedirectResponse
 from pydantic import BaseModel
 
 from .dtypes import FloatPrecision
-from .auth.auth_schemes import api_key_auth
+from .auth.schemes import api_key_auth
 from .features.actions import (
     get_all_varying_features,
     get_features,

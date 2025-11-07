@@ -2,7 +2,7 @@ import glob
 import os
 from shutil import rmtree
 
-from astra_web._aux import filter_has_prefix
+from astra_web.filter import filter_has_prefix
 from astra_web.file import find_symlinks, read_json, read_txt, write_json, write_txt
 from astra_web.actor import Actor
 from astra_web.status import DispatchStatus

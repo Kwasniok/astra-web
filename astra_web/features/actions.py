@@ -3,7 +3,7 @@ from typing import Any, Callable, Iterable, cast
 
 from pydantic import BaseModel
 
-from astra_web._aux import get_filter_subtree
+from astra_web.filter import get_filter_subtree
 from astra_web.file.json import JSONType
 from astra_web.generator.actions import load_generator_data
 from astra_web.actor import Actor
