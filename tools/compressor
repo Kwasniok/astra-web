@@ -1,0 +1,272 @@
+#!/usr/bin/env python
+
+from typing import Any
+import os
+import sys
+import glob
+import argparse
+from enum import Enum
+import numpy as np
+import json
+
+
+class FloatPrecision(str, Enum):
+    """Floating point precision."""
+
+    FLOAT16 = "f16"
+    FLOAT32 = "f32"
+    FLOAT64 = "f64"
+    FLOAT128 = "f128"
+
+    @classmethod
+    def select(cls, value: str) -> "FloatPrecision":
+        """Selects the FloatPrecision enum member based on the string value."""
+        for member in cls:
+            if member.value == value:
+                return member
+        raise ValueError(f"Invalid FloatPrecision value: {value}")
+
+    def numpy_dtype(self) -> Any:
+        match self:
+            case FloatPrecision.FLOAT16:
+                return np.float16
+            case FloatPrecision.FLOAT32:
+                return np.float32
+            case FloatPrecision.FLOAT64:
+                return np.float64
+            case FloatPrecision.FLOAT128:
+                return np.float128
+
+
+class CompressionError(RuntimeError):
+    """Raised when compression fails due to exceeding maximum relative error."""
+
+
+def _compress_simulation(
+    precision: FloatPrecision = FloatPrecision.FLOAT64,
+    max_rel_err: float = 1e-4,
+) -> dict | None:
+    """
+    Compresses some simulation output files to save disk space.
+
+    **WARNING**: **Deletes original files**.
+
+    **WARNING**: Compression may be **lossy**, and is intended for reducing disk usage.
+
+    **INFO**: Compression is **not idempotent**. Uncompress first before compressing again.
+
+    - Compressed files:
+        - Particle distribution files `run.0000.001` ... `run.<N>.001` -> `run.0000-<N>.001.f<P>.compressed.npz`
+
+    Returns:
+        - `CompressionReport` summarizing the compression operation.
+        - `None` if there is nothing to be compressed.
+
+    Raises:
+        CompressionError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
+    """
+
+    if glob.glob(f"run.*[0-9]-*[0-9].001.f*.compressed.npz"):
+        raise FileExistsError(f"Simulation is already compressed. Uncompress first.")
+
+    paths = _particle_paths()
+
+    total_original_size = sum(os.path.getsize(p) for p in paths)
+
+    keys = [k for k in map(lambda p: p.split(".")[-2], paths)]
+    data: dict[str, np.typing.NDArray] = {
+        k: _np_loadtxt_with_precision(p, precision, max_rel_err)
+        for k, p in zip(keys, paths)
+    }
+
+    if len(data) > 0:
+        compressed_path = (
+            f"run.{keys[0]}-{keys[-1]}.001.{precision.value}.compressed.npz"
+        )
+
+        np.savez_compressed(
+            compressed_path,
+            **data,
+            allow_pickle=False,
+        )
+        if os.path.exists(compressed_path):
+            for p in paths:
+                os.remove(p)
+
+        total_new_size = os.path.getsize(compressed_path)
+
+        return dict(
+            original_files=[os.path.basename(p) for p in paths],
+            new_files=[os.path.basename(compressed_path)],
+            total_original_size=total_original_size,
+            total_new_size=total_new_size,
+            compression_ratio=(total_original_size / total_new_size),
+        )
+
+    return None
+
+
+def _uncompress_simulation(
+    high_precision: bool = True,
+) -> dict | None:
+    """
+    Uncompresses previously compressed simulation output files if available.
+
+    - Uncompressed files:
+        - Particle distribution files `run.0000-<N>.f<P>.compressed.npz` -> `run.0000.001` ... `run.<N>.001`
+
+    - Note: Uncompression is an **idempotent** operation.
+
+    Args:
+        high_precision (bool): If `True`, writes floating point numbers with high precision (12 digits after the decimal point).  If `False`, uses 4 digits after the decimal point. See ASTRA documentation for details.
+
+    Returns:
+        - `CompressionReport` summarizing the uncompression operation.
+        - `None` if the simulation is already uncompressed.
+
+    Raises:
+        FileNotFoundError: If multiple compressed particle files are found.
+        CompressionError: If uncompression fails.
+    """
+
+    compressed_path = _compressed_particle_path()
+    if compressed_path is None:
+        # already uncompressed
+        return None
+
+    total_original_size = os.path.getsize(compressed_path)
+
+    try:
+        data = np.load(compressed_path)
+
+        for k in data.keys():
+            particle_path = f"run.{k}.001"
+            float_fmt = "%20.12E" if high_precision else "%20.4E"
+            int_fmt = "%4d"
+            np.savetxt(particle_path, data[k], fmt=[float_fmt] * 8 + [int_fmt] * 2)
+    except ValueError as e:
+        raise CompressionError(f"Failed to uncompress simulation.") from e
+
+    os.remove(compressed_path)
+
+    total_new_size = sum(os.path.getsize(f"run.{k}.001") for k in data.keys())
+
+    return dict(
+        original_files=[os.path.basename(compressed_path)],
+        new_files=[f"run.{k}.001" for k in data.keys()],
+        total_original_size=total_original_size,
+        total_new_size=total_new_size,
+        compression_ratio=(total_original_size / total_new_size),
+    )
+
+
+def _particle_paths() -> list[str]:
+    files = glob.glob("run.*[0-9].001")
+    return sorted(
+        files,
+        key=lambda s: s.split(".")[1],
+    )
+
+
+def _compressed_particle_path() -> str | None:
+    """
+    Returns the path to the compressed particle file if it exists.
+
+    Raises:
+        FileNotFoundError: If multiple compressed particle files are found.
+    """
+    paths = glob.glob("run.*[0-9]-*[0-9].001.f*.compressed.npz")
+    if len(paths) > 1:
+        raise FileNotFoundError(f"Multiple compressed particle files found.")
+    return paths[0] if len(paths) == 1 else None
+
+
+def _np_loadtxt_with_precision(
+    path: str,
+    precision: FloatPrecision,
+    max_rel_err: float,
+) -> np.typing.NDArray:
+    """
+    Loads a text file with numpy and converts it to the specified precision.
+
+    Raises:
+        CompressionError: If the maximum of the element-wise relative error exceeds `max_rel_error`.
+    """
+    data = np.loadtxt(path)
+    data_compressed = data.astype(precision.numpy_dtype())
+
+    rel_error = lambda x, y: np.max(np.abs(x - y) / np.maximum(np.abs(x), 1e-12))
+    if rel_error(data, data_compressed) > max_rel_err:
+        raise CompressionError(
+            f"Compression of particle data in file {path} exceeds maximum relative error of {max_rel_err}."
+        )
+
+    return data_compressed
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Compress or decompress simulation output files."
+    )
+
+    command_parser = parser.add_subparsers(
+        dest="command", required=True, metavar="COMMAND"
+    )
+
+    compression_parser = command_parser.add_parser(
+        "compress", help="Compress simulation output files."
+    )
+    compression_parser.add_argument(
+        "--precision",
+        type=str,
+        choices=list(map(lambda x: x.value, FloatPrecision)),
+        default=FloatPrecision.FLOAT64.value,
+        help="Floating point precision for compression. Default is 'f64'.",
+    )
+    compression_parser.add_argument(
+        "--max-rel-err",
+        type=float,
+        default=1e-4,
+        help="Maximum allowable relative error for lossy compression. Default is 1e-4.",
+    )
+
+    decompression_parser = command_parser.add_parser(
+        "decompress", help="Decompress simulation output files."
+    )
+    decompression_parser.add_argument(
+        "--precision",
+        type=str,
+        choices=("low", "high"),
+        default="high",
+        help="Floating point precision for decompression. Default is 'high'.",
+    )
+
+    args = parser.parse_args()
+
+    try:
+        if args.command == "compress":
+            args.precision = FloatPrecision.select(args.precision)
+            report = _compress_simulation(
+                precision=args.precision,
+                max_rel_err=args.max_rel_err,
+            )
+        elif args.command == "decompress":
+            report = _uncompress_simulation(
+                high_precision=args.precision == "high",
+            )
+    except CompressionError as e:
+        print(f"CompressionError: {e}", file=sys.stderr)
+        sys.exit(65)
+    except FileExistsError as e:
+        print(f"FileExistsError: {e}", file=sys.stderr)
+        sys.exit(17)
+    except FileNotFoundError as e:
+        print(f"FileNotFoundError: {e}", file=sys.stderr)
+        sys.exit(17)
+
+    if report is not None:
+        json.dump(report, sys.stdout, indent=4)
+        sys.exit(0)
+    else:
+        print(f"Nothing to do.", file=sys.stderr)
+        sys.exit(0)

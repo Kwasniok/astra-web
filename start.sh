@@ -53,5 +53,8 @@ for binary in "${binaries[@]}"; do
     fi
 done
 
+# tools
+cp tools/* "$ASTRA_BINARY_PATH/"
+
 # run
 uvicorn astra_web.main:app --host 0.0.0.0 --port $PORT
