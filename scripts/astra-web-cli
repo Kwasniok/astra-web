@@ -2,4 +2,6 @@
 
 cd {{ASTRA_WEB_DIR}}
 
+source .venv/bin/activate
+
 python -m astra_web "$@"
