@@ -177,12 +177,12 @@ set -euo pipefail
         cmd: str = " ".join(map(quote, task.command))
 
         # note: `time` always writes to stderr
-        script = f"""# task: '{task.name}'
+        script = f"""echo "{task.name}" >&2
 cd '{task.cwd}'
 time {cmd} > '{task.output_file_name_base}.out' 2> '{task.output_file_name_base}.err'
 [ ! -s '{task.output_file_name_base}.out' ] && rm -f '{task.output_file_name_base}.out'
 [ ! -s '{task.output_file_name_base}.err' ] && rm -f '{task.output_file_name_base}.err'
-echo "finished '{task.name}'" >&2
+echo "done" >&2
 """
         return script
 
