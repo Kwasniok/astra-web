@@ -625,7 +625,7 @@ def _read_auto_phase_table(run_output: str, start_line: int) -> CavityAutoPhaseT
                     f"Failed to parse cavity auto phase table: Invalid header line (`{line}`)."
                 )
         else:
-            row = re.search(r"(\d+)\s+(\d+\.\d+)\s+(\d+\.\d+)", line)
+            row = re.search(r"(\d+)\s+(\d+\.\d*)\s+([+-]?\d+\.\d*)", line)
             end = re.search(r"^\s*(-)+\s*$", line)
             if row:
                 num, eg, phi = row.groups()
