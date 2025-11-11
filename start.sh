@@ -2,7 +2,17 @@
 
 set -eo pipefail
 
-PORT=${1:-8000}
+# environment
+ENV_FILE="config/.env"
+if [ -f "$ENV_FILE" ]; then
+    set -a
+    source "$ENV_FILE"
+    set +a
+else
+    echo "Warning: `$ENV_FILE` not found, skipping .env file import."
+fi
+: "${ASTRA_BINARY_CHECK_HASH:=true}"
+: "${ASTRA_PORT:=8000}"
 
 # setup python
 if [ ! -d ".venv" ]; then
@@ -13,11 +23,6 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements/requirements.txt
 
-# load and export environment
-set -a
-source config/.env
-set +a
-: "${ASTRA_BINARY_CHECK_HASH:=true}"
 
 # ensure ASTRA binaries are installed
 if [ ! -d "$ASTRA_BINARY_PATH" ]; then
@@ -48,6 +53,7 @@ for binary in "${binaries[@]}"; do
             echo "Expected HASH: $hash"
             echo "Got HASH:      $computed_hash"
             echo "Corrupted file or unexpected version."
+            echo "Set `ASTRA_BINARY_CHECK_HASH=false` in your environment to skip this check."
             exit 1
         fi
     fi
@@ -64,9 +70,9 @@ if [ ! -f "$CLI_PATH" ]; then
     chmod ug+x "$CLI_PATH"
 fi
 # test cli
-echo "Testing astra-web-cli ..."
+echo "Checking astra-web-cli ..."
 "$CLI_PATH" --help > /dev/null
 
 
 # run
-uvicorn astra_web.web_api:app --host 0.0.0.0 --port $PORT
+uvicorn astra_web.web_api:app --host 0.0.0.0 --port $ASTRA_PORT

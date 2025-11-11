@@ -1,57 +1,61 @@
 [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 
 # ASTRA Web API
-This repository is based on [astra-web](https://github.com/AlexanderKlemps/astra-web) by A. Klemps (Hamburg University of Technology, TUHH) and contains an API wrapper for the well-known [ASTRA simulation code](https://www.desy.de/~mpyflo/) by
-K. Floettmann (DESY Hamburg) based on the Python FastAPI package.
+API wrapper for the well-known [ASTRA simulation code](https://www.desy.de/~mpyflo/) by
+K. Floettmann (DESY Hamburg) for enhanced management of many simulation. All simulations are managed by a server which is controlled via REST API calls.
 
-This fork includes modification for improved interoperability with a SLURM environment (more specifically the Maxwell cluster at DESY Hamburg).
+This project is a fork of [astra-web](https://github.com/AlexanderKlemps/astra-web) by A. Klemps (Hamburg University of Technology, TUHH) which includes modification for improved interoperability with a [SLURM](https://slurm.schedmd.com) environment and more.
 
 # Requirements
-Older versions may work, but are not tested.
-
-## local
+## server
 - Linux (kernel v6.12+)
 - python (v3.13+)
 - openmpi (v5.0.3+, optional for multi-threaded simulations, ensure `libmpi_usempi.so.40` is available)
-## remote
+## SLURM
 - SLURM (v0.0.40+, optional for remote execution on cluster)
+- sshfs (optional, depending on the network infrastructure)
 
+ℹ️ Older versions may work, but are not tested.
 
 # Setup
-## Install openmpi (optional, for local multi-treaded simulations)
-In case you want to run ASTRA in multi-threaded mode on the local host also install openmpi (see [Parallel Astra Readme](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux/AAA_Readme.txt)).
+## openmpi (optional, for local multi-treaded simulations)
+In case you want to run ASTRA in multi-threaded mode ensure that openmpi is installed on the server/SLURM cluster as well (see [Parallel Astra Readme](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux/AAA_Readme.txt)).
 
-When using [SLURM](#slurm), the SLURM server may take care of the parallel execution in that case openmpi is not required.
-
-⚠️ Ensure that the `libmpi_usempi.so.40` is available via the `LD_LIBRARY_PATH` environment variable. E.g. create a symlink to `.../openmpi/5.0.3/lib/libmpi_usempi_ignore_tkr.so.40` in `./lib` and append `.lib` to `LD_LIBRARY_PATH`.
+⚠️ Make sure that the `libmpi_usempi.so.40` is available via the `LD_LIBRARY_PATH` environment variable. E.g. create a symlink to `.../openmpi/5.0.3/lib/libmpi_usempi_ignore_tkr.so.40` in `./lib` and append `./lib` to `LD_LIBRARY_PATH`.
 
 ## Environment
-Create `config/.env` and set the environment variables according to:
+The following environment variables are used.
 
 | Variable            | Required | Description                                                                  |
 |---------------------|----------|------------------------------------------------------------------------------|
 | `ASTRA_WEB_API_KEY` | yes      | The API key to access the ASTRA web API. This is required for authorization. |
 | `ASTRA_DATA_PATH`   | yes      | The path to a local data directory where all results are stored.             |
 | `ASTRA_BINARY_PATH` | yes      | The path to the folder with ASTRA binaries. Binaries must be called `generator`, `astra` and `parallel_astra` respectively. |
+| `ASTRA_PORT`        | optional | The port number of the web service. Default is `8000`.                       |
 | `ASTRA_BINARY_CHECK_HASH` | optional | Whether to check the MD5 checksum of the ASTRA binaries on startup. Default is `true`. |
 
 See [SLURM](#slurm) for additional environment variables required to connect to a SLURM server for remote execution.
+See [BASH Environment](https://www.gnu.org/software/bash/manual/html_node/Environment.html) for how to handle an environment.
 
 ## Start
 Start the server locally by executing the following command in the root directory of this project:
 
     ./start.sh
 
+ℹ️ For convenience, this script will load all environment variables defined in `config/.env`.
+
+ℹ️ The default `port=8000` may be overwritten like `./start.sh 8001`.
+
 ⚠️ All communication with the host is done via HTTP which provides **no encryption**! Allways route your trafic through a secure connection like a VPN or SSH tunnel to ensure your data (e.g. tokens) is protected!
 
 
-# API Documentation
+# Web API Documentation
 
-Once the server is [set up](#setup) you will find the interactive API documentation under
+Once the server is [set up](#setup) you will find the interactive web API documentation under
 
-    http://<host>:8000/docs
+    http://<host>:<port>/docs
 
-where `<host>` is the URL of the host where the server is running. E.g. `localhost` when accessed locally.
+where `<host>` is the address of the server. E.g. `localhost` when the server runs on the same machine.
 
 ## How to Use the Documentation
 The documentation lists all requests by name and type.
@@ -60,12 +64,15 @@ Furthermore the schema of the input is presented with annotations for each field
 
 ![API Docs](./doc/web-doc-example-for-input.png)
 
-Requesting the example above may translate to the following code:
+Requesting the example above may translate to the following python code based on [rest-requests](https://pypi.org/project/rest-requests):
 ```python
+from rest_requests import request, RequestMethod
+
 await request(
-    "particles?host=local&timeout=600",
-    RequestType.POST,
-    {
+    RequestMethod.POST,
+    url="https://localhost:8000/particles?host=local&timeout=1000",
+    headers={"x-api-key": "<ASTRA_WEB_API_KEY>"},
+    body={
         "comment": "example",
         "particle_count": 1000,
         "particle_type": "electrons",
@@ -74,14 +81,16 @@ await request(
 )
 ```
 
-note: Unspecified parameters will be set to their default value if available. This simplifies the input but can also lead to unexpected results. All default values are identical to those given in the ASTRA manual v3.2. Even if no default value is given ASTRA might select a default value automatically.
+ℹ️ See `./alias_table.txt` for a translation of the parameter names and ASTRA mnemonics.
 
-Below all requests is a drop down list showing all available schemas.
+ℹ️ Some parameters in the body are optional and have default values. Confirm the ASTRA manual v3.2 on how the defaults are specified.
+
+ℹ️ In the documentation below all requests is a complete list of all input/output schemas.
 
 # SLURM
 If you want to dispatch some computations to a [SLURM cluster](https://slurm.schedmd.com) carefully follow the instructions below. Otherwise you can skip this section.
 Using SLURM is recommended for resource intensive simulations only.
-Fig. 1 shows a schematic for when ASTRA web is set up with SLURM.
+Fig. 1 shows a schematic overview of the extended setup.
 
 > ⚠️ Using SLURM may lead to unexpected problems! Check the server log if any are encountered. 
 
@@ -119,22 +128,22 @@ flowchart LR
 Fig. 1: Schematic overview of the ASTRA Web with SLURM support. The ASTRA Web server is accessed via a REST API over the https protocol. Some actions may be dispatched to a SLURM cluster for asynchronous execution via its own REST API. All data is stored persistently in the cluster. In case the server has no direct access to the persistent storage, it has to be mounted manually (see [Mount Data Directory](#mount-data-directory)).
 
 ## SLURM Environment
-In addition to the [basic environment](#environment), set the following environment variables (e.g. in `./docker/.env`):
+In addition to the [basic environment](#environment), set the following environment variables:
 
-| Variable                      | Required | Description                                                                        | Example                                               |
+| Variable                      | Required | Description                                                                        | Example(s)                                            |
 |-------------------------------|----------|------------------------------------------------------------------------------------|-------------------------------------------------------|
-| `SLURM_BASE_URL`                   | yes      | The URL of the [SLURM REST API](https://slurm.schedmd.com/rest_api.html).          | `https://slurm-rest.example.com/sapi`   |
-| `SLURM_API_VERSION` [0]       | yes      | The version of the SLURM REST API to use.                                          | `v0.0.40`                                            |
-| `SLURM_PROXY_URL` [1]             | optional | The URL of a SOCKS5 proxy to connect to the SLURM REST API.                        | `socks5://localhost:8080`                 |
+| `SLURM_BASE_URL`              | yes      | The URL of the [SLURM REST API](https://slurm.schedmd.com/rest_api.html).          | `https://slurm-rest.example.com/sapi`                 |
+| `SLURM_API_VERSION` [0]       | yes      | The version of the SLURM REST API to use.                                          | `v0.0.40`                                             |
+| `SLURM_PROXY_URL` [1]         | optional | The URL of a SOCKS5 proxy to connect to the SLURM REST API.                        | `socks5://localhost:8080`                             |
 | `SLURM_USER_NAME`             | yes      | The SLURM user name.                                                               | `<user>`                                              |
-| `SLURM_USER_TOKEN` [2]          | yes      | The [JWT token](https://slurm.schedmd.com/jwt.html) to authenticate the SLURM user.|                                                 |
-| `SLURM_PARTITION`             | yes      | The SLURM partition to use for the job.                                            | `short`                                              |
-| `SLURM_CONSTRAINTS`           | optional | The SLURM constraints to use for the job. This is a comma-separated list of constraints. | `gpu,highmem`, `none` |
+| `SLURM_USER_TOKEN` [2]        | yes      | The [JWT token](https://slurm.schedmd.com/jwt.html) to authenticate the SLURM user.|                                                       |
+| `SLURM_PARTITION`             | yes      | The SLURM partition to use for the job.                                            | `short`                                               |
+| `SLURM_CONSTRAINTS`           | optional | The SLURM constraints to use for the job. This is a comma-separated list of constraints. | `gpu,highmem`, `none`                           |
 | `SLURM_ENVIRONMENT` [3]       | yes      | The environment variables to set for the SLURM job.                                |`"PATH=/bin:/usr/bin/:/usr/local/bin/","MORE="values"` |
 | `SLURM_ASTRA_BINARY_PATH` [4] | yes      | The path to the ASTRA binary **as seen by the SLURM cluster!**                     | `/home/<user>/astra/bin`                              |
 | `SLURM_DATA_PATH` [5]         | yes      | The path to the data directory **as seen by the SLURM cluster!**                   | `/home/<user>/astra/data`                             |
-| `SLURM_OUTPUT_PATH` [6]       | optional | The path to a directory where the slurm output should be written to.               | `/home/<user>/slurm` or `./slurm`|
-| `SLURM_SCRIPT_SETUP` | optional | A BASH script fragment to be executed inside the job script before each dispatched command. | `module purge\nmodule load openmpi` |
+| `SLURM_OUTPUT_PATH` [6]       | optional | The path to a directory where the slurm output should be written to.               | `/home/<user>/slurm` or `./slurm`                     |
+| `SLURM_SCRIPT_SETUP`          | optional | A BASH script fragment to be added at the beginning of each job script.            | `module purge\nmodule load openmpi`          |
 
 - [0]: A complete example URL of an endpoint is `https://slurm-rest.example.com/sapi/slurm/v0.0.40/jobs`.
 - [1]: In case the SLURM server is not reachable from the local host and requires a tunnel. See section on [Using a Proxy](#using-a-proxy).
@@ -145,20 +154,34 @@ In addition to the [basic environment](#environment), set the following environm
 - [6]: The output of the SLURM job itself is allways separated from the output of the ASTRA computations and may be ignored. This keeps the output files from ASTRA clean and independent of the execution host.
 
 ## Mount Data Directory
-This step is critical to ensure local and remote execution work together seamlessly.
+⚠️ This step is **critical** to ensure server and SLURM execution work together seamlessly.
 
-Mount the remote data directory as following:
+For the server, mount the SLURM data directory such that the data paths align.
 
+Example using `sshfs`:
 ```bash
 sshfs -o idmap=user -o allow_other <user>@<bastion_host>:<SLURM_DATA_PATH> <ASTRA_DATA_PATH>
 ```
 
 ## Using a Proxy
-When the server is positioned outside of the network of the SLURM cluster and using a VPN is not an option one can use an ssh tunnel to access SLURM.
+When the server is positioned outside of the network of the SLURM cluster (and using a VPN is not an option) one can use an `ssh` tunnel to access SLURM.
 
-Setup the tunnel via SSH as in
+Setup the tunnel via `ssh` as in
 ```bash
-ssh -D 1080 -N <user>@<bastion_host>
+ssh -D 8080 -N <user>@<bastion_host>
 ```
 
 And set the `SLURM_PROXY` [environment](#slurm-environment) variable to specify the SOCKS5 proxy.
+
+# CLI Mode
+Some commands may also be provided as cli tools. E.g.
+
+```bash
+source .venv/bin/activate
+
+export ASTRA_DATA_PATH=<ASTRA_DATA_PATH>
+export ASTRA_BINARY_PATH=<ASTRA_BINARY_PATH>
+
+python -m astra_web --help
+python -m astra_web compress-sim --sim_id <SIM_ID>
+```
