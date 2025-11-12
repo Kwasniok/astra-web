@@ -16,7 +16,7 @@ from astra_web.simulation.actions import (
 )
 from astra_web.status import DispatchStatus
 
-from .schemas.io import Features, FeatureTable, FeatureFilter
+from .schemas.io import Features, FeatureTable, FeatureFilter, FeatureConfig
 
 
 def make_simulation_feature_table(
@@ -25,6 +25,7 @@ def make_simulation_feature_table(
     actor: Actor,
     *,
     filter_by_comment: str | None = None,
+    config: FeatureConfig = FeatureConfig(),
 ) -> FeatureTable:
     """
     Returns a table according to the selected features.
@@ -64,6 +65,7 @@ def make_simulation_feature_table(
                 sim_id,
                 actor,
                 include=features,
+                config=config,
             )
         )
 
@@ -74,6 +76,7 @@ def get_features(
     sim_id: str,
     actor: Actor,
     include: list[str] | None = None,
+    config: FeatureConfig = FeatureConfig(),
 ) -> Features:
     """
     Returns all features of a simulation.
@@ -98,7 +101,7 @@ def get_features(
         sim = None
         gen_id = get_generator_id(sim_id, actor)  # raises ValueError
     else:
-        sim = load_simulation_data(sim_id, actor, include_sim)
+        sim = load_simulation_data(sim_id, actor, include_sim, config)
         if sim is None:
             raise ValueError(
                 f"Simulation with ID {sim_id} not found or is not finished yet."

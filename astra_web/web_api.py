@@ -12,7 +12,7 @@ from .features.actions import (
     get_features,
     make_simulation_feature_table,
 )
-from .features.schemas.io import Features, FeatureTable, FeatureFilter
+from .features.schemas.io import Features, FeatureTable, FeatureFilter, FeatureConfig
 from .field.actions import (
     delete_field_table,
     list_field_table_file_names,
@@ -532,6 +532,11 @@ async def uncompress_simulation_(
 )
 async def download_features_table(
     sim_ids: list[str] | None = Body(default=None, examples=[["sim_id_1", "sim_id_2"]]),
+    filter_by_comment: str | None = Body(
+        default=None,
+        examples=["experiment v.*"],
+        help="Optional regex to filter simulations by their comment.",
+    ),
     features: FeatureFilter = Body(
         ...,
         examples=[
@@ -542,10 +547,9 @@ async def download_features_table(
             ]
         ],
     ),
-    filter_by_comment: str | None = Body(
-        default=None,
-        examples=["experiment v.*"],
-        help="Optional regex to filter simulations by their comment.",
+    config: FeatureConfig = Body(
+        default=FeatureConfig(),
+        description="Configuration for feature extraction.",
     ),
 ) -> FeatureTable:
     """
@@ -554,12 +558,15 @@ async def download_features_table(
     The `sim_ids` parameter is an optional list of (finished) simulation IDs for which the features should be computed.
     If none are provided, the features will be computed for all finished simulations in the database.
 
-    The `filter_by_comment` parameter is an optional regex string to filter simulations by their comment field.
+    The `filter_by_comment` parameter is an optional regex to filter **simulations** by their `comment` field.
     If none is provided, no filtering by comment is applied.
 
-    Both filter options can be combined.
+    Both `sim_ids` and `filter_by_comment` can be combined.
 
+    The `features` parameter is a list of feature identifiers to be included as columns in the feature table.
     See schema `Features` for a list of all available features.
+
+    The `config` parameter allows to specify additional configuration options for feature extraction.
     """
     actor = LocalActor.instance()
     try:
@@ -568,6 +575,7 @@ async def download_features_table(
             features,
             actor,
             filter_by_comment=filter_by_comment,
+            config=config,
         )
     except ValueError as e:
         raise HTTPException(

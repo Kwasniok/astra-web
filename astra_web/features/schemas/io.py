@@ -1,5 +1,5 @@
 from typing import Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from astra_web.generator.schemas.io import GeneratorData
 from astra_web.simulation.schemas.io import SimulationDataWithMeta
@@ -15,3 +15,7 @@ class Features(BaseModel):
 
 FeatureFilter = list[str]
 FeatureTable = dict[str, list[Any]]
+
+
+class FeatureConfig(BaseModel):
+    """Configuration for feature extraction."""

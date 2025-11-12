@@ -7,6 +7,7 @@ from typing import Any, Type, TypeVar
 import numpy as np
 
 from astra_web.dtypes import FloatPrecision
+from astra_web.features.schemas.io import FeatureConfig
 from astra_web.filter import filter_has_prefix, get_filter_subtree
 from astra_web.file import read_json, read_txt, write_json, write_txt
 from astra_web.generator.schemas.particles import Particles, ParticleCounts
@@ -326,6 +327,7 @@ def load_simulation_data(
     sim_id: str,
     actor: Actor,
     include: list[str] | None = None,
+    config: FeatureConfig = FeatureConfig(),
 ) -> SimulationDataWithMeta | None:
     """
     Loads the entire simulation data for a given simulation ID.
@@ -377,6 +379,7 @@ def _load_output(
     sim_id: str,
     actor: Actor,
     include: list[str] | None = None,
+    config: FeatureConfig = FeatureConfig(),
 ) -> SimulationOutput:
 
     particles, final_particle_counts = (
