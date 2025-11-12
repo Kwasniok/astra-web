@@ -12,7 +12,7 @@ else
     echo "Warning: `$ENV_FILE` not found, skipping .env file import."
 fi
 : "${ASTRA_BINARY_CHECK_HASH:=true}"
-: "${ASTRA_PORT:=8000}"
+: "${ASTRA_WEB_PORT:=8000}"
 
 # setup python
 if [ ! -d ".venv" ]; then
@@ -75,4 +75,4 @@ echo "Checking astra-web-cli ..."
 
 
 # run
-uvicorn astra_web.web_api:app --host 0.0.0.0 --port $ASTRA_PORT
+uvicorn astra_web.web_api:app --host 0.0.0.0 --port $ASTRA_WEB_PORT
