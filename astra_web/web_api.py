@@ -12,7 +12,7 @@ from .features.actions import (
     get_features,
     make_simulation_feature_table,
 )
-from .features.schemas.io import Features, FeatureTable, FeatureTableInput
+from .features.schemas.io import Features, FeatureTable, FeatureFilter
 from .field.actions import (
     delete_field_table,
     list_field_table_file_names,
@@ -532,7 +532,7 @@ async def uncompress_simulation_(
 )
 async def download_features_table(
     sim_ids: list[str] | None = Body(default=None, examples=[["sim_id_1", "sim_id_2"]]),
-    features: FeatureTableInput = Body(
+    features: FeatureFilter = Body(
         ...,
         examples=[
             [

@@ -16,12 +16,12 @@ from astra_web.simulation.actions import (
 )
 from astra_web.status import DispatchStatus
 
-from .schemas.io import Features, FeatureTable, FeatureTableInput
+from .schemas.io import Features, FeatureTable, FeatureFilter
 
 
 def make_simulation_feature_table(
     sim_ids: list[str] | None,
-    features: FeatureTableInput,
+    features: FeatureFilter,
     actor: Actor,
     *,
     filter_by_comment: str | None = None,

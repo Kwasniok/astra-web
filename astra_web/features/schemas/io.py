@@ -13,5 +13,5 @@ class Features(BaseModel):
     simulation: SimulationDataWithMeta | None
 
 
-FeatureTableInput = list[str]
+FeatureFilter = list[str]
 FeatureTable = dict[str, list[Any]]
