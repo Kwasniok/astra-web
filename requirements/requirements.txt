@@ -15,3 +15,4 @@ scipy
 matplotlib
 openpmd-beamphysics
 slurm-requests==2.1.0
+tqdm

@@ -3,6 +3,8 @@ from typing import Any, Callable, Iterable, cast
 
 from pydantic import BaseModel
 
+from tqdm import tqdm
+
 from astra_web.filter import get_filter_subtree
 from astra_web.file.json import JSONType
 from astra_web.generator.actions import load_generator_data
@@ -51,7 +53,7 @@ def make_simulation_feature_table(
         for path, value in _traverse(data, feature_tree):
             feature_table[path].append(value)
 
-    for sim_id in sim_ids:
+    for sim_id in tqdm(sim_ids):
         if get_simulation_status(sim_id, actor) != DispatchStatus.FINISHED:
             # skip unfinished simulations
             continue
