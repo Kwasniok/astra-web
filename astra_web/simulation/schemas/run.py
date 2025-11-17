@@ -64,7 +64,7 @@ class SimulationRunSpecifications(IniExportableModel):
 
     # ions: skipped
 
-    bunch_reduction_num: float | None = Field(
+    bunch_reduction_num: int | None = Field(
         default=1,
         alias="N_red",
         validation_alias="bunch_reduction_num",

@@ -65,13 +65,13 @@ class SimulationOutputSpecification(IniExportableModel):
         default_factory=IniExportableArrayModel[SimulationOutputScreen],
         description="The quantity to be optimized.",
     )
-    step_width: float | None = Field(
+    step_width: int | None = Field(
         default=0,
         alias="Step_width",
         validation_alias="step_width",
         description="Output generation based on time steps rather than on positions. Output is generated every `step_width` * time_step.",
     )
-    step_max: float | None = Field(
+    step_max: int | None = Field(
         default=0,
         alias="Step_max",
         validation_alias="step_max",

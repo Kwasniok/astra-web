@@ -113,7 +113,7 @@ class SimulationScanSpecifications(IniExportableModel):
         validation_alias="optimization_z_max",
         description="The maximal z position to be considered for the optimization.",
     )
-    optimization_z_num: float | None = Field(
+    optimization_z_num: int | None = Field(
         default=None,
         alias="S_dz",
         validation_alias="optimization_z_num",
