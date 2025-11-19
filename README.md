@@ -15,13 +15,13 @@ This project is a fork of [astra-web](https://github.com/AlexanderKlemps/astra-w
 - SLURM (v0.0.40+, optional for remote execution on cluster)
 - sshfs (optional, depending on the network infrastructure)
 
-ℹ️ Older versions may work, but are not tested.
+> ℹ️ Older versions may work, but are not tested.
 
 # Setup
 ## openmpi (optional, for local multi-treaded simulations)
 In case you want to run ASTRA in multi-threaded mode ensure that openmpi is installed on the server/SLURM cluster as well (see [Parallel Astra Readme](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux/AAA_Readme.txt)).
 
-⚠️ Make sure that the `libmpi_usempi.so.40` is available via the `LD_LIBRARY_PATH` environment variable. E.g. create a symlink to `.../openmpi/5.0.3/lib/libmpi_usempi_ignore_tkr.so.40` in `./lib` and append `./lib` to `LD_LIBRARY_PATH`.
+> ⚠️ Make sure that the `libmpi_usempi.so.40` is available via the `LD_LIBRARY_PATH` environment variable. E.g. create a symlink to `.../openmpi/5.0.3/lib/libmpi_usempi_ignore_tkr.so.40` in `./lib` and append `./lib` to `LD_LIBRARY_PATH`.
 
 ## Environment
 The following environment variables are used.
@@ -42,20 +42,18 @@ Start the server locally by executing the following command in the root director
 
     ./start.sh
 
-ℹ️ For convenience, this script will load all environment variables defined in `config/.env`.
+> ℹ️ For convenience this script will load all environment variables defined in `config/.env`.
 
-ℹ️ The default `port=8000` may be overwritten like `./start.sh 8001`.
-
-⚠️ All communication with the host is done via HTTP which provides **no encryption**! Allways route your trafic through a secure connection like a VPN or SSH tunnel to ensure your data (e.g. tokens) is protected!
+> ⚠️ Communication with the server may be done via the HTTP protocol which provides **no encryption**! Always route your traffic through a secure connection like a VPN or SSH tunnel to ensure critical data (e.g. key or token) is protected!
 
 
 # Web API Documentation
 
-Once the server is [set up](#setup) you will find the interactive web API documentation under
+Once the server is [set up](#setup) you will find the interactive web API documentation at
 
     http://<host>:<port>/docs
 
-where `<host>` is the address of the server. E.g. `localhost` when the server runs on the same machine.
+where `<host>` is the address of the server - e.g. `localhost` when the server runs on the same machine.
 
 ## How to Use the Documentation
 The documentation lists all requests by name and type.
@@ -81,11 +79,11 @@ await request(
 )
 ```
 
-ℹ️ See `./alias_table.txt` for a translation of the parameter names and ASTRA mnemonics.
+> ℹ️ See `./alias_table.txt` (created/updated with each start of the server) for a translation of the parameter names and ASTRA mnemonics.
 
-ℹ️ Some parameters in the body are optional and have default values. Confirm the ASTRA manual v3.2 on how the defaults are specified.
+> ℹ️ Some parameters in the body are optional and have default values, some defaults are automatically computed internally by ASTRA. Confirm the ASTRA manual v3.2 on how these defaults are specified.
 
-ℹ️ In the documentation below all requests is a complete list of all input/output schemas.
+> ℹ️ In the documentation below all requests is a complete list of all input/output schemas.
 
 # SLURM
 If you want to dispatch some computations to a [SLURM cluster](https://slurm.schedmd.com) carefully follow the instructions below. Otherwise you can skip this section.
@@ -132,13 +130,13 @@ In addition to the [basic environment](#environment), set the following environm
 
 | Variable                      | Required | Description                                                                        | Example(s)                                            |
 |-------------------------------|----------|------------------------------------------------------------------------------------|-------------------------------------------------------|
-| `SLURM_BASE_URL`              | yes      | The URL of the [SLURM REST API](https://slurm.schedmd.com/rest_api.html).          | `https://slurm-rest.example.com/sapi`                 |
+| `SLURM_BASE_URL` [0]          | yes      | The URL of the [SLURM REST API](https://slurm.schedmd.com/rest_api.html).          | `https://slurm-rest.example.com/sapi`                 |
 | `SLURM_API_VERSION` [0]       | yes      | The version of the SLURM REST API to use.                                          | `v0.0.40`                                             |
 | `SLURM_PROXY_URL` [1]         | optional | The URL of a SOCKS5 proxy to connect to the SLURM REST API.                        | `socks5://localhost:8080`                             |
 | `SLURM_USER_NAME`             | yes      | The SLURM user name.                                                               | `<user>`                                              |
 | `SLURM_USER_TOKEN` [2]        | yes      | The [JWT token](https://slurm.schedmd.com/jwt.html) to authenticate the SLURM user.|                                                       |
 | `SLURM_PARTITION`             | yes      | The SLURM partition to use for the job.                                            | `short`                                               |
-| `SLURM_CONSTRAINTS`           | optional | The SLURM constraints to use for the job. This is a comma-separated list of constraints. | `gpu,highmem`, `none`                           |
+| `SLURM_CONSTRAINTS`           | optional | The SLURM constraints to use for the job. This is a comma-separated list of constraints. | `gpu,highmem`                                |
 | `SLURM_ENVIRONMENT` [3]       | yes      | The environment variables to set for the SLURM job.                                |`"PATH=/bin:/usr/bin/:/usr/local/bin/","MORE="values"` |
 | `SLURM_ASTRA_BINARY_PATH` [4] | yes      | The path to the ASTRA binary **as seen by the SLURM cluster!**                     | `/home/<user>/astra/bin`                              |
 | `SLURM_DATA_PATH` [5]         | yes      | The path to the data directory **as seen by the SLURM cluster!**                   | `/home/<user>/astra/data`                             |
@@ -149,32 +147,33 @@ In addition to the [basic environment](#environment), set the following environm
 - [1]: In case the SLURM server is not reachable from the local host and requires a tunnel. See section on [Using a Proxy](#using-a-proxy).
 - [2]: The **⚠️SLURM token may expire⚠️** due to limited a lifetime. Make sure to refresh it regularly via the endpoint `/slurm/configuration/user_token`.
 - [3]: List of quoted strings separated by commas without spaces! Escaping commas inside strings is not possible!
-- [4]: Ensure the versions of ASTRA match your local ones and the **⚠️binaries are renamed to [`astra`](https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/) and [`parallel_astra`](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux)⚠️**.
-- [5]: The paths for these files will most likely differ from the local paths on your machine. It is important that your local paths bind to the same directories as for the remote host as described in [Mount Data Directory](#mount-data-directory).
-- [6]: The output of the SLURM job itself is allways separated from the output of the ASTRA computations and may be ignored. This keeps the output files from ASTRA clean and independent of the execution host.
+- [4]: Ensure the versions of ASTRA match your local ones and the **⚠️binaries are renamed to [`astra`](https://www.desy.de/~mpyflo/Astra_for_64_Bit_Linux/) and [`parallel_astra`](https://www.desy.de/~mpyflo/Parallel_Astra_for_Linux)⚠️ etc.**.
+- [5]: The paths for these files might differ from the paths on the server. It is important that the server paths bind to the same directories as for the remote host as described in [Mount Data Directory](#mount-data-directory).
+- [6]: The output of the SLURM job itself is always separated from the output of the ASTRA computations and may be ignored. This keeps the output files from ASTRA clean and automatically processable.
 
 ## Mount Data Directory
-⚠️ This step is **critical** to ensure server and SLURM execution work together seamlessly.
+> ⚠️ This step is **critical** to ensure server and SLURM execution work together seamlessly.
 
 For the server, mount the SLURM data directory such that the data paths align.
 
 Example using `sshfs`:
 ```bash
-sshfs -o idmap=user -o allow_other <user>@<bastion_host>:<SLURM_DATA_PATH> <ASTRA_DATA_PATH>
+sshfs -o idmap=user -o allow_other <user>@<slurm_host>:<SLURM_DATA_PATH> <ASTRA_DATA_PATH>
 ```
 
 ## Using a Proxy
-When the server is positioned outside of the network of the SLURM cluster (and using a VPN is not an option) one can use an `ssh` tunnel to access SLURM.
+When the server is located outside of the network of the SLURM cluster (and using a VPN is not an option) one can use an `ssh` tunnel to access the internal SLURM network.
 
 Setup the tunnel via `ssh` as in
 ```bash
-ssh -D 8080 -N <user>@<bastion_host>
+ssh -D 8080 -N <user>@<slurm_host>
 ```
-
-And set the `SLURM_PROXY` [environment](#slurm-environment) variable to specify the SOCKS5 proxy.
+and set the `SLURM_PROXY` [environment](#slurm-environment) variable to specify the SOCKS5 proxy.
 
 # CLI Mode
-Some commands may also be provided as cli tools. E.g.
+Some commands may also be provided via the cli.
+
+Example:
 
 ```bash
 source .venv/bin/activate
