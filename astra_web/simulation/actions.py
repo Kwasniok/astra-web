@@ -586,6 +586,10 @@ def _load_astra_output_and_meta(
             minutes = int(minute_match.group(1)) if minute_match else 0
             seconds = float(second_match.group(1)) if second_match else 0.0
             execution_time = hours * 3600 + minutes * 60 + seconds
+        elif "ATTENTION" in line:
+            attention_match = re.search(r"ATTENTION:\s*(.*)", line)
+            if attention_match:
+                warnings.append(attention_match.group(1))
         elif "WARNING" in line:
             warning_match = re.search(r"WARNING:\s*(.*)", line)
             if warning_match:
@@ -707,10 +711,12 @@ def get_simulation_status(sim_id: str, actor: Actor) -> DispatchStatus:
     path = actor.simulation_path(sim_id, "run.out")
     if os.path.isfile(path):
         run_out = read_txt(path)
-        if "finished simulation" in run_out:
-            return DispatchStatus.FINISHED
         if "Error" in run_out:
             return DispatchStatus.FAILED
+        if "ATTENTION" in run_out:
+            return DispatchStatus.FAILED
+        if "finished simulation" in run_out:
+            return DispatchStatus.FINISHED
     return DispatchStatus.UNFINISHED
 
 
