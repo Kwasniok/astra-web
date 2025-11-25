@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime
 from shutil import rmtree
-from typing import Any, Type, TypeVar
+from typing import Type, TypeVar
 import numpy as np
 
 from astra_web.dtypes import FloatPrecision
@@ -428,7 +428,7 @@ def load_simulation_input(sim_id: str, actor: Actor) -> SimulationInput | None:
 
 
 def _load_particle_data(
-    sim_id, actor, include
+    sim_id: str, actor: Actor, include: list[str] | None
 ) -> tuple[list[Particles], ParticleCounts]:
 
     final_only = include is not None and not filter_has_prefix(include, "particles")
