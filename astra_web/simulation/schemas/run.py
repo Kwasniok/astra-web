@@ -58,9 +58,7 @@ class SimulationRunSpecifications(IniExportableModel):
     )
     @property
     def distribution_file_name(self) -> str:
-        # name initial particle distribution file in the same convention as the run output files
-        # see manual of ASTRA v3.2 (Mach 2017) chapter 2
-        return f"run.{0:04d}.{self.run_number:03d}"
+        return "distribution.ini"
 
     # ions: skipped
 

@@ -241,7 +241,7 @@ def delete_particle_distribution(
         links = find_symlinks(
             actor.generator_path(gen_id, "distribution.ini"),
             actor.data_path(),
-            link_name="run.0000.001",
+            link_name="distribution.ini",
         )
         if len(links) > 0:
             return links

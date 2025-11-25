@@ -156,7 +156,7 @@ def compress_simulation(
     **INFO**: Compression is **not idempotent**. Uncompress first before compressing again.
 
     - Compressed files:
-        - Particle distribution files `run.0000.001` ... `run.<N>.001` -> `run.0000-<N>.001.f<P>.compressed.npz`
+        - Particle distribution files `run.<M>.001` ... `run.<N>.001` -> `run.<M>-<N>.001.f<P>.compressed.npz`
 
     Returns:
         - `CompressionReport` summarizing the compression operation.
@@ -250,7 +250,7 @@ def uncompress_simulation(
     Uncompresses previously compressed simulation output files if available.
 
     - Uncompressed files:
-        - Particle distribution files `run.0000-<N>.f<P>.compressed.npz` -> `run.0000.001` ... `run.<N>.001`
+        - Particle distribution files `run.<M>-<N>.f<P>.compressed.npz` -> `run.<M>.001` ... `run.<N>.001`
 
     - Note: Uncompression is an **idempotent** operation.
 
