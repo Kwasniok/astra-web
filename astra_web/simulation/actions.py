@@ -432,12 +432,24 @@ def _load_particle_data(
 ) -> tuple[list[Particles], ParticleCounts]:
 
     final_only = include is not None and not filter_has_prefix(include, "particles")
+    # for backwards compatibility:
+    # Older versions list distribution.ini as run.0000.001.
+    # But distribution.ini (or run.0000.001) is not scaled according to ASTRAs T_rms and XY_rms.
+    # This means it has to be treated separately and therefore will not be included here in order to avoid surprises.
+    skip_first = not os.path.exists(actor.simulation_path(sim_id, "distribution.ini"))
     compressed_path = _compressed_particle_path(sim_id, actor)
     if compressed_path is None:
-        particles = _load_particle_data_from_raw_files(sim_id, actor, final_only)
+        particles = _load_particle_data_from_raw_files(
+            sim_id,
+            actor,
+            final_only=final_only,
+            skip_first=skip_first,
+        )
     else:
         particles = _load_particle_data_from_compressed_file(
-            compressed_path, final_only
+            compressed_path,
+            final_only=final_only,
+            skip_first=skip_first,
         )
 
     final_particle_counts = ParticleCounts(
@@ -475,10 +487,16 @@ def _particle_paths(id: str, actor: Actor) -> list[str]:
 
 
 def _load_particle_data_from_raw_files(
-    sim_id: str, actor: Actor, final_only: bool = False
+    sim_id: str,
+    actor: Actor,
+    final_only: bool = False,
+    skip_first: bool = False,  # for backwards compatibility, see _load_particle_data
 ) -> list[Particles]:
 
     particle_paths = _particle_paths(sim_id, actor)
+
+    if skip_first:
+        particle_paths = particle_paths[1:]
 
     if final_only:
         particle_paths = particle_paths[-1:]
@@ -491,10 +509,14 @@ def _load_particle_data_from_raw_files(
 def _load_particle_data_from_compressed_file(
     compressed_path: str,
     final_only: bool = False,
+    skip_first: bool = False,  # for backwards compatibility, see _load_particle_data
 ) -> list[Particles]:
     data = np.load(compressed_path)
 
     particle_keys = sorted(data.keys())
+
+    if skip_first:
+        particle_keys = particle_keys[1:]
 
     if final_only:
         particle_keys = particle_keys[-1:]
