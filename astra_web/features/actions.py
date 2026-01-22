@@ -62,14 +62,20 @@ def make_simulation_feature_table(
             if not comment_re.search(comment):
                 # skip non-matching comments
                 continue
-        append_row(
-            get_features(
+
+        # try loading features and append them if successful
+        try:
+            fs = get_features(
                 sim_id,
                 actor,
                 include=features,
                 config=config,
             )
-        )
+        except Exception:
+            # skip simulations with missing/invalid/broken data
+            continue
+
+        append_row(fs)
 
     return feature_table
 
