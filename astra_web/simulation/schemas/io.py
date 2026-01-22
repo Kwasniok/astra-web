@@ -17,6 +17,7 @@ from .emittance_table import (
     LongitudinalNormalizedEmittanceTable,
     TraceSpaceEmittanceTable,
 )
+from .twiss_table import TwissTable
 from .auto_phase import CavityAutoPhaseTable
 
 
@@ -169,6 +170,10 @@ class SimulationOutput(BaseModel):
         default=None
     )
     trace_space_emittance_table: TraceSpaceEmittanceTable | None = Field(default=None)
+    twiss_table: TwissTable | None = Field(
+        default=None,
+        description="Twiss parameters at various positions in the beamline.",
+    )
 
 
 class SimulationDataWithMeta(BaseModel):

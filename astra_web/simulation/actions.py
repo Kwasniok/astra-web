@@ -21,6 +21,7 @@ from .schemas.emittance_table import (
     TraceSpaceEmittanceTable,
     Transversal1DNormalizedEmittanceTable,
 )
+from .schemas.twiss_table import TwissTable
 from .schemas.io import (
     SimulationDataWithMeta,
     SimulationDispatchOutput,
@@ -405,6 +406,18 @@ def _load_output(
         else None
     )
 
+    tr_sp_emittance = (
+        _load_trace_space_emittance(sim_id, actor)
+        if filter_has_prefix(include, "trace_space_emittance_table")
+        else None
+    )
+
+    twiss_table = (
+        _load_twiss_table(sim_id, actor)
+        if filter_has_prefix(include, "twiss_table")
+        else None
+    )
+
     return SimulationOutput(
         particles=particles,
         final_particle_counts=final_particle_counts,
@@ -412,6 +425,7 @@ def _load_output(
         norm_emittance_table_y=norm_emittance_y,
         norm_emittance_table_z=norm_emittance_z,
         trace_space_emittance_table=tr_sp_emittance,
+        twiss_table=twiss_table,
     )
 
 
@@ -571,6 +585,33 @@ def _load_trace_space_emittance(
         return TraceSpaceEmittanceTable.read_from_csv(path)
     except FileNotFoundError:
         return None
+
+
+def _load_twiss_table(sim_id: str, actor: Actor) -> TwissTable | None:
+    particles, _ = _load_particle_data(sim_id, actor)
+
+    def twiss_per_dist(dist: Particles) -> dict:
+        _dist = dist.to_pmd()
+
+        twiss_x = _dist.twiss["x"]
+        twiss_y = _dist.twiss["y"]
+
+        return dict(
+            alpha_x=twiss_x["alpha"],
+            beta_x=twiss_x["beta"],
+            gamma_x=twiss_x["gamma"],
+            alpha_y=twiss_y["alpha"],
+            beta_y=twiss_y["beta"],
+            gamma_y=twiss_y["gamma"],
+        )
+
+    twiss_params = [twiss_per_dist(p) for p in particles]
+
+    list_of_dicts_to_dict_of_lists = lambda data: {
+        key: [d[key] for d in data] for key in data[0]
+    }
+
+    return TwissTable(**list_of_dicts_to_dict_of_lists(twiss_params))
 
 
 def _load_astra_output_and_meta(
