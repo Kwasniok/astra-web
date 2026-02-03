@@ -44,9 +44,10 @@ class LocalActor(Actor):
         stdout_path = os.path.join(task.cwd, task.output_file_name_base + ".out")
         stderr_path = os.path.join(task.cwd, task.output_file_name_base + ".err")
 
-        with open(stdout_path, "w") as stdout_file, open(
-            stderr_path, "w"
-        ) as stderr_file:
+        with (
+            open(stdout_path, "w") as stdout_file,
+            open(stderr_path, "w") as stderr_file,
+        ):
             run(
                 task.command,
                 cwd=task.cwd,
