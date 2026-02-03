@@ -11,7 +11,7 @@ if [ -f "$ENV_FILE" ]; then
 else
     echo "Warning: `$ENV_FILE` not found, skipping .env file import."
 fi
-: "${ASTRA_BINARY_CHECK_HASH:=true}"
+: "${ASTRA_BINARY_CHECK_HASH:=false}"
 : "${ASTRA_WEB_PORT:=8000}"
 
 # setup python

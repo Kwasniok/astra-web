@@ -32,7 +32,7 @@ The following environment variables are used.
 | `ASTRA_WEB_PORT`    | optional | The port number of the web service. Default is `8000`.                       |
 | `ASTRA_DATA_PATH`   | yes      | The path to a local data directory where all results are stored.             |
 | `ASTRA_BINARY_PATH` | yes      | The path to the folder with ASTRA binaries. Binaries must be called `generator`, `astra` and `parallel_astra` respectively. |
-| `ASTRA_BINARY_CHECK_HASH` | optional | Whether to check the MD5 checksum of the ASTRA binaries on startup. Default is `true`. |
+| `ASTRA_BINARY_CHECK_HASH` | optional | Whether to check the MD5 checksum of the ASTRA binaries on startup to ensure a perfectly compatible version is downloaded. Default is `false`. |
 
 See [SLURM](#slurm) for additional environment variables required to connect to a SLURM server for remote execution.
 See [BASH Environment](https://www.gnu.org/software/bash/manual/html_node/Environment.html) for how to handle an environment.
