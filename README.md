@@ -48,7 +48,7 @@ Start the server locally by executing the following command in the root director
 > ⚠️ Communication with the server may be done via the HTTP protocol which provides **no encryption**! Always route your traffic through a secure connection like a VPN or SSH tunnel to ensure critical data (e.g. key or token) is protected!
 
 # Example
-Example notebooks demonstrating the usage of the web API can be found at `example`.
+Example notebooks demonstrating the usage of the web API can be found at [example](example).
 
 > ⚠️ Do not forget to provide a matching environment for the examples. E.g. via `example/.env`.
 
