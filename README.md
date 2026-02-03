@@ -11,6 +11,7 @@ This project is a fork of [astra-web](https://github.com/AlexanderKlemps/astra-w
 - Linux (kernel v6.12+)
 - python (v3.13+)
 - openmpi (v5.0.3+, optional for multi-threaded simulations, ensure `libmpi_usempi.so.40` is available)
+- ASTRA (v4.0, other versions are untested, will install automatically newest version if not already installed, see [Setup](#setup))
 ## SLURM
 - SLURM (v0.0.40+, optional for remote execution on cluster)
 - sshfs (optional, depending on the network infrastructure)
@@ -46,6 +47,10 @@ Start the server locally by executing the following command in the root director
 
 > ⚠️ Communication with the server may be done via the HTTP protocol which provides **no encryption**! Always route your traffic through a secure connection like a VPN or SSH tunnel to ensure critical data (e.g. key or token) is protected!
 
+# Example
+Example notebooks demonstrating the usage of the web API can be found at `example`.
+
+> ⚠️ Do not forget to provide a matching environment for the examples. E.g. via `example/.env`.
 
 # Web API Documentation
 

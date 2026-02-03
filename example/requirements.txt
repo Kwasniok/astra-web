@@ -1,0 +1,12 @@
+ipykernel
+nbformat>=4.2.0
+dotenv
+tqdm
+numpy
+scipy
+pandas
+scikit-learn
+slurm-requests==2.1.0
+openpmd-beamphysics
+plotly
+matplotlib
