@@ -19,3 +19,8 @@ FeatureTable = dict[str, list[Any]]
 
 class FeatureConfig(BaseModel):
     """Configuration for feature extraction."""
+
+    twiss_table_fraction: float = Field(
+        default=1.0,
+        description="Fraction of particles to include for calculating Twiss parameters.",
+    )

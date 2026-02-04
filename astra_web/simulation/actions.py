@@ -10,7 +10,7 @@ from astra_web.dtypes import FloatPrecision
 from astra_web.features.schemas.io import FeatureConfig
 from astra_web.filter import filter_has_prefix, get_filter_subtree
 from astra_web.file import read_json, read_txt, write_json, write_txt
-from astra_web.generator.schemas.particles import Particles, ParticleCounts
+from astra_web.generator.schemas.particles import Particles
 from astra_web.actor import Actor
 from astra_web.simulation.schemas.auto_phase import CavityAutoPhaseTable
 from astra_web.simulation.schemas.compression import CompressionReport
@@ -21,6 +21,7 @@ from .schemas.emittance_table import (
     TraceSpaceEmittanceTable,
     Transversal1DNormalizedEmittanceTable,
 )
+from .schemas.particle_statistics import ParticleStatistics
 from .schemas.io import (
     SimulationDataWithMeta,
     SimulationDispatchOutput,
@@ -341,14 +342,11 @@ def load_simulation_data(
     if not os.path.exists(actor.simulation_path(sim_id)):
         return None
 
-    input = (
-        load_simulation_input(sim_id, actor)
-        if filter_has_prefix(include, "input")
-        else None
-    )
+    # always load input
+    input = load_simulation_input(sim_id, actor)
 
     output = (
-        _load_output(sim_id, actor, get_filter_subtree(include, "output"))
+        _load_output(sim_id, actor, get_filter_subtree(include, "output"), config)
         if filter_has_prefix(include, "output")
         else None
     )
@@ -382,10 +380,9 @@ def _load_output(
     config: FeatureConfig = FeatureConfig(),
 ) -> SimulationOutput:
 
-    particles, final_particle_counts = (
+    particles = (
         _load_particle_data(sim_id, actor, include)
         if filter_has_prefix(include, "particles")
-        or filter_has_prefix(include, "final_particle_counts")
         else (None, None)
     )
 
@@ -405,13 +402,19 @@ def _load_output(
         else None
     )
 
+    particles_statistics = (
+        _load_particles_statistics(sim_id, actor, config)
+        if filter_has_prefix(include, "particles_statistics")
+        else None
+    )
+
     return SimulationOutput(
         particles=particles,
-        final_particle_counts=final_particle_counts,
         norm_emittance_table_x=norm_emittance_x,
         norm_emittance_table_y=norm_emittance_y,
         norm_emittance_table_z=norm_emittance_z,
         trace_space_emittance_table=tr_sp_emittance,
+        particles_statistics=particles_statistics,
     )
 
 
@@ -429,9 +432,19 @@ def load_simulation_input(sim_id: str, actor: Actor) -> SimulationInput | None:
 
 def _load_particle_data(
     sim_id: str, actor: Actor, include: list[str] | None
-) -> tuple[list[Particles], ParticleCounts]:
-
+) -> list[Particles]:
     final_only = include is not None and not filter_has_prefix(include, "particles")
+    return _load_particle_data_internal(
+        sim_id,
+        actor,
+        final_only=final_only,
+    )
+
+
+def _load_particle_data_internal(
+    sim_id: str, actor: Actor, final_only: bool
+) -> list[Particles]:
+    """Internal version of _load_particle_data with dedicated control over final_only."""
     # for backwards compatibility:
     # Older versions list distribution.ini as run.0000.001.
     # But distribution.ini (or run.0000.001) is not scaled according to ASTRAs T_rms and XY_rms.
@@ -452,13 +465,7 @@ def _load_particle_data(
             skip_first=skip_first,
         )
 
-    final_particle_counts = ParticleCounts(
-        total=len(particles[-1].x),
-        active=int(sum(particles[-1].active_particles)),
-        lost=int(sum(particles[-1].lost_particles)),
-    )
-
-    return particles, final_particle_counts
+    return particles
 
 
 def _compressed_particle_path(sim_id: str, actor: Actor) -> str | None:
@@ -571,6 +578,82 @@ def _load_trace_space_emittance(
         return TraceSpaceEmittanceTable.read_from_csv(path)
     except FileNotFoundError:
         return None
+
+
+def _load_particles_statistics(
+    sim_id: str, actor: Actor, config: FeatureConfig
+) -> ParticleStatistics | None:
+    """Loads particle distributions and computes Twiss parameters using openPMD beamphysics."""
+
+    particles = _load_particle_data_internal(sim_id, actor, final_only=False)
+
+    if len(particles) == 0:
+        return None
+
+    list_of_dicts_to_dict_of_lists = lambda ds: {
+        k: [d[k] for d in ds] for k in ds[0].keys()
+    }
+
+    columns: dict[str, list[float]] = {}
+    pgs = list(p.to_pmd() for p in particles)
+
+    # General
+    rows = list(
+        {
+            # particle counts
+            "particles_total": pg["n_particle"],
+            "particles_alive": pg["n_alive"],
+            "particles_dead": pg["n_dead"],
+            # charge
+            "sum_charge": pg["charge"],
+            # "mean_current": pg["average_current"], # bugged in numpy 2.0
+            # position
+            "mean_x": pg.avg("x"),
+            "mean_y": pg.avg("y"),
+            "mean_z": pg.avg("z"),
+            "std_x": pg.std("x"),
+            "std_y": pg.std("y"),
+            "std_z": pg.std("z"),
+            # momentum
+            "mean_p": pg.avg("p"),
+            "std_p": pg.std("p"),
+            "mean_px": pg.avg("px"),
+            "mean_py": pg.avg("py"),
+            "mean_pz": pg.avg("pz"),
+            "std_px": pg.std("px"),
+            "std_py": pg.std("py"),
+            "std_pz": pg.std("pz"),
+            # energy
+            "mean_energy": pg.avg("energy"),
+            "std_energy": pg.std("energy"),
+            "mean_kinetic_energy": pg.avg("kinetic_energy"),
+            "std_kinetic_energy": pg.std("kinetic_energy"),
+            # relativistic factors
+            "mean_gamma": pg.avg("gamma"),
+            "std_gamma": pg.std("gamma"),
+            "mean_beta": pg.avg("beta"),
+            "std_beta": pg.std("beta"),
+            "mean_beta_x": pg.avg("beta_x"),
+            "mean_beta_y": pg.avg("beta_y"),
+            "mean_beta_z": pg.avg("beta_z"),
+            "std_beta_x": pg.std("beta_x"),
+            "std_beta_y": pg.std("beta_y"),
+            "std_beta_z": pg.std("beta_z"),
+            # emittance
+            "norm_emit_x": pg["norm_emit_x"],
+            "norm_emit_y": pg["norm_emit_y"],
+            "norm_emit_4d": pg["norm_emit_4d"],
+        }
+        for pg in pgs
+    )
+    columns |= list_of_dicts_to_dict_of_lists(rows)
+
+    # Twiss
+    rows = list(pg.twiss("xy", fraction=config.twiss_table_fraction) for pg in pgs)
+    rows = list({f"twiss_{k}": d[k] for k in d.keys()} for d in rows)
+    columns |= list_of_dicts_to_dict_of_lists(rows)
+
+    return ParticleStatistics(**columns, twiss_fraction=config.twiss_table_fraction)
 
 
 def _load_astra_output_and_meta(

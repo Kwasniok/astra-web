@@ -107,7 +107,7 @@ class Particles(BaseModel):
         return pd.DataFrame(self.model_dump())
 
     def to_pmd(
-        self, ref_particle: pd.Series | None = None, only_active: bool = False
+        self, ref_particle: pd.Series | None = None, include_inactive: bool = False
     ) -> ParticleGroup:
         """
         Returns particles as ParticleGroup object for analysis.
@@ -115,7 +115,7 @@ class Particles(BaseModel):
         data = self.to_df()
         ref_particle = ref_particle if ref_particle is not None else data.iloc[0]
 
-        if only_active:
+        if not include_inactive:
             data = data[self.active_particles]
 
         data["weight"] = np.abs(data.pop("macro_charge")) * 1e-9
@@ -124,8 +124,8 @@ class Particles(BaseModel):
         data.loc[1:, "t_clock"] = (
             data.loc[1:, "t_clock"] + ref_particle["t_clock"]
         ) * 1e-9
-        data.loc[data["status"] == 1, "status"] = 2
-        data.loc[data["status"] == 5, "status"] = 1
+        data.loc[data["status_flag"] == 1, "status"] = 2
+        data.loc[data["status_flag"] == 5, "status"] = 1
 
         data_dict = data.to_dict("list")
         data_dict["n_particles"] = data.size
@@ -133,11 +133,3 @@ class Particles(BaseModel):
         data_dict["t"] = ref_particle["t_clock"] * 1e-9
 
         return ParticleGroup(data=data_dict)
-
-
-class ParticleCounts(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    total: int = Field(description="Total number of particles.")
-    active: int = Field(description="Number of active particles.")
-    lost: int = Field(description="Number of lost particles.")
