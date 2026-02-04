@@ -1,5 +1,6 @@
 import re
 from typing import Any, Callable, Iterable, cast
+import traceback
 
 from pydantic import BaseModel
 
@@ -73,6 +74,9 @@ def make_simulation_feature_table(
             )
         except Exception:
             # skip simulations with missing/invalid/broken data
+            print(f"Skipping simulation {sim_id} due to an error:")
+            stack = traceback.format_exc()
+            print(stack)
             continue
 
         append_row(fs)
