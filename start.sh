@@ -3,16 +3,51 @@
 set -eo pipefail
 
 # environment
-ENV_FILE="config/.env"
-if [ -f "$ENV_FILE" ]; then
-    set -a
-    source "$ENV_FILE"
-    set +a
+# NOTE: previously defined variables are not overwritten
+: "${ASTRA_WEB_ENV_FILE:='.env'}"
+
+# check if file exists
+if [[ -f "$ASTRA_WEB_ENV_FILE" ]]; then
+
+  # load undefined variables
+  while IFS='=' read -r key value; do
+    # skip empty lines and comments
+    [[ -z "$key" || "$key" =~ ^# ]] && continue
+
+    # trim whitespace around key
+    key="${key//[[:space:]]/}"
+
+    # strip surrounding quotes from value
+    value="${value%\"}"   # remove trailing double quote
+    value="${value#\"}"   # remove leading double quote
+    value="${value%\'}"   # remove trailing single quote
+    value="${value#\'}"   # remove leading single quote
+
+    # export only if the variable was undefined
+    if [[ ! -v "$key" ]]; then
+        export "$key=$value"
+    else
+        echo "INFO: Environment variable $key is already defined as \"$value\", skipping value from \`$ASTRA_WEB_ENV_FILE\`"
+    fi
+  done < "$ASTRA_WEB_ENV_FILE"
+
 else
-    echo "Warning: `$ENV_FILE` not found, skipping .env file import."
+  echo "INFO: No environment file found at \`$ASTRA_WEB_ENV_FILE\`!"
 fi
+
+# defaults
 : "${ASTRA_BINARY_CHECK_HASH:=false}"
 : "${ASTRA_WEB_PORT:=8000}"
+
+# ensure all required environment variables are set
+required_env_vars=(ASTRA_WEB_API_KEY ASTRA_DATA_PATH ASTRA_BINARY_PATH)
+for v in "${required_env_vars[@]}"; do
+  if [[ ! -v $v ]]; then
+    echo "ERROR: Environment variable $v is NOT defined!"
+    exit 1
+  fi
+done
+
 
 # setup python
 if [ ! -d ".venv" ]; then

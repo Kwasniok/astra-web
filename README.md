@@ -43,7 +43,7 @@ Start the server locally by executing the following command in the root director
 
     ./start.sh
 
-> ℹ️ For convenience this script will load all environment variables defined in `config/.env`.
+> ℹ️ For convenience, the environment can be written into a file at `.env`. This script will then load all (undefined) environment variables found there during startup. If desired an alternative file can be set via `ASTRA_WEB_ENV_FILE`.
 
 > ⚠️ Communication with the server may be done via the HTTP protocol which provides **no encryption**! Always route your traffic through a secure connection like a VPN or SSH tunnel to ensure critical data (e.g. key or token) is protected!
 
