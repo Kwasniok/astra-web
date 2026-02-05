@@ -4,7 +4,7 @@ set -eo pipefail
 
 # environment
 # NOTE: previously defined variables are not overwritten
-: "${ASTRA_WEB_ENV_FILE:='.env'}"
+: "${ASTRA_WEB_ENV_FILE:=.env}"
 
 # check if file exists
 if [[ -f "$ASTRA_WEB_ENV_FILE" ]]; then
