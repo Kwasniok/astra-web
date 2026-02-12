@@ -32,6 +32,11 @@ class SLURMActor(Actor):
                 user_name=os.environ["SLURM_USER_NAME"],
                 user_token=os.environ["SLURM_USER_TOKEN"],
                 partition=os.environ["SLURM_PARTITION"],
+                nice=(
+                    int(os.environ["SLURM_NICE"])
+                    if "SLURM_NICE" in os.environ
+                    else None
+                ),
                 constraints=os.environ.get("SLURM_CONSTRAINTS", None),
                 environment=split(os.environ.get("SLURM_ENVIRONMENT", None)),
                 script_setup=os.environ.get("SLURM_SCRIPT_SETUP", ""),
@@ -118,6 +123,13 @@ set -euo pipefail
         data: dict[str, Any] = {
             "job": {
                 "name": name,
+                **(
+                    {
+                        "nice": self._config.nice,
+                    }
+                    if self._config.nice is not None
+                    else {}
+                ),
                 "partition": self._config.partition,
                 **(
                     {

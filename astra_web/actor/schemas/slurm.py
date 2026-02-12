@@ -16,6 +16,7 @@ class SLURMConfiguration(BaseModel):
     user_name: str
     user_token: str
     partition: str
+    nice: int | None = None
     constraints: str | None = None
     environment: list[str] = []
     script_setup: str = ""

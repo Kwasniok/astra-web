@@ -142,6 +142,7 @@ In addition to the [basic environment](#environment), set the following environm
 | `SLURM_USER_TOKEN` [2]        | yes      | The [JWT token](https://slurm.schedmd.com/jwt.html) to authenticate the SLURM user.|                                                       |
 | `SLURM_PARTITION`             | yes      | The SLURM partition to use for the job.                                            | `short`                                               |
 | `SLURM_CONSTRAINTS`           | optional | The SLURM constraints to use for the job. This is a comma-separated list of constraints. | `gpu,highmem`                                |
+| `SLURM_NICE`                  | optional   | Nice value for the job. Higher nice means lower priority.                        |
 | `SLURM_ENVIRONMENT` [3]       | yes      | The environment variables to set for the SLURM job.                                |`"PATH=/bin:/usr/bin/:/usr/local/bin/","MORE="values"` |
 | `SLURM_ASTRA_BINARY_PATH` [4] | yes      | The path to the ASTRA binary **as seen by the SLURM cluster!**                     | `/home/<user>/astra/bin`                              |
 | `SLURM_DATA_PATH` [5]         | yes      | The path to the data directory **as seen by the SLURM cluster!**                   | `/home/<user>/astra/data`                             |
