@@ -23,6 +23,9 @@ if [[ -f "$ASTRA_WEB_ENV_FILE" ]]; then
     value="${value%\'}"   # remove trailing single quote
     value="${value#\'}"   # remove leading single quote
 
+    # interpret escape sequences in value (e.g. \n, \t)
+    printf -v value '%b' "$value"
+
     # export only if the variable was undefined
     if [[ ! -v "$key" ]]; then
         export "$key=$value"
