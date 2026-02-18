@@ -1,5 +1,6 @@
 import argparse
 from astra_web.actor import LocalActor
+from astra_web.actor.schemas.config.local import LocalConfiguration
 from astra_web.dtypes import FloatPrecision
 from astra_web.simulation.actions import (
     compress_simulation,
@@ -69,7 +70,7 @@ def main():
 
     args = parser.parse_args()
 
-    actor = LocalActor.instance()
+    actor = LocalActor()
 
     if args.command == "compress-sim":
         compress_simulation(

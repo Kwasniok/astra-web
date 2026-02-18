@@ -1,30 +1,15 @@
 import os
 from subprocess import run
+
 from .base import Actor, Task
 from .schemas.any import DispatchResponse
+from .schemas.config.local import LocalConfiguration
 
 
 class LocalActor(Actor):
 
-    _ASTRA_BINARY_PATH = os.environ["ASTRA_BINARY_PATH"]
-    _DATA_PATH = os.environ["ASTRA_DATA_PATH"]
-
-    _instance = None
-
-    @classmethod
-    def instance(cls) -> "LocalActor":
-        if cls._instance is None:
-            cls._instance = LocalActor(do_not_init_manually_use_instance=None)
-        return cls._instance
-
-    def data_path(self) -> str:
-        return self._DATA_PATH
-
-    def astra_binary_path(self, binary: str) -> str:
-        """
-        Returns the path to the Astra binary.
-        """
-        return os.path.join(self._ASTRA_BINARY_PATH, binary)
+    def __init__(self, config: LocalConfiguration | None = None) -> None:
+        super().__init__(config or LocalConfiguration())
 
     async def _dispatch_tasks(self, tasks: list[Task]) -> DispatchResponse:
         """

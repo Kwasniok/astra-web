@@ -4,88 +4,50 @@ import slurm_requests as slurm
 from slurm_requests import RequestMethod, JSON
 from .base import Actor, Task
 from .schemas.any import DispatchResponse
-from .schemas.slurm import SLURMConfiguration
+from .schemas.config.slurm import SLURMConfiguration
 from astra_web.uuid import get_uuid
 
 
 class SLURMActor(Actor):
 
-    _instance = None
+    def __init__(self, config: SLURMConfiguration) -> None:
+        super().__init__(config)
 
-    @classmethod
-    def instance(cls) -> "SLURMActor":
-        if cls._instance is None:
-            cls._instance = SLURMActor(do_not_init_manually_use_instance=None)
+    def data_path(self) -> str:
+        """
+        Returns the path to the data directory.
+        """
+        config: SLURMConfiguration = self._config
+        return config.data_path or super().data_path()
 
-            # acquire environment variables only upon first use
-            # avoids errors due to undefined env if SLURM is never used
-            split: Callable[[str | None], list[str]] = lambda csv: (
-                csv.split(",") if csv else []
-            )
-            cls._config = SLURMConfiguration(
-                astra_binary_path=os.environ["SLURM_ASTRA_BINARY_PATH"],
-                data_path=os.environ["SLURM_DATA_PATH"],
-                output_path=os.environ.get("SLURM_OUTPUT_PATH", "."),
-                base_url=os.environ["SLURM_BASE_URL"],
-                api_version=os.environ["SLURM_API_VERSION"],
-                proxy_url=os.environ.get("SLURM_PROXY_URL", None),
-                user_name=os.environ["SLURM_USER_NAME"],
-                user_token=os.environ["SLURM_USER_TOKEN"],
-                partition=os.environ["SLURM_PARTITION"],
-                nice=(
-                    int(os.environ["SLURM_NICE"])
-                    if "SLURM_NICE" in os.environ
-                    else None
-                ),
-                constraints=os.environ.get("SLURM_CONSTRAINTS", None),
-                environment=split(os.environ.get("SLURM_ENVIRONMENT", None)),
-                script_setup=os.environ.get("SLURM_SCRIPT_SETUP", ""),
-            )
-
-        return cls._instance
-
-    def configure(self, config: SLURMConfiguration) -> None:
+    def astra_binary_path(self, binary: str) -> str:
         """
-        Configure the SLURM access.
+        Returns the path to the Astra binary.
         """
-        self._config = config
-
-    def update_user_token(self, user_token: str) -> None:
-        """
-        Update the SLURM user token.
-        """
-        self._config.user_token = user_token
-
-    @property
-    def configuration(self) -> SLURMConfiguration:
-        """
-        Returns the current configuration of the SLURM host actor.
-        """
-        return self._config
+        config: SLURMConfiguration = self._config
+        return (
+            os.path.join(config.astra_binary_path, binary)
+            if config.astra_binary_path is not None
+            else super().astra_binary_path(binary)
+        )
 
     @property
     def _header_credentials(self) -> dict[str, str]:
         """
         Returns the headers used for SLURM requests.
         """
+        config: SLURMConfiguration = self._config
         return {
-            "X-SLURM-USER-NAME": self._config.user_name,
-            "X-SLURM-USER-TOKEN": self._config.user_token,
+            "X-SLURM-USER-NAME": config.user_name,
+            "X-SLURM-USER-TOKEN": config.user_token,
         }
-
-    def data_path(self) -> str:
-        return self._config.data_path
-
-    def astra_binary_path(self, binary: str) -> str:
-        """
-        Returns the path to the Astra binary.
-        """
-        return os.path.join(self._config.astra_binary_path, binary)
 
     async def _dispatch_tasks(self, tasks: list[Task]) -> DispatchResponse:
         """
         Dispatches tasks for their respective directories and captures their output.
         """
+
+        config: SLURMConfiguration = self._config
 
         if len(tasks) == 0:
             return DispatchResponse(
@@ -113,7 +75,7 @@ class SLURMActor(Actor):
 set -euo pipefail
 
 # setup
-{self._config.script_setup}
+{config.job_setup}
 
 # tasks: {','.join(task.name for task in tasks)}
 
@@ -124,18 +86,22 @@ set -euo pipefail
             "job": {
                 "name": name,
                 **(
-                    {
-                        "nice": self._config.nice,
-                    }
-                    if self._config.nice is not None
+                    {"partition": config.partition}
+                    if config.partition is not None
                     else {}
                 ),
-                "partition": self._config.partition,
                 **(
                     {
-                        "constraints": self._config.constraints,
+                        "nice": config.nice,
                     }
-                    if self._config.constraints is not None
+                    if config.nice is not None
+                    else {}
+                ),
+                **(
+                    {
+                        "constraints": config.constraints,
+                    }
+                    if config.constraints is not None
                     else {}
                 ),
                 "time_limit": {
@@ -145,15 +111,15 @@ set -euo pipefail
                 },
                 **({"tasks_per_node": threads} if threads is not None else {}),
                 "current_working_directory": "/tmp",
-                "environment": self._config.environment
+                "environment": config.environment
                 # add ASTRA specific environment variables for astra-web-cli
                 + [
-                    f"ASTRA_BINARY_PATH={self._config.astra_binary_path}",
-                    f"ASTRA_DATA_PATH={self._config.data_path}",
+                    f"ASTRA_BINARY_PATH={config.astra_binary_path}",
+                    f"ASTRA_DATA_PATH={config.data_path}",
                 ],
                 # separate SLURM output if desired
-                "standard_output": f"{self._config.output_path}/%x-slurm-%j.out",
-                "standard_error": f"{self._config.output_path}/%x-slurm-%j.err",
+                "standard_output": f"{config.job_output_path}/%x-slurm-%j.out",
+                "standard_error": f"{config.job_output_path}/%x-slurm-%j.err",
                 "script": script,
             },
         }
@@ -241,18 +207,20 @@ echo "done" >&2
         timeout: int | None = None,
     ) -> JSON:
 
+        config: SLURMConfiguration = self._config
+
         return await slurm.request(
             method=method,
             midpoint=midpoint,
             endpoint=endpoint,
-            url=self._config.base_url,
-            api_version=self._config.api_version,
-            user_name=self._config.user_name,
-            user_token=self._config.user_token,
+            url=config.base_url,
+            api_version=config.api_version,
+            user_name=config.user_name,
+            user_token=config.user_token,
             headers=self._header_credentials,
             body=body or {},
             timeout=timeout,
-            proxy_url=self._config.proxy_url,
+            proxy_url=config.proxy_url,
         )  # type: ignore
 
 

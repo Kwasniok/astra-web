@@ -34,10 +34,11 @@ from .generator.schemas.particles import Particles
 from .actor import (
     ActorTypes,
     Actors,
+    ActorConfigurations,
     LocalActor,
     SLURMActor,
 )
-from .actor.schemas.slurm import SLURMConfiguration
+from .actor.schemas.config import SLURMConfiguration
 from .simulation.actions import (
     CompressionError,
     compress_simulation,
@@ -89,7 +90,7 @@ app = FastAPI(
     description="This is an API wrapper for the ASTRA simulation code developed \
                  by K. Floettmann at DESY Hamburg. For more information, refer to the official \
                  [website](https://www.desy.de/~mpyflo/).",
-    version="8.0.0",
+    version="9.0.0",
     contact={
         "name": "Jens Kwasniok",
         "email": "jens.kwasniok@desy.de",
@@ -144,7 +145,7 @@ def list_particle_distribution_ids(
     """
     Returns a list of particle distribution IDs.
     """
-    actor = LocalActor.instance()
+    actor = LocalActor()
     return list_generator_ids(actor, state=state)
 
 
@@ -156,8 +157,8 @@ def list_particle_distribution_ids(
 async def _list_particle_distribution_states(
     gen_ids: list[str] | None = Body(default=None, examples=[["gen_id_1", "gen_id_2"]]),
 ) -> list[tuple[str, DispatchStatus]]:
-    # local
-    local_actor = LocalActor.instance()
+    # local only
+    local_actor = LocalActor()
     return list_particle_distribution_states(local_actor, gen_ids=gen_ids)
 
 
@@ -165,15 +166,25 @@ async def _list_particle_distribution_states(
     "/particles",
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
+    responses={
+        400: {"description": "Invalid host actor type or configuration."},
+    },
 )
 async def dispatch_particle_distribution_generation_(
-    generator_input: GeneratorInput,
+    input: GeneratorInput = Body(...),
     host: Actors = Query(default=Actors.LOCAL),
+    host_config: ActorConfigurations | None = Body(default=None),
 ) -> GeneratorDispatchOutput:
-    local_actor = LocalActor.instance()
-    host_actor = ActorTypes.select(host)
+    local_actor = LocalActor()
+    try:
+        host_actor = ActorTypes.init(host, host_config)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     return await dispatch_particle_distribution_generation(
-        generator_input,
+        input,
         local_actor,
         host_actor,
     )
@@ -184,6 +195,7 @@ async def dispatch_particle_distribution_generation_(
     dependencies=[Depends(api_key_auth)],
     tags=["particles"],
     responses={
+        400: {"description": "Invalid host actor type or configuration."},
         409: {
             "description": "Generator input not found on server. Cannot reset generation."
         },
@@ -192,8 +204,15 @@ async def dispatch_particle_distribution_generation_(
 async def redispatch_particle_distribution_(
     gen_id: str,
     host: Actors = Query(default=Actors.LOCAL),
+    host_config: ActorConfigurations | None = Body(default=None),
 ) -> GeneratorDispatchOutput:
-    actor = ActorTypes.select(host)
+    try:
+        actor = ActorTypes.init(host, host_config)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     try:
         return await redispatch_particle_distribution_generation(
             gen_id,
@@ -217,7 +236,7 @@ def upload_particle_distribution(
         default=None, description="Optional comment for the particle distribution."
     ),
 ) -> dict[str, str]:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     gen_id = write_particle_distribution(output, actor, comment=comment)
     return {"gen_id": gen_id}
 
@@ -228,7 +247,7 @@ def upload_particle_distribution(
     tags=["particles"],
 )
 def download_generator_results(gen_id: str) -> GeneratorData:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     output = load_generator_data(gen_id, actor)
     if output is None:
         raise HTTPException(
@@ -250,7 +269,7 @@ async def delete_particle_distribution_(
         description="If true, deletes the particle distribution even if it is referenced by simulations.",
     ),
 ) -> None:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     blocking_links = delete_particle_distribution(gen_id, actor, force=force)
     if blocking_links is not None:
         raise HTTPException(
@@ -265,7 +284,7 @@ async def delete_particle_distribution_(
     tags=["fields"],
 )
 async def list_field_table_file_names_() -> list[str]:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     return list_field_table_file_names(actor)
 
 
@@ -275,7 +294,7 @@ async def list_field_table_file_names_() -> list[str]:
     tags=["fields"],
 )
 async def download_field_table_(file_name: str) -> FieldTable:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     try:
         table = read_field_table(file_name, actor)
     except FileNotFoundError:
@@ -292,7 +311,7 @@ async def download_field_table_(file_name: str) -> FieldTable:
     tags=["fields"],
 )
 async def upload_field_table_(file_name: str, table: FieldTable) -> None:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     try:
         write_field_table(file_name, table, actor)
     except FileExistsError:
@@ -314,7 +333,7 @@ async def delete_field_table_(
         description="If true, forces deletion even if the field table is referenced by a simulation.",
     ),
 ) -> None:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     blocking_links = delete_field_table(file_name, actor, force=force)
     if blocking_links:
         raise HTTPException(
@@ -334,7 +353,7 @@ def list_simulation_ids_(
     """
     Returns a list of  simulation IDs.
     """
-    actor = LocalActor.instance()
+    actor = LocalActor()
     return list_simulation_ids(actor, state=state)
 
 
@@ -346,8 +365,8 @@ def list_simulation_ids_(
 async def _list_simulation_states(
     sim_ids: list[str] | None = Body(default=None, examples=[["sim_id_1", "sim_id_2"]]),
 ) -> list[tuple[str, DispatchStatus]]:
-    # local
-    local_actor = LocalActor.instance()
+    # local only
+    local_actor = LocalActor()
     return list_simulation_states(local_actor, sim_ids=sim_ids)
 
 
@@ -355,15 +374,24 @@ async def _list_simulation_states(
     "/simulations",
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
+    responses={
+        400: {"description": "Invalid host actor type or configuration."},
+    },
 )
 async def dispatch_simulation(
-    simulation_input: SimulationInput,
+    input: SimulationInput = Body(...),
     host: Actors = Query(default=Actors.LOCAL),
+    host_config: ActorConfigurations | None = Body(default=None),
 ) -> SimulationDispatchOutput:
-    # local
-    local_actor = LocalActor.instance()
-    host_actor = ActorTypes.select(host)
-    return await dispatch_simulation_run(simulation_input, local_actor, host_actor)
+    local_actor = LocalActor()
+    try:
+        host_actor = ActorTypes.init(host, host_config)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    return await dispatch_simulation_run(input, local_actor, host_actor)
 
 
 @app.put(
@@ -371,6 +399,7 @@ async def dispatch_simulation(
     dependencies=[Depends(api_key_auth)],
     tags=["simulations"],
     responses={
+        400: {"description": "Invalid host actor type or configuration."},
         409: {
             "description": "Simulation input not found on server. Cannot reset simulation."
         },
@@ -379,8 +408,15 @@ async def dispatch_simulation(
 async def redispatch_simulation_(
     sim_id: str,
     host: Actors = Query(default=Actors.LOCAL),
+    host_config: ActorConfigurations | None = Body(default=None),
 ) -> SimulationDispatchOutput:
-    actor = ActorTypes.select(host)
+    try:
+        actor = ActorTypes.init(host, host_config)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
     try:
         return await redispatch_simulation_run(
             sim_id,
@@ -403,7 +439,7 @@ def download_simulation_data(sim_id: str) -> SimulationDataWithMeta:
     Returns the output of a specific ASTRA simulation on the requested server depending
     on the given ID.
     """
-    actor = LocalActor.instance()
+    actor = LocalActor()
     output = load_simulation_data(sim_id, actor)
     if output is None:
         raise HTTPException(
@@ -426,7 +462,7 @@ async def delete_simulation_(
         description="If true, deletes the simulation even if it is referenced by other entities.",
     ),
 ) -> None:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     return delete_simulation(sim_id, actor, force=force)
 
 
@@ -457,7 +493,7 @@ async def compress_simulation_(
         description="Maximum allowed element-wise relative error during lossy compression.",
     ),
 ) -> CompressionReport | None:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     try:
         return compress_simulation(
             sim_id,
@@ -503,7 +539,7 @@ async def uncompress_simulation_(
         description="If `true`, writes floating point numbers with high precision (12 digits after the decimal point).  If `false`, uses 4 digits after the decimal point. See ASTRA documentation for details.",
     ),
 ) -> CompressionReport | None:
-    actor = LocalActor.instance()
+    actor = LocalActor()
     try:
         return uncompress_simulation(sim_id, actor, high_precision=high_precision)
     except CompressionError as e:
@@ -568,7 +604,7 @@ async def download_features_table(
 
     The `config` parameter allows to specify additional configuration options for feature extraction.
     """
-    actor = LocalActor.instance()
+    actor = LocalActor()
     try:
         return make_simulation_feature_table(
             sim_ids,
@@ -600,7 +636,7 @@ async def download_varying_features(
     The `sim_ids` parameter is a list of (finished) simulation IDs for which the features should be computed.
     If none are provided, the features will be computed for all simulations in the database.
     """
-    actor = LocalActor.instance()
+    actor = LocalActor()
     return get_all_varying_features(sim_ids, actor)
 
 
@@ -619,7 +655,7 @@ async def download_all_features_for_simulation(
     Returns all features for a specific simulation run.
     note: May include raw and meta data as well.
     """
-    actor = LocalActor.instance()
+    actor = LocalActor()
     try:
         return get_features(sim_id, actor)
     except ValueError as e:
@@ -630,53 +666,17 @@ async def download_all_features_for_simulation(
 
 
 @app.get(
-    "/slurm/configuration",
-    dependencies=[Depends(api_key_auth)],
-    tags=["slurm"],
-)
-async def download_slurm_configuration() -> SLURMConfiguration:
-    slurm_actor = SLURMActor.instance()
-    return slurm_actor.configuration
-
-
-@app.put(
-    "/slurm/configuration",
-    dependencies=[Depends(api_key_auth)],
-    tags=["slurm"],
-)
-async def configure_slurm(config: SLURMConfiguration) -> None:
-    slurm_actor = SLURMActor.instance()
-    slurm_actor.configure(config)
-
-
-@app.put(
-    "/slurm/configuration/user_token",
-    dependencies=[Depends(api_key_auth)],
-    tags=["slurm"],
-)
-async def update_slurm_user_token(
-    value: str = Query(..., description="The new SLURM user token.")
-) -> None:
-    """
-    Exclusively updates the SLURM user token used for authentication with the SLURM REST API and nothing more.
-
-    Usefull in case the previous token has expired or is no longer valid.
-    """
-    slurm_actor = SLURMActor.instance()
-    slurm_actor.update_user_token(value)
-
-
-@app.get(
     "/slurm/ping",
     dependencies=[Depends(api_key_auth)],
     tags=["slurm"],
 )
 async def ping_slurm(
+    config: SLURMConfiguration = Body(...),
     timeout: int | None = Query(
         default=None, description="SLURM REST API request timeout in seconds."
     ),
 ) -> dict[str, Any]:
-    slurm_actor = SLURMActor.instance()
+    slurm_actor = SLURMActor(config)
     return await slurm_actor.ping(timeout)  # type: ignore
 
 
@@ -686,9 +686,10 @@ async def ping_slurm(
     tags=["slurm"],
 )
 async def diagnose_slurm(
+    config: SLURMConfiguration = Body(...),
     timeout: int | None = Query(
         default=None, description="SLURM REST API request timeout in seconds."
     ),
 ) -> dict[str, Any]:
-    slurm_actor = SLURMActor.instance()
+    slurm_actor = SLURMActor(config)
     return await slurm_actor.diagnose(timeout)  # type: ignore

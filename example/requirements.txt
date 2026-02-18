@@ -6,7 +6,8 @@ numpy
 scipy
 pandas
 scikit-learn
-slurm-requests==2.1.0
+requests
+slurm-requests==2.2.0
 openpmd-beamphysics
 plotly
 matplotlib

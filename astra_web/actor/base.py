@@ -5,6 +5,7 @@ from astra_web.generator.schemas.io import GeneratorInput
 from astra_web.simulation.schemas.compression import CompressionConfig
 from astra_web.simulation.schemas.io import SimulationInput
 from .schemas.any import DispatchResponse
+from .schemas.config import BaseConfiguration
 
 
 @dataclass
@@ -26,27 +27,18 @@ class Actor(ABC):
     dispatching.
     """
 
-    def __init__(self, *, do_not_init_manually_use_instance: None):
-        pass
+    def __init__(self, config: BaseConfiguration) -> None:
+        self._config = config
 
     GENERATE_DISPATCH_NAME_PREFIX = "generate-"
     SIMULATE_DISPATCH_NAME_PREFIX = "simulate-"
     COMPRESS_DISPATCH_NAME_PREFIX = "compress-"
 
-    @classmethod
-    @abstractmethod
-    def instance(cls) -> "Actor":
-        """
-        Returns the singleton instance of the host actor.
-        """
-        pass
-
-    @abstractmethod
     def data_path(self) -> str:
         """
         Returns the path to the data directory.
         """
-        pass
+        return self._config._data_path
 
     def generator_path(self, id: str, file_name: str | None = None) -> str:
         """
@@ -88,12 +80,11 @@ class Actor(ABC):
         path = os.path.join(self.data_path(), "simulation")
         return [d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))]
 
-    @abstractmethod
     def astra_binary_path(self, binary: str) -> str:
         """
         Returns the path to the Astra binary.
         """
-        pass
+        return os.path.join(self._config._astra_binary_path, binary)
 
     async def dispatch_generation(
         self, generator_input: GeneratorInput

@@ -9,8 +9,10 @@ ASTRA_WEB_API_KEY=<your api key>
 ```
 """
 
+from typing import Any, Callable
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 from aiohttp.client_exceptions import ClientResponseError
 from rest_requests import request as rest_request, RequestMethod, JSON, json_diff
 
